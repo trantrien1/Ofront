@@ -1,20 +1,44 @@
 import React, { useEffect, useState } from "react";
-import { Box, Flex, Text, Avatar } from "@chakra-ui/react";
+import {
+  Avatar,
+  Box,
+  Flex,
+  Text,
+} from "@chakra-ui/react";
 import { doc, getDoc } from "firebase/firestore";
 import { firestore } from "../../firebase/clientApp";
 import { Notification } from "../../atoms/notificationsAtom";
+import { normalizeTimestamp, formatTimeAgo } from "../../helpers/timestampHelpers";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const NotificationItem = dynamic(() => Promise.resolve(NotificationItemComponent), {
+  ssr: false,
+  loading: () => <NotificationItemSkeleton />
+});
+
+const NotificationItemSkeleton = () => (
+  <Box p={3} borderBottom="1px solid" borderColor="gray.100">
+    <Flex align="start" gap={3}>
+      <Avatar size="sm" />
+      <Box flex={1}>
+        <Text fontSize="sm" color="gray.500">Loading...</Text>
+      </Box>
+    </Flex>
+  </Box>
+);
 
 type NotificationItemProps = {
   notification: Notification;
-  onMarkAsRead: (id: string) => void;
+  onMarkAsRead: (notificationId: string) => void;
 };
 
-interface UserData {
+type UserData = {
   displayName: string;
-  photoURL?: string;
-}
+  photoURL: string;
+};
 
-const NotificationItem: React.FC<NotificationItemProps> = ({
+const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   notification,
   onMarkAsRead,
 }) => {
@@ -39,18 +63,15 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     fetchUserData();
   }, [notification.userId]);
 
-  const formatTimeAgo = (timestamp: any) => {
+  const formatTimeAgoLocal = (timestamp: any) => {
     if (!timestamp) return "Just now";
     
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    return `${Math.floor(diffInSeconds / 2592000)}mo ago`;
+    try {
+      return formatTimeAgo(normalizeTimestamp(timestamp));
+    } catch (error) {
+      console.error("Error formatting timestamp:", error);
+      return "Just now";
+    }
   };
 
   const getTypeEmoji = () => {
@@ -113,7 +134,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             </Text>
           )}
           <Text fontSize="xs" color="gray.400" mt={1}>
-            {formatTimeAgo(notification.timestamp)}
+            {formatTimeAgoLocal(notification.timestamp)}
           </Text>
         </Box>
       </Flex>

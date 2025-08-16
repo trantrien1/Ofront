@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -10,16 +11,63 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
-import Link from "next/link";
-import React, { useEffect, useState } from "react";
-import { FaReddit } from "react-icons/fa";
-import { Community } from "../../atoms/communitiesAtom";
 import { firestore } from "../../firebase/clientApp";
+import { Community } from "../../atoms/communitiesAtom";
+import { FaReddit } from "react-icons/fa";
 import useCommunityData from "../../hooks/useCommunityData";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const Recommendations = dynamic(() => Promise.resolve(RecommendationsComponent), {
+  ssr: false,
+  loading: () => <RecommendationsSkeleton />
+});
+
+const RecommendationsSkeleton = () => (
+  <Flex
+    direction="column"
+    bg="white"
+    borderRadius={4}
+    cursor="pointer"
+    border="1px solid"
+    borderColor="gray.300"
+  >
+    <Flex
+      align="flex-end"
+      color="white"
+      p="6px 10px"
+      bg="blue.500"
+      height="70px"
+      borderRadius="4px 4px 0px 0px"
+      fontWeight={600}
+      bgImage="url(/images/recCommsArt.png)"
+      backgroundSize="cover"
+      bgGradient="linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75)),
+      url('images/recCommsArt.png')"
+    >
+      Top Communities
+    </Flex>
+    <Stack mt={2} p={3}>
+      <Flex justify="space-between" align="center">
+        <SkeletonCircle size="10" />
+        <Skeleton height="10px" width="70%" />
+      </Flex>
+      <Flex justify="space-between" align="center">
+        <SkeletonCircle size="10" />
+        <Skeleton height="10px" width="70%" />
+      </Flex>
+      <Flex justify="space-between" align="center">
+        <SkeletonCircle size="10" />
+        <Skeleton height="10px" width="70%" />
+      </Flex>
+    </Stack>
+  </Flex>
+);
 
 type RecommendationsProps = {};
 
-const Recommendations: React.FC<RecommendationsProps> = () => {
+const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(false);
   const { communityStateValue, onJoinLeaveCommunity } = useCommunityData();
@@ -93,8 +141,9 @@ const Recommendations: React.FC<RecommendationsProps> = () => {
         ) : (
           <>
             {communities.map((item, index) => {
-              const isJoined = !!communityStateValue.mySnippets.find(
-                (snippet) => snippet.communityId === item.id
+              // Simple join check after mounting
+              const isJoined = (communityStateValue.mySnippets as any[]).find(
+                (snippet: any) => snippet.communityId === item.id
               );
               return (
                 <Link key={item.id} href={`/r/${item.id}`}>
@@ -118,6 +167,7 @@ const Recommendations: React.FC<RecommendationsProps> = () => {
                             boxSize="28px"
                             src={item.imageURL}
                             mr={2}
+                            fallbackSrc="/images/redditlogo.png"
                           />
                         ) : (
                           <Icon
@@ -142,7 +192,7 @@ const Recommendations: React.FC<RecommendationsProps> = () => {
                         fontSize="8pt"
                         onClick={(event) => {
                           event.stopPropagation();
-                          onJoinLeaveCommunity(item, isJoined);
+                          onJoinLeaveCommunity(item, !!isJoined);
                         }}
                         variant={isJoined ? "outline" : "solid"}
                       >
@@ -164,4 +214,5 @@ const Recommendations: React.FC<RecommendationsProps> = () => {
     </Flex>
   );
 };
+
 export default Recommendations;

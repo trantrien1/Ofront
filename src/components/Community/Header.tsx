@@ -1,15 +1,61 @@
 import React from "react";
-import { Box, Button, Flex, Icon, Text, Image } from "@chakra-ui/react";
+import { Box, Button, Flex, Icon, Image, Text } from "@chakra-ui/react";
 import { FaReddit } from "react-icons/fa";
-import { Community, communityState } from "../../atoms/communitiesAtom";
+import { Community } from "../../atoms/communitiesAtom";
 import useCommunityData from "../../hooks/useCommunityData";
-import { useSetRecoilState } from "recoil";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const Header = dynamic(() => Promise.resolve(HeaderComponent), {
+  ssr: false,
+  loading: () => <HeaderSkeleton />
+});
+
+const HeaderSkeleton = () => (
+  <Flex direction="column" width="100%" height="146px">
+    <Box height="50%" bg="blue.400" />
+    <Flex justifyContent="center" bg="white" height="50%">
+      <Flex width="95%" maxWidth="860px">
+        <Icon
+          as={FaReddit}
+          fontSize={64}
+          position="relative"
+          top={-3}
+          color="blue.500"
+          border="4px solid white"
+          borderRadius="50%"
+        />
+        <Flex padding="10px 16px">
+          <Flex direction="column" mr={6}>
+            <Text fontWeight={800} fontSize="16pt">
+              Loading...
+            </Text>
+            <Text fontWeight={600} fontSize="10pt" color="gray.400">
+              r/loading
+            </Text>
+          </Flex>
+          <Flex>
+            <Button
+              variant="solid"
+              height="30px"
+              pr={6}
+              pl={6}
+              isLoading={true}
+            >
+              Join
+            </Button>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Flex>
+  </Flex>
+);
 
 type HeaderProps = {
   communityData: Community;
 };
 
-const Header: React.FC<HeaderProps> = ({ communityData }) => {
+const HeaderComponent: React.FC<HeaderProps> = ({ communityData }) => {
   /**
    * !!!Don't pass communityData boolean until the end
    * It's a small optimization!!!

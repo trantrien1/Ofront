@@ -22,12 +22,18 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   const setAuthModalState = useSetRecoilState(authModalState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  // Client-side mounting check
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    if (!user || !!communityStateValue.mySnippets.length) return;
+    if (!user || !!communityStateValue.mySnippets.length || !mounted) return;
 
     getSnippets();
-  }, [user]);
+  }, [user, mounted]);
 
   const getSnippets = async () => {
     setLoading(true);
@@ -193,7 +199,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
         currentCommunity: defaultCommunity,
       }));
     }
-  }, [router.query, communityStateValue.currentCommunity]);
+  }, [router.query]); // Remove communityStateValue.currentCommunity dependency to prevent infinite loop
 
   // console.log("LOL", communityStateValue);
 
@@ -203,6 +209,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
     loading,
     setLoading,
     error,
+    mounted,
   };
 };
 

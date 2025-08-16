@@ -11,13 +11,36 @@ import {
 import { IoNotificationsOutline } from "react-icons/io5";
 import { useNotifications } from "../../hooks/useNotifications";
 import NotificationItem from "./NotificationItem";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const NotificationDropdown = dynamic(() => Promise.resolve(NotificationDropdownComponent), {
+  ssr: false,
+  loading: () => <NotificationDropdownSkeleton />
+});
+
+const NotificationDropdownSkeleton = () => (
+  <Box position="relative">
+    <Flex
+      mr={1.5}
+      ml={1.5}
+      padding={1}
+      cursor="pointer"
+      borderRadius={4}
+      _hover={{ bg: "gray.200" }}
+      position="relative"
+    >
+      <IoNotificationsOutline fontSize={20} />
+    </Flex>
+  </Box>
+);
 
 type NotificationDropdownProps = {
   isOpen: boolean;
   onToggle: () => void;
 };
 
-const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
+const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
   isOpen,
   onToggle,
 }) => {

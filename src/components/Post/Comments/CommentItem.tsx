@@ -7,14 +7,34 @@ import {
   Spinner,
   Stack,
   Text,
+  Skeleton,
 } from "@chakra-ui/react";
 import { Timestamp } from "firebase/firestore";
-import moment from "moment";
 import { FaReddit } from "react-icons/fa";
 import {
   IoArrowDownCircleOutline,
   IoArrowUpCircleOutline,
 } from "react-icons/io5";
+import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const CommentItem = dynamic(() => Promise.resolve(CommentItemComponent), {
+  ssr: false,
+  loading: () => <CommentItemSkeleton />
+});
+
+const CommentItemSkeleton = () => (
+  <Flex>
+    <Box mr={2}>
+      <Icon as={FaReddit} fontSize={30} color="gray.300" />
+    </Box>
+    <Stack spacing={1} flex={1}>
+      <Skeleton height="20px" width="60%" />
+      <Skeleton height="16px" width="100%" />
+    </Stack>
+  </Flex>
+);
 
 export type Comment = {
   id?: string;
@@ -35,7 +55,7 @@ type CommentItemProps = {
   userId?: string;
 };
 
-const CommentItem: React.FC<CommentItemProps> = ({
+const CommentItemComponent: React.FC<CommentItemProps> = ({
   comment,
   onDeleteComment,
   isLoading,
@@ -71,9 +91,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
           >
             {comment.creatorDisplayText}
           </Text>
-          {comment.createdAt?.seconds && (
+          {comment.createdAt && (
             <Text color="gray.600">
-              {moment(new Date(comment.createdAt?.seconds * 1000)).fromNow()}
+              {formatTimeAgo(normalizeTimestamp(comment.createdAt))}
             </Text>
           )}
           {isLoading && <Spinner size="sm" />}

@@ -19,11 +19,37 @@ import { useRouter } from "next/router";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, firestore, storage } from "../../firebase/clientApp";
 import { Community, communityState } from "../../atoms/communitiesAtom";
-import moment from "moment";
 import { useRecoilValue, useSetRecoilState } from "recoil";
+import { normalizeTimestamp } from "../../helpers/timestampHelpers";
 import { FaReddit } from "react-icons/fa";
 import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const About = dynamic(() => Promise.resolve(AboutComponent), {
+  ssr: false,
+  loading: () => <AboutSkeleton />
+});
+
+const AboutSkeleton = () => (
+  <Box pt={0} position="sticky" top="14px">
+    <Flex
+      justify="space-between"
+      align="center"
+      p={3}
+      color="white"
+      bg="blue.500"
+      borderRadius="4px 4px 0px 0px"
+    >
+      <Skeleton height="20px" width="60%" />
+    </Flex>
+    <Flex direction="column" bg="white" p={3} borderRadius="0px 0px 4px 4px">
+      <Skeleton height="16px" width="40%" mb={2} />
+      <Skeleton height="12px" width="80%" />
+    </Flex>
+  </Box>
+);
 
 type AboutProps = {
   communityData: Community;
@@ -32,7 +58,7 @@ type AboutProps = {
   loading?: boolean;
 };
 
-const About: React.FC<AboutProps> = ({
+const AboutComponent: React.FC<AboutProps> = ({
   communityData,
   pt,
   onCreatePage,
@@ -157,9 +183,11 @@ const About: React.FC<AboutProps> = ({
                 {communityData?.createdAt && (
                   <Text>
                     Created{" "}
-                    {moment(
-                      new Date(communityData.createdAt!.seconds * 1000)
-                    ).format("MMM DD, YYYY")}
+                    {new Date(normalizeTimestamp(communityData.createdAt)).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
                   </Text>
                 )}
               </Flex>

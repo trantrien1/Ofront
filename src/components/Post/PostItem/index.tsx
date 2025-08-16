@@ -8,7 +8,6 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import moment from "moment";
 import { NextRouter } from "next/router";
 import { AiOutlineDelete } from "react-icons/ai";
 import { BsChat, BsDot } from "react-icons/bs";
@@ -23,6 +22,26 @@ import {
 } from "react-icons/io5";
 import { Post } from "../../../atoms/postsAtom";
 import Link from "next/link";
+import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const PostItem = dynamic(() => Promise.resolve(PostItemComponent), {
+  ssr: false,
+  loading: () => <PostItemSkeleton />
+});
+
+const PostItemSkeleton = () => (
+  <Flex
+    border="1px solid"
+    bg="white"
+    borderColor="gray.300"
+    borderRadius={4}
+    p={4}
+  >
+    <Skeleton height="200px" width="100%" />
+  </Flex>
+);
 
 export type PostItemContentProps = {
   post: Post;
@@ -42,7 +61,7 @@ export type PostItemContentProps = {
   homePage?: boolean;
 };
 
-const PostItem: React.FC<PostItemContentProps> = ({
+const PostItemComponent: React.FC<PostItemContentProps> = ({
   post,
   postIdx,
   onVote,
@@ -151,7 +170,7 @@ const PostItem: React.FC<PostItemContentProps> = ({
               )}
               <Text color="gray.500">
                 Posted by u/{post.userDisplayText}{" "}
-                {moment(new Date(post.createdAt.seconds * 1000)).fromNow()}
+                {formatTimeAgo(normalizeTimestamp(post.createdAt))}
               </Text>
             </Stack>
           )}

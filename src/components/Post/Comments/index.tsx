@@ -1,13 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  Box,
-  Flex,
-  SkeletonCircle,
-  SkeletonText,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
-import { User } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { Box, Button, Flex, Icon, Stack, Text, SkeletonCircle, SkeletonText } from "@chakra-ui/react";
+import { Post, postState } from "../../../atoms/postsAtom";
+import { firestore } from "../../../firebase/clientApp";
+// import { useNotifications } from "../../../hooks/useNotifications";
+import CommentItem, { Comment } from "./CommentItem";
+import CommentInput from "./Input";
 import {
   collection,
   doc,
@@ -19,21 +16,34 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import { useSetRecoilState } from "recoil";
+import { useSetRecoilState, useRecoilValue } from "recoil";
 import { authModalState } from "../../../atoms/authModalAtom";
-import { Post, postState } from "../../../atoms/postsAtom";
-import { firestore } from "../../../firebase/clientApp";
-import { useNotifications } from "../../../hooks/useNotifications";
-import CommentItem, { Comment } from "./CommentItem";
-import CommentInput from "./Input";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "../../../firebase/clientApp";
+import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const Comments = dynamic(() => Promise.resolve(CommentsComponent), {
+  ssr: false,
+  loading: () => <CommentsSkeleton />
+});
+
+const CommentsSkeleton = () => (
+  <Box bg="white" borderRadius="0px 0px 4px 4px" p={2}>
+    <Text fontSize="10pt" fontWeight={700}>
+      Loading comments...
+    </Text>
+  </Box>
+);
 
 type CommentsProps = {
-  user?: User | null;
-  selectedPost: Post;
+  user: any;
+  selectedPost: Post | null;
   community: string;
 };
 
-const Comments: React.FC<CommentsProps> = ({
+const CommentsComponent: React.FC<CommentsProps> = ({
   user,
   selectedPost,
   community,
@@ -45,7 +55,7 @@ const Comments: React.FC<CommentsProps> = ({
   const [deleteLoading, setDeleteLoading] = useState("");
   const setAuthModalState = useSetRecoilState(authModalState);
   const setPostState = useSetRecoilState(postState);
-  const { createNotification } = useNotifications();
+  // const { createNotification } = useNotifications();
 
   const onCreateComment = async (comment: string) => {
     if (!user) {
@@ -60,24 +70,24 @@ const Comments: React.FC<CommentsProps> = ({
       // Create comment document
       const commentDocRef = doc(collection(firestore, "comments"));
       batch.set(commentDocRef, {
-        postId: selectedPost.id,
+        postId: selectedPost?.id,
         creatorId: user.uid,
         creatorDisplayText: user.email!.split("@")[0],
         creatorPhotoURL: user.photoURL,
         communityId: community,
         text: comment,
-        postTitle: selectedPost.title,
+        postTitle: selectedPost?.title,
         createdAt: serverTimestamp(),
       } as Comment);
 
       // Update post numberOfComments
-      batch.update(doc(firestore, "posts", selectedPost.id), {
+      batch.update(doc(firestore, "posts", selectedPost?.id!), {
         numberOfComments: increment(1),
       });
       await batch.commit();
 
       setComment("");
-      const { id: postId, title } = selectedPost;
+      const { id: postId, title } = selectedPost!;
       setComments((prev) => [
         {
           id: commentDocRef.id,
@@ -105,18 +115,18 @@ const Comments: React.FC<CommentsProps> = ({
         postUpdateRequired: true,
       }));
 
-      // Create notification for post creator
-      if (selectedPost.creatorId !== user.uid) {
-        createNotification({
-          type: "comment",
-          message: "commented on your post",
-          userId: user.uid,
-          targetUserId: selectedPost.creatorId,
-          postId: selectedPost.id,
-          postTitle: selectedPost.title,
-          communityName: community,
-        });
-      }
+              // Create notification for post creator
+        // if (selectedPost?.creatorId !== user.uid) {
+        //   createNotification({
+        //     type: "comment",
+        //     message: "commented on your post",
+        //     userId: user.uid,
+        //     targetUserId: selectedPost?.creatorId,
+        //     postId: selectedPost?.id,
+        //     postTitle: selectedPost?.title,
+        //     communityName: community,
+        //   });
+        // }
 
     } catch (error: any) {
       console.log("onCreateComment error", error.message);
@@ -124,44 +134,41 @@ const Comments: React.FC<CommentsProps> = ({
     setCommentCreateLoading(false);
   };
 
-  const onDeleteComment = useCallback(
-    async (comment: Comment) => {
-      setDeleteLoading(comment.id as string);
-      try {
-        if (!comment.id) throw "Comment has no ID";
-        const batch = writeBatch(firestore);
-        const commentDocRef = doc(firestore, "comments", comment.id);
-        batch.delete(commentDocRef);
+  const onDeleteComment = async (comment: Comment) => {
+    setDeleteLoading(comment.id as string);
+    try {
+      if (!comment.id) throw "Comment has no ID";
+      const batch = writeBatch(firestore);
+      const commentDocRef = doc(firestore, "comments", comment.id);
+      batch.delete(commentDocRef);
 
-        batch.update(doc(firestore, "posts", comment.postId), {
-          numberOfComments: increment(-1),
-        });
+      batch.update(doc(firestore, "posts", comment.postId), {
+        numberOfComments: increment(-1),
+      });
 
-        await batch.commit();
+      await batch.commit();
 
-        setPostState((prev) => ({
-          ...prev,
-          selectedPost: {
-            ...prev.selectedPost,
-            numberOfComments: prev.selectedPost?.numberOfComments! - 1,
-          } as Post,
-          postUpdateRequired: true,
-        }));
+      setPostState((prev) => ({
+        ...prev,
+        selectedPost: {
+          ...prev.selectedPost,
+          numberOfComments: prev.selectedPost?.numberOfComments! - 1,
+        } as Post,
+        postUpdateRequired: true,
+      }));
 
-        setComments((prev) => prev.filter((item) => item.id !== comment.id));
-        // return true;
-      } catch (error: any) {
-        console.log("Error deletig comment", error.message);
-        // return false;
-      }
-      setDeleteLoading("");
-    },
-    [setComments, setPostState]
-  );
+      setComments((prev) => prev.filter((item) => item.id !== comment.id));
+      // return true;
+    } catch (error: any) {
+      console.log("Error deletig comment", error.message);
+      // return false;
+    }
+    setDeleteLoading("");
+  };
 
   const getPostComments = async () => {
     try {
-      console.log("Fetching comments for post:", selectedPost.id);
+      console.log("Fetching comments for post:", selectedPost?.id);
       
       // First try to fetch all comments to see what's in the database
       const allCommentsQuery = query(collection(firestore, "comments"));
@@ -174,8 +181,8 @@ const Comments: React.FC<CommentsProps> = ({
       
       // Filter comments for this specific post
       const postComments = allComments.filter((comment: any) => {
-        console.log("Comparing:", comment.postId, "===", selectedPost.id, "Result:", comment.postId === selectedPost.id);
-        return comment.postId === selectedPost.id;
+        console.log("Comparing:", comment.postId, "===", selectedPost?.id, "Result:", comment.postId === selectedPost?.id);
+        return comment.postId === selectedPost?.id;
       });
       
       console.log("Filtered comments for this post:", postComments);
@@ -201,9 +208,9 @@ const Comments: React.FC<CommentsProps> = ({
       comments: comments,
       commentsLength: comments.length,
       loading: commentFetchLoading,
-      selectedPostId: selectedPost.id
+      selectedPostId: selectedPost?.id
     });
-  }, [comments, commentFetchLoading, selectedPost.id]);
+  }, [comments, commentFetchLoading, selectedPost?.id]);
 
   // Don't render if no selectedPost
   if (!selectedPost?.id) {

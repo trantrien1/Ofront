@@ -8,7 +8,7 @@ export interface Notification {
   userId: string; // ID of the user who triggered the notification
   targetUserId: string; // ID of the user who receives the notification
   postId?: string;
-  commentId?: string;
+  commentId?: string; // ID of the specific comment for comment notifications
   postTitle?: string;
   communityName?: string;
   timestamp: Timestamp;

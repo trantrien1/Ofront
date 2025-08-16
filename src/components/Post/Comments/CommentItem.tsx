@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import {
   Avatar,
   Box,
@@ -7,7 +7,6 @@ import {
   Spinner,
   Stack,
   Text,
-  Skeleton,
 } from "@chakra-ui/react";
 import { Timestamp } from "firebase/firestore";
 import { FaReddit } from "react-icons/fa";
@@ -16,13 +15,7 @@ import {
   IoArrowUpCircleOutline,
 } from "react-icons/io5";
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
-import dynamic from "next/dynamic";
-
-// Disable SSR for this component to prevent hydration issues
-const CommentItem = dynamic(() => Promise.resolve(CommentItemComponent), {
-  ssr: false,
-  loading: () => <CommentItemSkeleton />
-});
+import { useRouter } from "next/router";
 
 const CommentItemSkeleton = () => (
   <Flex>
@@ -30,8 +23,7 @@ const CommentItemSkeleton = () => (
       <Icon as={FaReddit} fontSize={30} color="gray.300" />
     </Box>
     <Stack spacing={1} flex={1}>
-      <Skeleton height="20px" width="60%" />
-      <Skeleton height="16px" width="100%" />
+      <Text fontSize="sm" color="gray.500">Loading comment...</Text>
     </Stack>
   </Flex>
 );
@@ -61,6 +53,42 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   isLoading,
   userId,
 }) => {
+  const router = useRouter();
+  const commentRef = useRef<HTMLDivElement>(null);
+  const [isHighlighted, setIsHighlighted] = useState(false);
+
+  // Check if this comment should be highlighted based on URL hash
+  useEffect(() => {
+    // Only run on client side after component mounts
+    const checkHighlight = () => {
+      if (typeof window !== 'undefined' && router.isReady) {
+        const hash = window.location.hash;
+        const targetCommentId = hash.replace('#comment-', '');
+        
+        if (targetCommentId === comment.id) {
+          setIsHighlighted(true);
+          // Scroll to the comment
+          setTimeout(() => {
+            commentRef.current?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }, 100);
+          
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            setIsHighlighted(false);
+          }, 3000);
+        }
+      }
+    };
+
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(checkHighlight, 0);
+    
+    return () => clearTimeout(timeoutId);
+  }, [comment.id, router.asPath, router.isReady]);
+
   // const [loading, setLoading] = useState(false);
 
   // const handleDelete = useCallback(async () => {
@@ -79,11 +107,20 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   // }, [setLoading]);
 
   return (
-    <Flex>
+    <Flex
+      ref={commentRef}
+      id={`comment-${comment.id}`}
+      bg={isHighlighted ? "yellow.100" : "transparent"}
+      p={isHighlighted ? 2 : 0}
+      borderRadius={isHighlighted ? "md" : "none"}
+      transition="all 0.3s ease"
+      border={isHighlighted ? "2px solid" : "none"}
+      borderColor={isHighlighted ? "yellow.400" : "transparent"}
+    >
       <Box mr={2}>
         <Icon as={FaReddit} fontSize={30} color="gray.300" />
       </Box>
-      <Stack spacing={1}>
+      <Stack spacing={1} flex={1}>
         <Stack direction="row" align="center" spacing={2} fontSize="8pt">
           <Text
             fontWeight={700}
@@ -127,4 +164,6 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     </Flex>
   );
 };
+
+const CommentItem = CommentItemComponent;
 export default CommentItem;

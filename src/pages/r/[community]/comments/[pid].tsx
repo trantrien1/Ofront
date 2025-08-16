@@ -60,6 +60,24 @@ const PostPage: React.FC<PostPageProps> = () => {
     }
   }, [router.query, postStateValue.selectedPost]);
 
+  // Handle hash-based comment highlighting
+  useEffect(() => {
+    // This effect will trigger when the router is ready and the hash changes
+    // The highlighting logic is handled in CommentItem component
+    if (router.isReady && typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash.startsWith('#comment-')) {
+        // Small delay to ensure comments are rendered
+        setTimeout(() => {
+          const element = document.querySelector(hash);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 500);
+      }
+    }
+  }, [router.isReady, router.asPath]);
+
   return (
     <PageContentLayout>
       <>

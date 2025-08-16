@@ -10,6 +10,7 @@ import { firestore } from "../../firebase/clientApp";
 import { Notification } from "../../atoms/notificationsAtom";
 import { normalizeTimestamp, formatTimeAgo } from "../../helpers/timestampHelpers";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/router";
 
 // Disable SSR for this component to prevent hydration issues
 const NotificationItem = dynamic(() => Promise.resolve(NotificationItemComponent), {
@@ -44,6 +45,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 }) => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   // Fetch user data for the notification
   useEffect(() => {
@@ -89,6 +91,20 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
     }
   };
 
+  const handleNotificationClick = () => {
+    // Mark notification as read
+    onMarkAsRead(notification.id);
+
+    // Navigate to the relevant page
+    if (notification.type === "comment" && notification.postId && notification.communityName) {
+      const url = `/r/${notification.communityName}/comments/${notification.postId}`;
+      // If we have a commentId, add it as a hash to highlight the specific comment
+      const fullUrl = notification.commentId ? `${url}#comment-${notification.commentId}` : url;
+      router.push(fullUrl);
+    }
+    // Add other notification types navigation here if needed
+  };
+
   if (loading) {
     return (
       <Box p={3} borderBottom="1px solid" borderColor="gray.100">
@@ -105,7 +121,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
       bg={notification.read ? "white" : "blue.50"}
       cursor="pointer"
       _hover={{ bg: "gray.50" }}
-      onClick={() => onMarkAsRead(notification.id)}
+      onClick={handleNotificationClick}
     >
       <Flex align="start" gap={3}>
         <Avatar

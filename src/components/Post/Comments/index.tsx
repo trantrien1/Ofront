@@ -121,8 +121,9 @@ const CommentsComponent: React.FC<CommentsProps> = ({
           type: "comment",
           message: "commented on your post",
           userId: user.uid,
-          targetUserId: selectedPost?.creatorId,
+          targetUserId: selectedPost?.creatorId!,
           postId: selectedPost?.id,
+          commentId: commentDocRef.id,
           postTitle: selectedPost?.title,
           communityName: community,
         });

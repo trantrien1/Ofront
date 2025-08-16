@@ -1,30 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Flex, Text, Avatar } from "@chakra-ui/react";
-
-export interface NotificationData {
-  id: string;
-  type: "comment" | "like" | "follow" | "mention";
-  message: string;
-  user: {
-    displayName: string;
-    photoURL?: string;
-  };
-  postTitle?: string;
-  communityName?: string;
-  timestamp: Date;
-  read: boolean;
-}
+import { doc, getDoc } from "firebase/firestore";
+import { firestore } from "../../firebase/clientApp";
+import { Notification } from "../../atoms/notificationsAtom";
 
 type NotificationItemProps = {
-  notification: NotificationData;
+  notification: Notification;
   onMarkAsRead: (id: string) => void;
 };
+
+interface UserData {
+  displayName: string;
+  photoURL?: string;
+}
 
 const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onMarkAsRead,
 }) => {
-  const formatTimeAgo = (date: Date) => {
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user data for the notification
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userDoc = await getDoc(doc(firestore, "users", notification.userId));
+        if (userDoc.exists()) {
+          setUserData(userDoc.data() as UserData);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [notification.userId]);
+
+  const formatTimeAgo = (timestamp: any) => {
+    if (!timestamp) return "Just now";
+    
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
@@ -50,6 +68,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     }
   };
 
+  if (loading) {
+    return (
+      <Box p={3} borderBottom="1px solid" borderColor="gray.100">
+        <Text fontSize="sm" color="gray.500">Loading...</Text>
+      </Box>
+    );
+  }
+
   return (
     <Box
       p={3}
@@ -63,14 +89,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       <Flex align="start" gap={3}>
         <Avatar
           size="sm"
-          src={notification.user.photoURL}
-          name={notification.user.displayName}
+          src={userData?.photoURL}
+          name={userData?.displayName || "Unknown User"}
         />
         <Box flex={1}>
           <Flex align="center" gap={2} mb={1}>
             <Text fontSize="16px">{getTypeEmoji()}</Text>
             <Text fontSize="sm" fontWeight="medium">
-              {notification.user.displayName}
+              {userData?.displayName || "Unknown User"}
             </Text>
           </Flex>
           <Text fontSize="sm" color="gray.600" mb={1}>

@@ -23,6 +23,7 @@ import { useSetRecoilState } from "recoil";
 import { authModalState } from "../../../atoms/authModalAtom";
 import { Post, postState } from "../../../atoms/postsAtom";
 import { firestore } from "../../../firebase/clientApp";
+import { useNotifications } from "../../../hooks/useNotifications";
 import CommentItem, { Comment } from "./CommentItem";
 import CommentInput from "./Input";
 
@@ -44,6 +45,7 @@ const Comments: React.FC<CommentsProps> = ({
   const [deleteLoading, setDeleteLoading] = useState("");
   const setAuthModalState = useSetRecoilState(authModalState);
   const setPostState = useSetRecoilState(postState);
+  const { createNotification } = useNotifications();
 
   const onCreateComment = async (comment: string) => {
     if (!user) {
@@ -102,6 +104,20 @@ const Comments: React.FC<CommentsProps> = ({
         } as Post,
         postUpdateRequired: true,
       }));
+
+      // Create notification for post creator
+      if (selectedPost.creatorId !== user.uid) {
+        createNotification({
+          type: "comment",
+          message: "commented on your post",
+          userId: user.uid,
+          targetUserId: selectedPost.creatorId,
+          postId: selectedPost.id,
+          postTitle: selectedPost.title,
+          communityName: community,
+        });
+      }
+
     } catch (error: any) {
       console.log("onCreateComment error", error.message);
     }

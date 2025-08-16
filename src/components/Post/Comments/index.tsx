@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Box, Button, Flex, Icon, Stack, Text, SkeletonCircle, SkeletonText } from "@chakra-ui/react";
 import { Post, postState } from "../../../atoms/postsAtom";
 import { firestore } from "../../../firebase/clientApp";
-// import { useNotifications } from "../../../hooks/useNotifications";
+import { useNotifications } from "../../../hooks/useNotifications";
 import CommentItem, { Comment } from "./CommentItem";
 import CommentInput from "./Input";
 import {
@@ -55,7 +55,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   const [deleteLoading, setDeleteLoading] = useState("");
   const setAuthModalState = useSetRecoilState(authModalState);
   const setPostState = useSetRecoilState(postState);
-  // const { createNotification } = useNotifications();
+  const { createNotification } = useNotifications();
 
   const onCreateComment = async (comment: string) => {
     if (!user) {
@@ -115,18 +115,18 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         postUpdateRequired: true,
       }));
 
-              // Create notification for post creator
-        // if (selectedPost?.creatorId !== user.uid) {
-        //   createNotification({
-        //     type: "comment",
-        //     message: "commented on your post",
-        //     userId: user.uid,
-        //     targetUserId: selectedPost?.creatorId,
-        //     postId: selectedPost?.id,
-        //     postTitle: selectedPost?.title,
-        //     communityName: community,
-        //   });
-        // }
+      // Create notification for post creator
+      if (selectedPost?.creatorId !== user.uid) {
+        createNotification({
+          type: "comment",
+          message: "commented on your post",
+          userId: user.uid,
+          targetUserId: selectedPost?.creatorId,
+          postId: selectedPost?.id,
+          postTitle: selectedPost?.title,
+          communityName: community,
+        });
+      }
 
     } catch (error: any) {
       console.log("onCreateComment error", error.message);

@@ -13,6 +13,6 @@ const defaultModalState: AuthModalState = {
 };
 
 export const authModalState = atom<AuthModalState>({
-  key: "authModalState_" + Math.random().toString(36).substr(2, 9),
+  key: `atoms/auth/authModalState_${Date.now()}_${Math.random()}`,
   default: defaultModalState,
 });

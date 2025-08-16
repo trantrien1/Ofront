@@ -28,6 +28,6 @@ export const defaultMenuState: DirectoryMenuState = {
 };
 
 export const directoryMenuState = atom({
-  key: "directoryMenuState_" + Math.random().toString(36).substr(2, 9),
+  key: `atoms/directory/directoryMenuState_${Date.now()}_${Math.random()}`,
   default: defaultMenuState,
 });

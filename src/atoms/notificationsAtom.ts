@@ -28,6 +28,6 @@ const defaultNotificationsState: NotificationsState = {
 };
 
 export const notificationsState = atom<NotificationsState>({
-  key: "notificationsState",
+  key: `atoms/notifications/notificationsState_${Date.now()}_${Math.random()}`,
   default: defaultNotificationsState,
 });

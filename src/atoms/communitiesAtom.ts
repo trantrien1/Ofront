@@ -47,6 +47,6 @@ export const defaultCommunityState: CommunityState = {
 };
 
 export const communityState = atom<CommunityState>({
-  key: "communitiesState_" + Math.random().toString(36).substr(2, 9),
+  key: `atoms/communities/communityState_${Date.now()}_${Math.random()}`,
   default: defaultCommunityState,
 });

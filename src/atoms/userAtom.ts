@@ -12,6 +12,6 @@ export interface UserData {
 const defaultUserState: UserData | null = null;
 
 export const userState = atom({
-  key: "userState_" + Math.random().toString(36).substr(2, 9),
+  key: `atoms/user/userState_${Date.now()}_${Math.random()}`,
   default: defaultUserState,
 });

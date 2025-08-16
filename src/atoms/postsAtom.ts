@@ -47,6 +47,6 @@ export const defaultPostState: PostState = {
 };
 
 export const postState = atom({
-  key: "postState_" + Math.random().toString(36).substr(2, 9),
+  key: `atoms/posts/postState_${Date.now()}_${Math.random()}`,
   default: defaultPostState,
 });

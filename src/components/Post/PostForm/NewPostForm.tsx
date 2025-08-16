@@ -26,7 +26,7 @@ import { useRecoilState, useSetRecoilState } from "recoil";
 import { firestore, storage } from "../../../firebase/clientApp";
 import TabItem from "./TabItem";
 import { postState } from "../../../atoms/postsAtom";
-import { getDownloadURL, ref, uploadString } from "firebase/storage";
+
 import TextInputs from "./TextInputs";
 import ImageUpload from "./ImageUpload";
 
@@ -53,7 +53,7 @@ const formTabs = [
   },
 ];
 
-export type TabItem = {
+export type TabItemType = {
   title: string;
   icon: typeof Icon.arguments;
 };
@@ -96,20 +96,11 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
         voteStatus: 0,
         createdAt: serverTimestamp(),
         editedAt: serverTimestamp(),
+        // Save image as base64 if selected
+        imageURL: selectedFile || "",
       });
 
       console.log("HERE IS NEW POST ID", postDocRef.id);
-
-      // // check if selectedFile exists, if it does, do image processing
-      if (selectedFile) {
-        const imageRef = ref(storage, `posts/${postDocRef.id}/image`);
-        await uploadString(imageRef, selectedFile, "data_url");
-        const downloadURL = await getDownloadURL(imageRef);
-        await updateDoc(postDocRef, {
-          imageURL: downloadURL,
-        });
-        console.log("HERE IS DOWNLOAD URL", downloadURL);
-      }
 
       // Clear the cache to cause a refetch of the posts
       setPostItems((prev) => ({
@@ -127,14 +118,51 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
   const onSelectImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const reader = new FileReader();
     if (event.target.files?.[0]) {
-      reader.readAsDataURL(event.target.files[0]);
-    }
-
-    reader.onload = (readerEvent) => {
-      if (readerEvent.target?.result) {
-        setSelectedFile(readerEvent.target?.result as string);
+      const file = event.target.files[0];
+      
+      // Compress image if it's larger than 500KB
+      if (file.size > 500 * 1024) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new window.Image();
+        
+        img.onload = () => {
+          // Calculate new dimensions (max 800px width/height)
+          const maxSize = 800;
+          let { width, height } = img;
+          
+          if (width > height) {
+            if (width > maxSize) {
+              height = (height * maxSize) / width;
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width = (width * maxSize) / height;
+              height = maxSize;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw and compress
+          ctx?.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          setSelectedFile(compressedDataUrl);
+        };
+        
+        img.src = URL.createObjectURL(file);
+      } else {
+        // Use original file if small enough
+        reader.readAsDataURL(file);
+        reader.onload = (readerEvent) => {
+          if (readerEvent.target?.result) {
+            setSelectedFile(readerEvent.target?.result as string);
+          }
+        };
       }
-    };
+    }
   };
 
   const onTextChange = ({
@@ -174,6 +202,9 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
             setSelectedTab={setSelectedTab}
             selectFileRef={selectFileRef}
             onSelectImage={onSelectImage}
+            handleCreatePost={handleCreatePost}
+            loading={loading}
+            textInputs={textInputs}
           />
         )}
       </Flex>

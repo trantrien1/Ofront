@@ -7,6 +7,12 @@ type ImageUploadProps = {
   setSelectedTab: (value: string) => void;
   selectFileRef: React.RefObject<HTMLInputElement>;
   onSelectImage: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleCreatePost: () => void;
+  loading: boolean;
+  textInputs: {
+    title: string;
+    body: string;
+  };
 };
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -15,6 +21,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   setSelectedTab,
   selectFileRef,
   onSelectImage,
+  handleCreatePost,
+  loading,
+  textInputs,
 }) => {
   return (
     <Flex direction="column" justify="center" align="center" width="100%">
@@ -35,6 +44,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               onClick={() => setSelectedFile("")}
             >
               Remove
+            </Button>
+            <Button
+              height="28px"
+              padding="0px 30px"
+              disabled={!textInputs.title}
+              isLoading={loading}
+              onClick={handleCreatePost}
+            >
+              Post
             </Button>
           </Stack>
         </>

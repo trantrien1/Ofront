@@ -25,7 +25,7 @@ import PostItem from "../components/Post/PostItem";
 import { auth, firestore } from "../firebase/clientApp";
 import usePosts from "../hooks/usePosts";
 
-import PersonalHome from "../components/Community/PersonalHome";
+
 
 const Home: NextPage = () => {
   const [user, loadingUser] = useAuthState(auth);
@@ -226,8 +226,6 @@ const Home: NextPage = () => {
       </>
       <Stack spacing={5} position="sticky" top="14px">
         <Recommendations />
-
-        <PersonalHome />
       </Stack>
     </PageContentLayout>
   );

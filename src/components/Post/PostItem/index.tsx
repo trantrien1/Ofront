@@ -90,6 +90,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [loadingPin, setLoadingPin] = useState(false);
   const [hidden, setHidden] = useState(false); // For spoiler functionality
+  const [isPortrait, setIsPortrait] = useState(false);
   const singlePostView = !onSelectPost; // function not passed to [pid]
   
   const communityStateValue = useRecoilValue(communityState);
@@ -98,8 +99,8 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const communityData = communityStateValue.currentCommunity;
 
   // Color mode values for dark theme
-  const cardBg = useColorModeValue("gray.800", "gray.800");
-  const metaColor = useColorModeValue("gray.300", "gray.300");
+  const cardBg = useColorModeValue("white.800", "white.800");
+  const metaColor = useColorModeValue("gray.500", "gray.500");
   const borderCol = useColorModeValue("whiteAlpha.300", "whiteAlpha.300");
 
   const handleDelete = async (
@@ -198,6 +199,10 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       borderColor={borderCol}
       shadow="md"
       cursor={singlePostView ? "unset" : "pointer"}
+      _hover={{
+        bg: "gray.100",
+        
+      }}
       onClick={() => onSelectPost && post && onSelectPost(post, postIdx!)}
     >
       {/* Header meta - Reddit Style */}
@@ -207,7 +212,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         <Text>• {formatTimeAgo(normalizeTimestamp(post.createdAt))}</Text>
         <Text>• posted by {post.userDisplayText}</Text>
         {post.imageURL && (
-          <Badge colorScheme="whiteAlpha" variant="subtle">SPOILER</Badge>
+          <Badge colorScheme="black" variant="subtle">SPOILER</Badge>
         )}
         <Button size="xs" colorScheme="blue" ml="auto" variant="solid">
           Join
@@ -215,13 +220,13 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       </HStack>
 
       {/* Title */}
-      <Text fontSize="xl" fontWeight="bold" mb={3} color="white">
+      <Text fontSize="xl" fontWeight="bold" mb={3} color="gray.350">
         {post.title}
       </Text>
 
       {/* Content */}
       {post.body && (
-        <Text fontSize="md" color="gray.300" mb={3}>
+        <Text fontSize="md" color="black.300" mb={3}>
           {post.body}
         </Text>
       )}
@@ -232,24 +237,44 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           position="relative"
           overflow="hidden"
           rounded="2xl"
-          border="1px solid"
-          borderColor="whiteAlpha.300"
-          bg="black"
           mb={3}
         >
           {/* Ảnh */}
           <Box
-            as="img"
-            src={post.imageURL}
-            alt={post.title}
+            position="relative"
             w="100%"
-            maxH="600px"
-            objectFit="cover"
-            filter={hidden ? "blur(24px) grayscale(40%) brightness(0.7)" : "none"}
-            transform={hidden ? "scale(1.02)" : "scale(1)"}
-            transition="all .25s ease"
-            onLoad={() => setLoadingImage(false)}
-          />
+            maxH="80vh" // giới hạn tối đa chiều cao
+            overflow="hidden"
+            rounded="2xl"
+          >
+            {/* Background mờ */}
+            <Box
+              as="img"
+              src={post.imageURL}
+              alt={post.title}
+              position="absolute"
+              inset={0}
+              w="100%"
+              h="80%"
+              objectFit="cover"
+              filter="blur(20px) brightness(0.7)"
+              transform="scale(1.1)" // phóng to để tránh viền rỗ
+            />
+
+            {/* Ảnh chính */}
+            <Box
+              as="img"
+              src={post.imageURL}
+              alt={post.title}
+              position="relative"
+              zIndex={1}
+              maxW="100%"
+              maxH="80vh"
+              m="auto"
+              objectFit="contain"
+            />
+          </Box>
+
 
           {/* Overlay + nút View spoiler */}
           {hidden && (
@@ -268,7 +293,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
                 rounded="full"
                 px={5}
                 size="sm"
-                bg="blackAlpha.700"
+                bg="black.700"
                 _hover={{ bg: "blackAlpha.600" }}
               >
                 View spoiler
@@ -286,7 +311,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         rounded="full"
         border="1px solid"
         borderColor="whiteAlpha.300"
-        bg="gray.800"
+        bg="gray.300"
         transition="all 0.2s ease"
         cursor="pointer"
         onClick={(e) => e.stopPropagation()}
@@ -299,18 +324,16 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           variant="ghost"
           bg={userVoteValue === 1 ? "orange.400" : "gray.300"}
           borderRadius="full"
-          border="1px solid"
           borderColor={userVoteValue === 1 ? "orange.400" : "transparent"}
           _hover={{
-            bg: "gray.700",
-            borderColor: "orange.500",
+            bg: "gray.200",
             transform: "scale(1.1)"
           }}
           transition="all 0.2s ease"
           onClick={(event) => onVote(event, post, 1, post.communityId)}
         />
         
-        <Text fontWeight="semibold" color="white">
+        <Text fontWeight="semibold" color="black">
           {post.voteStatus.toLocaleString()}
         </Text>
         
@@ -321,11 +344,9 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           variant="ghost"
           bg={userVoteValue === -1 ? "blue.400" : "gray.300"}
           borderRadius="full"
-          border="1px solid"
           borderColor={userVoteValue === -1 ? "blue.400" : "transparent"}
           _hover={{
-            bg: "gray.700",
-            borderColor: "blue.500",
+            bg: "gray.200",
             transform: "scale(1.1)"
           }}
           transition="all 0.2s ease"
@@ -338,28 +359,26 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           px={3}
           py={2}
           rounded="full"
-          border="1px solid"
           borderColor="gray.800"
-          bg="gray.700"
+          bg="gray.300"
           _hover={{ 
-            bg: "gray.700", 
+            bg: "gray.350", 
             borderColor: "gray.600",
             transform: "scale(1.05)"
           }}
         >
-          <ChatIcon color="gray.400" />
-          <Text color="gray.400">{post.numberOfComments}</Text>
+          <ChatIcon color="gray.350" />
+          <Text color="gray.350">{post.numberOfComments}</Text>
         </HStack>
 
         <HStack
           px={3}
           py={2}
           rounded="full"
-          border="1px solid"
           borderColor="gray.800"
-          bg="gray.700"
+          bg="gray.300"
           _hover={{ 
-            bg: "gray.600", 
+            bg: "gray.350", 
             borderColor: "gray.600",
             transform: "scale(1.05)"
           }}
@@ -367,8 +386,8 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           cursor="pointer"
           onClick={(e) => e.stopPropagation()}
         >
-          <FiShare2 color="white" />
-          <Text color="white" fontSize="sm" fontWeight="medium">
+          <FiShare2 color="gray.350" />
+          <Text color="gray.350" fontSize="sm" fontWeight="medium">
             Share
           </Text>
         </HStack>
@@ -379,11 +398,10 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             px={3}
             py={2}
             rounded="full"
-            border="1px solid"
             borderColor="gray.800"
-            bg="gray.700"
+            bg="gray.300"
             _hover={{ 
-              bg: "gray.600", 
+              bg: "gray.350", 
               borderColor: "gray.600",
               transform: "scale(1.05)"
             }}
@@ -398,11 +416,11 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             }}
           >
             {loadingPin ? (
-              <Spinner size="sm" color="white" />
+              <Spinner size="sm" color="gray.350" />
             ) : (
-              <Icon as={MdPushPin} color="white" />
+              <Icon as={MdPushPin} color="gray.350" />
             )}
-            <Text color="white" fontSize="sm" fontWeight="medium">
+            <Text color="gray.350" fontSize="sm" fontWeight="medium">
               {loadingPin ? "Processing..." : (isPinned ? "Unpin" : "Pin")}
             </Text>
           </HStack>
@@ -413,11 +431,10 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             px={3}
             py={2}
             rounded="full"
-            border="1px solid"
             borderColor="gray.800"
-            bg="gray.700"
+            bg="gray.300"
             _hover={{ 
-              bg: "gray.600", 
+              bg: "gray.350", 
               borderColor: "gray.600",
               transform: "scale(1.05)"
             }}
@@ -429,8 +446,8 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
               <Spinner size="sm" color="white" />
             ) : (
               <>
-                <Icon as={AiOutlineDelete} color="white" />
-                <Text color="white" fontSize="sm" fontWeight="medium">
+                <Icon as={AiOutlineDelete} color="gray.350" />
+                <Text color="gray.350" fontSize="sm" fontWeight="medium">
                   Delete
                 </Text>
               </>

@@ -75,10 +75,10 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             });
           }, 100);
           
-          // Remove highlight after 3 seconds
+          // Remove highlight after 2 seconds
           setTimeout(() => {
             setIsHighlighted(false);
-          }, 3000);
+          }, 2000);
         }
       }
     };
@@ -110,12 +110,12 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     <Flex
       ref={commentRef}
       id={`comment-${comment.id}`}
-      bg={isHighlighted ? "yellow.100" : "transparent"}
+      bg={isHighlighted ? "gray.100" : "transparent"}
       p={isHighlighted ? 2 : 0}
       borderRadius={isHighlighted ? "md" : "none"}
-      transition="all 0.3s ease"
-      border={isHighlighted ? "2px solid" : "none"}
-      borderColor={isHighlighted ? "yellow.400" : "transparent"}
+      transition="all 0.2s ease"
+      //border={isHighlighted ? "2px solid" : "none"}
+      borderColor={isHighlighted ? "gray.400" : "transparent"}
     >
       <Box mr={2}>
         <Icon as={FaReddit} fontSize={30} color="gray.300" />

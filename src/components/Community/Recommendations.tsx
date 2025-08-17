@@ -5,8 +5,6 @@ import {
   Flex,
   Icon,
   Image,
-  Skeleton,
-  SkeletonCircle,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -21,10 +19,10 @@ import dynamic from "next/dynamic";
 // Disable SSR for this component to prevent hydration issues
 const Recommendations = dynamic(() => Promise.resolve(RecommendationsComponent), {
   ssr: false,
-  loading: () => <RecommendationsSkeleton />
+  loading: () => <RecommendationsBox />
 });
 
-const RecommendationsSkeleton = () => (
+const RecommendationsBox = () => (
   <Flex
     direction="column"
     bg="white"
@@ -50,16 +48,16 @@ const RecommendationsSkeleton = () => (
     </Flex>
     <Stack mt={2} p={3}>
       <Flex justify="space-between" align="center">
-        <SkeletonCircle size="10" />
-        <Skeleton height="10px" width="70%" />
+        <Box width="40px" height="40px" bg="gray.200" borderRadius="full" />
+        <Box height="10px" width="70%" bg="gray.200" borderRadius="md" />
       </Flex>
       <Flex justify="space-between" align="center">
-        <SkeletonCircle size="10" />
-        <Skeleton height="10px" width="70%" />
+        <Box width="40px" height="40px" bg="gray.200" borderRadius="full" />
+        <Box height="10px" width="70%" bg="gray.200" borderRadius="md" />
       </Flex>
       <Flex justify="space-between" align="center">
-        <SkeletonCircle size="10" />
-        <Skeleton height="10px" width="70%" />
+        <Box width="40px" height="40px" bg="gray.200" borderRadius="full" />
+        <Box height="10px" width="70%" bg="gray.200" borderRadius="md" />
       </Flex>
     </Stack>
   </Flex>
@@ -126,16 +124,16 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
         {loading ? (
           <Stack mt={2} p={3}>
             <Flex justify="space-between" align="center">
-              <SkeletonCircle size="10" />
-              <Skeleton height="10px" width="70%" />
+              <Box width="40px" height="40px" bg="gray.200" borderRadius="full" />
+              <Box height="10px" width="70%" bg="gray.200" borderRadius="md" />
             </Flex>
             <Flex justify="space-between" align="center">
-              <SkeletonCircle size="10" />
-              <Skeleton height="10px" width="70%" />
+              <Box width="40px" height="40px" bg="gray.200" borderRadius="full" />
+              <Box height="10px" width="70%" bg="gray.200" borderRadius="md" />
             </Flex>
             <Flex justify="space-between" align="center">
-              <SkeletonCircle size="10" />
-              <Skeleton height="10px" width="70%" />
+              <Box width="40px" height="40px" bg="gray.200" borderRadius="full" />
+              <Box height="10px" width="70%" bg="gray.200" borderRadius="md" />
             </Flex>
           </Stack>
         ) : (

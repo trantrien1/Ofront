@@ -5,8 +5,6 @@ import {
   Divider,
   Flex,
   Icon,
-  Skeleton,
-  SkeletonCircle,
   Stack,
   Text,
   Image,
@@ -42,11 +40,11 @@ const AboutSkeleton = () => (
       bg="blue.500"
       borderRadius="4px 4px 0px 0px"
     >
-      <Skeleton height="20px" width="60%" />
+      <Box height="20px" width="60%" bg="gray.200" borderRadius="md" />
     </Flex>
     <Flex direction="column" bg="white" p={3} borderRadius="0px 0px 4px 4px">
-      <Skeleton height="16px" width="40%" mb={2} />
-      <Skeleton height="12px" width="80%" />
+      <Box height="16px" width="40%" bg="gray.200" borderRadius="md" mb={2} />
+      <Box height="12px" width="80%" bg="gray.200" borderRadius="md" />
     </Flex>
   </Box>
 );
@@ -135,11 +133,11 @@ const AboutComponent: React.FC<AboutProps> = ({
       <Flex direction="column" p={3} bg="white" borderRadius="0px 0px 4px 4px">
         {loading ? (
           <Stack mt={2}>
-            <SkeletonCircle size="10" />
-            <Skeleton height="10px" />
-            <Skeleton height="20px" />
-            <Skeleton height="20px" />
-            <Skeleton height="20px" />
+            <Box width="40px" height="40px" bg="gray.200" borderRadius="full" />
+            <Box height="10px" bg="gray.200" borderRadius="md" />
+            <Box height="20px" bg="gray.200" borderRadius="md" />
+            <Box height="20px" bg="gray.200" borderRadius="md" />
+            <Box height="20px" bg="gray.200" borderRadius="md" />
           </Stack>
         ) : (
           <>

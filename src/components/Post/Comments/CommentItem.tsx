@@ -7,6 +7,7 @@ import {
   Spinner,
   Stack,
   Text,
+  Button,
 } from "@chakra-ui/react";
 import { Timestamp } from "firebase/firestore";
 import { FaReddit } from "react-icons/fa";
@@ -17,6 +18,7 @@ import {
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
+import ReplyInput from "./ReplyInput";
 
 // Disable SSR for this component to prevent hydration issues
 const DynamicCommentItem = dynamic(() => Promise.resolve(CommentItemComponent), {
@@ -45,24 +47,36 @@ export type Comment = {
   postTitle: string;
   text: string;
   createdAt?: Timestamp;
+  parentId?: string; // ID of parent comment (for replies)
+  replies?: Comment[]; // Nested replies
+  replyCount?: number; // Number of replies
 };
 
 type CommentItemProps = {
   comment: Comment;
   onDeleteComment: (comment: Comment) => void;
+  onReply: (parentComment: Comment, replyText: string) => void;
   isLoading: boolean;
   userId?: string;
+  user?: any;
+  level?: number; // Nesting level (0 = top level, 1 = reply, 2 = reply to reply, etc.)
 };
 
 const CommentItemComponent: React.FC<CommentItemProps> = ({
   comment,
   onDeleteComment,
+  onReply,
   isLoading,
   userId,
+  user,
+  level = 0,
 }) => {
   const router = useRouter();
   const commentRef = useRef<HTMLDivElement>(null);
   const [isHighlighted, setIsHighlighted] = useState(false);
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
 
   // Check if this comment should be highlighted based on URL hash
   useEffect(() => {
@@ -96,79 +110,124 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     return () => clearTimeout(timeoutId);
   }, [comment.id, router.asPath, router.isReady]);
 
-  // const [loading, setLoading] = useState(false);
+  const handleReply = async (replyText: string) => {
+    setReplyLoading(true);
+    try {
+      await onReply(comment, replyText);
+      setReplyText("");
+      setShowReplyInput(false);
+    } catch (error: any) {
+      console.log("Error creating reply:", error.message);
+    }
+    setReplyLoading(false);
+  };
 
-  // const handleDelete = useCallback(async () => {
-  //   setLoading(true);
-  //   try {
-  //     const success = await onDeleteComment(comment);
-
-  //     if (!success) {
-  //       throw new Error("Error deleting comment");
-  //     }
-  //   } catch (error: any) {
-  //     console.log(error.message);
-  //     // setError
-  //     setLoading(false);
-  //   }
-  // }, [setLoading]);
+  const handleCancelReply = () => {
+    setShowReplyInput(false);
+    setReplyText("");
+  };
 
   return (
-    <Flex
-      ref={commentRef}
-      id={`comment-${comment.id}`}
-      bg={isHighlighted ? "gray.100" : "transparent"}
-      p={isHighlighted ? 2 : 0}
-      borderRadius={isHighlighted ? "md" : "none"}
-      transition="all 0.2s ease"
-      //border={isHighlighted ? "2px solid" : "none"}
-      borderColor={isHighlighted ? "gray.400" : "transparent"}
-    >
-      <Box mr={2}>
-        <Icon as={FaReddit} fontSize={30} color="gray.300" />
-      </Box>
-      <Stack spacing={1} flex={1}>
-        <Stack direction="row" align="center" spacing={2} fontSize="8pt">
-          <Text
-            fontWeight={700}
-            _hover={{ textDecoration: "underline", cursor: "pointer" }}
-          >
-            {comment.creatorDisplayText}
-          </Text>
-          {comment.createdAt && (
-            <Text color="gray.600">
-              {formatTimeAgo(normalizeTimestamp(comment.createdAt))}
+    <Box>
+      <Flex
+        ref={commentRef}
+        id={`comment-${comment.id}`}
+        bg={isHighlighted ? "gray.100" : "transparent"}
+        p={isHighlighted ? 2 : 0}
+        borderRadius={isHighlighted ? "md" : "none"}
+        transition="all 0.2s ease"
+        borderColor={isHighlighted ? "gray.400" : "transparent"}
+        ml={level * 4} // Indent based on nesting level
+      >
+        <Box mr={2}>
+          <Icon as={FaReddit} fontSize={30} color="gray.300" />
+        </Box>
+        <Stack spacing={1} flex={1}>
+          <Stack direction="row" align="center" spacing={2} fontSize="8pt">
+            <Text
+              fontWeight={700}
+              _hover={{ textDecoration: "underline", cursor: "pointer" }}
+            >
+              {comment.creatorDisplayText}
             </Text>
-          )}
-          {isLoading && <Spinner size="sm" />}
-        </Stack>
-        <Text fontSize="10pt">{comment.text}</Text>
-        <Stack
-          direction="row"
-          align="center"
-          cursor="pointer"
-          fontWeight={600}
-          color="gray.500"
-        >
-          <Icon as={IoArrowUpCircleOutline} />
-          <Icon as={IoArrowDownCircleOutline} />
-          {userId === comment.creatorId && (
-            <>
-              <Text fontSize="9pt" _hover={{ color: "blue.500" }}>
-                Edit
+            {comment.createdAt && (
+              <Text color="gray.600">
+                {formatTimeAgo(normalizeTimestamp(comment.createdAt))}
               </Text>
-              <Text
-                fontSize="9pt"
-                _hover={{ color: "blue.500" }}
-                onClick={() => onDeleteComment(comment)}
-              >
-                Delete
+            )}
+            {isLoading && <Spinner size="sm" />}
+          </Stack>
+          <Text fontSize="10pt">{comment.text}</Text>
+          <Stack
+            direction="row"
+            align="center"
+            cursor="pointer"
+            fontWeight={600}
+            color="gray.500"
+          >
+            <Icon as={IoArrowUpCircleOutline} />
+            <Icon as={IoArrowDownCircleOutline} />
+            <Text 
+              fontSize="9pt" 
+              _hover={{ color: "blue.500" }}
+              onClick={() => setShowReplyInput(!showReplyInput)}
+            >
+              Reply
+            </Text>
+            {comment.replyCount && comment.replyCount > 0 && (
+              <Text fontSize="9pt" color="gray.400">
+                {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
               </Text>
-            </>
-          )}
+            )}
+            {userId === comment.creatorId && (
+              <>
+                <Text fontSize="9pt" _hover={{ color: "blue.500" }}>
+                  Edit
+                </Text>
+                <Text
+                  fontSize="9pt"
+                  _hover={{ color: "blue.500" }}
+                  onClick={() => onDeleteComment(comment)}
+                >
+                  Delete
+                </Text>
+              </>
+            )}
+          </Stack>
         </Stack>
-      </Stack>
-    </Flex>
+      </Flex>
+      
+      {/* Reply Input */}
+      {showReplyInput && (
+        <ReplyInput
+          comment={replyText}
+          setComment={setReplyText}
+          loading={replyLoading}
+          user={user}
+          onReply={handleReply}
+          onCancel={handleCancelReply}
+          parentCommentText={comment.text}
+        />
+      )}
+      
+      {/* Nested Replies */}
+      {comment.replies && comment.replies.length > 0 && (
+        <Stack spacing={2} mt={2}>
+          {comment.replies.map((reply) => (
+            <CommentItemComponent
+              key={reply.id}
+              comment={reply}
+              onDeleteComment={onDeleteComment}
+              onReply={onReply}
+              isLoading={isLoading}
+              userId={userId}
+              user={user}
+              level={level + 1}
+            />
+          ))}
+        </Stack>
+      )}
+    </Box>
   );
 };
 

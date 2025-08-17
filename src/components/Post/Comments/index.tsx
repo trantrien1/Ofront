@@ -78,7 +78,9 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         text: comment,
         postTitle: selectedPost?.title,
         createdAt: serverTimestamp(),
-      } as Comment);
+        parentId: null, // Top-level comment
+        replyCount: 0,
+      });
 
       // Update post numberOfComments
       batch.update(doc(firestore, "posts", selectedPost?.id!), {
@@ -135,6 +137,105 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     setCommentCreateLoading(false);
   };
 
+  const onReply = async (parentComment: Comment, replyText: string) => {
+    if (!user) {
+      setAuthModalState({ open: true, view: "login" });
+      return;
+    }
+
+    try {
+      const batch = writeBatch(firestore);
+
+      // Create reply document
+      const replyDocRef = doc(collection(firestore, "comments"));
+      batch.set(replyDocRef, {
+        postId: selectedPost?.id,
+        creatorId: user.uid,
+        creatorDisplayText: user.email!.split("@")[0],
+        creatorPhotoURL: user.photoURL,
+        communityId: community,
+        text: replyText,
+        postTitle: selectedPost?.title,
+        createdAt: serverTimestamp(),
+        parentId: parentComment.id, // Link to parent comment
+        replyCount: 0,
+      });
+
+      // Update parent comment's reply count
+      if (parentComment.id) {
+        batch.update(doc(firestore, "comments", parentComment.id), {
+          replyCount: increment(1),
+        });
+      }
+
+      // Update post numberOfComments
+      batch.update(doc(firestore, "posts", selectedPost?.id!), {
+        numberOfComments: increment(1),
+      });
+
+      await batch.commit();
+
+      // Update local state
+      const newReply: Comment = {
+        id: replyDocRef.id,
+        creatorId: user.uid,
+        creatorDisplayText: user.email!.split("@")[0],
+        creatorPhotoURL: user.photoURL,
+        communityId: community,
+        postId: selectedPost?.id!,
+        postTitle: selectedPost?.title!,
+        text: replyText,
+        createdAt: {
+          seconds: Date.now() / 1000,
+          nanoseconds: 0,
+        } as any,
+        parentId: parentComment.id,
+        replyCount: 0,
+      };
+
+      // Add reply to parent comment's replies array
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === parentComment.id) {
+            return {
+              ...c,
+              replies: [...(c.replies || []), newReply],
+              replyCount: (c.replyCount || 0) + 1,
+            };
+          }
+          return c;
+        })
+      );
+
+      // Update post state
+      setPostState((prev) => ({
+        ...prev,
+        selectedPost: {
+          ...prev.selectedPost,
+          numberOfComments: prev.selectedPost?.numberOfComments! + 1,
+        } as Post,
+        postUpdateRequired: true,
+      }));
+
+      // Create notification for parent comment creator
+      if (parentComment.creatorId !== user.uid) {
+        createNotification({
+          type: "comment",
+          message: "replied to your comment",
+          userId: user.uid,
+          targetUserId: parentComment.creatorId,
+          postId: selectedPost?.id,
+          commentId: replyDocRef.id,
+          postTitle: selectedPost?.title,
+          communityName: community,
+        });
+      }
+
+    } catch (error: any) {
+      console.log("onReply error", error.message);
+    }
+  };
+
   const onDeleteComment = async (comment: Comment) => {
     setDeleteLoading(comment.id as string);
     try {
@@ -171,23 +272,46 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     try {
       console.log("Fetching comments for post:", selectedPost?.id);
       
-      // First try to fetch all comments to see what's in the database
-      const allCommentsQuery = query(collection(firestore, "comments"));
-      const allCommentDocs = await getDocs(allCommentsQuery);
-      const allComments = allCommentDocs.docs.map((doc) => ({
+      // Fetch all comments for this post
+      const commentsQuery = query(
+        collection(firestore, "comments"),
+        where("postId", "==", selectedPost?.id)
+      );
+      const commentDocs = await getDocs(commentsQuery);
+      const allComments = commentDocs.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      }));
-      console.log("All comments in database:", allComments);
+      })) as Comment[];
       
-      // Filter comments for this specific post
-      const postComments = allComments.filter((comment: any) => {
-        console.log("Comparing:", comment.postId, "===", selectedPost?.id, "Result:", comment.postId === selectedPost?.id);
-        return comment.postId === selectedPost?.id;
+      console.log("All comments for this post:", allComments);
+      
+      // Organize comments into a tree structure
+      const commentMap = new Map<string, Comment>();
+      const topLevelComments: Comment[] = [];
+      
+      // First pass: create a map of all comments
+      allComments.forEach((comment) => {
+        commentMap.set(comment.id!, comment);
+        comment.replies = [];
       });
       
-      console.log("Filtered comments for this post:", postComments);
-      setComments(postComments as Comment[]);
+      // Second pass: organize into parent-child relationships
+      allComments.forEach((comment) => {
+        if (comment.parentId) {
+          // This is a reply
+          const parentComment = commentMap.get(comment.parentId);
+          if (parentComment) {
+            parentComment.replies = parentComment.replies || [];
+            parentComment.replies.push(comment);
+          }
+        } else {
+          // This is a top-level comment
+          topLevelComments.push(comment);
+        }
+      });
+      
+      console.log("Organized comments:", topLevelComments);
+      setComments(topLevelComments);
       
     } catch (error: any) {
       console.log("getPostComments error", error.message);
@@ -255,8 +379,10 @@ const CommentsComponent: React.FC<CommentsProps> = ({
                     key={item.id}
                     comment={item}
                     onDeleteComment={onDeleteComment}
+                    onReply={onReply}
                     isLoading={deleteLoading === (item.id as string)}
                     userId={user?.uid}
+                    user={user}
                   />
                 ))}
               </>

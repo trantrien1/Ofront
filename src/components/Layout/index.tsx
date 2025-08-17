@@ -3,6 +3,7 @@ import { Box, Flex } from "@chakra-ui/react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../../firebase/clientApp";
 import useAuth from "../../hooks/useAuth";
+import Navbar from "../Navbar";
 import Sidebar from "./Sidebar";
 import AuthModal from "../Modal/Auth";
 
@@ -23,18 +24,36 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
-      <Flex minH="100vh">
-        <Sidebar />
-        <Box 
-          flex={1} 
-          ml={isCollapsed ? "80px" : "280px"} 
-          bg="gray.50"
-          transition="margin-left 0.3s ease"
+      <Box>
+        {/* Top Header/Navbar */}
+        <Box
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          zIndex={1001}
+          bg="white"
+          borderBottom="1px solid"
+          borderColor="gray.200"
         >
-          {children}
+          <Navbar />
         </Box>
+
+        {/* Main Layout */}
+        <Flex minH="100vh" pt="44px"> {/* Add top padding for fixed header */}
+          <Sidebar />
+          <Box 
+            flex={1} 
+            ml={isCollapsed ? "80px" : "280px"} 
+            bg="gray.50"
+            transition="margin-left 0.3s ease"
+          >
+            {children}
+          </Box>
+        </Flex>
+        
         <AuthModal />
-      </Flex>
+      </Box>
     </SidebarContext.Provider>
   );
 };

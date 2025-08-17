@@ -20,7 +20,6 @@ import { useRouter } from "next/router";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue } from "recoil";
 import {
-  FaReddit,
   FaHome,
   FaFire,
   FaPlus,
@@ -176,8 +175,8 @@ const Sidebar: React.FC = () => {
     <Box
       position="fixed"
       left={0}
-      top={0}
-      h="100vh"
+      top="44px" // Start below the header
+      h="calc(100vh - 44px)" // Full height minus header height
       w={isCollapsed ? "80px" : "280px"}
       bg={bgColor}
       borderRight="1px solid"
@@ -189,26 +188,8 @@ const Sidebar: React.FC = () => {
       transition="width 0.3s ease"
     >
       <VStack spacing={0} align="stretch" h="full">
-        {/* Logo Section */}
-        <Flex
-          align="center"
-          p={4}
-          borderBottom="1px solid"
-          borderColor={borderColor}
-          cursor="pointer"
-          onClick={() => handleNavigation("/")}
-          justify={isCollapsed ? "center" : "flex-start"}
-        >
-          <Icon as={FaReddit} fontSize="32px" color="brand.100" mr={isCollapsed ? 0 : 3} />
-          {!isCollapsed && (
-            <Text fontSize="xl" fontWeight="bold" color="brand.100">
-              Reddit
-            </Text>
-          )}
-        </Flex>
-
         {/* Toggle Button */}
-        <Flex justify={isCollapsed ? "center" : "flex-end"} p={2}>
+        <Flex justify={isCollapsed ? "center" : "flex-end"} p={3} borderBottom="1px solid" borderColor={borderColor}>
           <IconButton
             aria-label="Toggle Sidebar"
             icon={<Icon as={isCollapsed ? FaBars : FaBars} />}
@@ -318,7 +299,7 @@ const Sidebar: React.FC = () => {
                     key={snippet.communityId}
                     name={snippet.communityId}
                     icon={snippet.imageURL}
-                    memberCount={snippet.memberCount}
+                    memberCount={undefined}
                     path={`/r/${snippet.communityId}`}
                   />
                 ))}
@@ -344,7 +325,7 @@ const Sidebar: React.FC = () => {
                 memberCount={15420}
                 path="/r/VietNamNation"
               />
-            </VStack>
+            </VStack> 
           </Collapse>
         </Box>
 

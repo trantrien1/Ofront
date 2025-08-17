@@ -8,7 +8,7 @@ import {
   directoryMenuState,
 } from "../../atoms/directoryMenuAtom";
 import { auth } from "../../firebase/clientApp";
-import Directory from "./Directory";
+
 import RightContent from "./RightContent";
 import SearchInput from "./SearchInput";
 import router from "next/router";
@@ -41,7 +41,7 @@ const Navbar: React.FC = () => {
           height="46px"
         />
       </Flex>
-      {user && <Directory />}
+
       <SearchInput user={user as User} />
       <RightContent user={user as User} />
     </Flex>

@@ -5,15 +5,14 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilState } from "recoil";
 import safeJsonStringify from "safe-json-stringify";
 import { Community, communityState } from "../../../atoms/communitiesAtom";
-import About from "../../../components/Community/About";
 import CommunityNotFound from "../../../components/Community/CommunityNotFound";
-
+import CommunityInfo from "../../../components/Community/CommunityInfo";
 import Header from "../../../components/Community/Header";
-import CommunityManagement from "../../../components/Community/CommunityManagement";
 import CommunityRules from "../../../components/Community/CommunityRules";
-import TestManagement from "../../../components/Community/TestManagement";
+import CommunityHighlights from "../../../components/Community/CommunityHighlights";
 import PageContentLayout from "../../../components/Layout/PageContent";
 import Posts from "../../../components/Post/Posts";
+import { usePinnedPosts } from "../../../hooks/usePinnedPosts";
 import { auth, firestore } from "../../../firebase/clientApp";
 
 interface CommunityPageProps {
@@ -25,6 +24,10 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
 
   const [communityStateValue, setCommunityStateValue] =
     useRecoilState(communityState);
+
+  const { pinnedPosts, loading: loadingPinnedPosts } = usePinnedPosts(
+    communityData.pinnedPosts || []
+  );
 
   // useEffect(() => {
   //   // First time the user has navigated to this community page during session - add to cache
@@ -60,7 +63,10 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
       <PageContentLayout>
         {/* Left Content */}
         <>
-  
+          <CommunityHighlights 
+            pinnedPosts={pinnedPosts}
+            communityData={communityData}
+          />
           <Posts
             communityData={communityData}
             userId={user?.uid}
@@ -69,10 +75,8 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
         </>
         {/* Right Content */}
         <>
-          <About communityData={communityData} />
-          <TestManagement communityId={communityData.id} />
+          <CommunityInfo communityData={communityData} />
           <CommunityRules communityData={communityData} />
-          <CommunityManagement communityData={communityData} />
         </>
       </PageContentLayout>
     </>
@@ -103,5 +107,10 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   } catch (error) {
     // Could create error page here
     console.log("getServerSideProps error - [community]", error);
+    return {
+      props: {
+        communityData: "",
+      },
+    };
   }
 }

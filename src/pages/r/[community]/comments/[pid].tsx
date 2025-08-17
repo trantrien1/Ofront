@@ -31,8 +31,6 @@ const PostPage: React.FC<PostPageProps> = () => {
   } = usePosts(communityStateValue.currentCommunity);
 
   const fetchPost = async () => {
-    console.log("FETCHING POST");
-
     setLoading(true);
     try {
       const postDocRef = doc(firestore, "posts", pid as string);
@@ -41,10 +39,6 @@ const PostPage: React.FC<PostPageProps> = () => {
         ...prev,
         selectedPost: { id: postDoc.id, ...postDoc.data() } as Post,
       }));
-      // setPostStateValue((prev) => ({
-      //   ...prev,
-      //   selectedPost: {} as Post,
-      // }));
     } catch (error: any) {
       console.log("fetchPost error", error.message);
     }
@@ -55,10 +49,13 @@ const PostPage: React.FC<PostPageProps> = () => {
   useEffect(() => {
     const { pid } = router.query;
 
-    if (pid && !postStateValue.selectedPost) {
-      fetchPost();
+    if (pid) {
+      // Always fetch post when pid changes, regardless of selectedPost state
+      if (postStateValue.selectedPost?.id !== pid) {
+        fetchPost();
+      }
     }
-  }, [router.query, postStateValue.selectedPost]);
+  }, [router.query.pid, postStateValue.selectedPost?.id, fetchPost]);
 
   // Handle hash-based comment highlighting
   useEffect(() => {

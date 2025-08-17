@@ -31,6 +31,11 @@ import Link from "next/link";
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 import dynamic from "next/dynamic";
 import PostModeration from "../PostModeration";
+import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { firestore } from "../../../firebase/clientApp";
+import { useRecoilValue, useSetRecoilState } from "recoil";
+import { communityState } from "../../../atoms/communitiesAtom";
+import { useToast } from "@chakra-ui/react";
 
 // Disable SSR for this component to prevent hydration issues
 const PostItem = dynamic(() => Promise.resolve(PostItemComponent), {
@@ -83,8 +88,14 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
 }) => {
   const [loadingImage, setLoadingImage] = useState(true);
   const [loadingDelete, setLoadingDelete] = useState(false);
+  const [loadingPin, setLoadingPin] = useState(false);
   const [hidden, setHidden] = useState(false); // For spoiler functionality
   const singlePostView = !onSelectPost; // function not passed to [pid]
+  
+  const communityStateValue = useRecoilValue(communityState);
+  const setCommunityStateValue = useSetRecoilState(communityState);
+  const toast = useToast();
+  const communityData = communityStateValue.currentCommunity;
 
   // Color mode values for dark theme
   const cardBg = useColorModeValue("gray.800", "gray.800");
@@ -114,6 +125,69 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       // setError
     }
   };
+
+  const handlePinPost = async () => {
+    setLoadingPin(true);
+    try {
+      const communityRef = doc(firestore, "communities", post.communityId);
+      const isPinned = communityData?.pinnedPosts?.includes(post.id);
+      
+      if (isPinned) {
+        // Unpin post
+        await updateDoc(communityRef, {
+          pinnedPosts: arrayRemove(post.id)
+        });
+        
+        // Update local state
+        const updatedPinnedPosts = communityData.pinnedPosts?.filter(id => id !== post.id) || [];
+        setCommunityStateValue(prev => ({
+          ...prev,
+          currentCommunity: {
+            ...prev.currentCommunity,
+            pinnedPosts: updatedPinnedPosts
+          }
+        }));
+        
+        toast({
+          title: "Post unpinned successfully",
+          status: "success",
+          duration: 3000,
+        });
+      } else {
+        // Pin post
+        await updateDoc(communityRef, {
+          pinnedPosts: arrayUnion(post.id)
+        });
+        
+        // Update local state
+        const updatedPinnedPosts = [...(communityData.pinnedPosts || []), post.id];
+        setCommunityStateValue(prev => ({
+          ...prev,
+          currentCommunity: {
+            ...prev.currentCommunity,
+            pinnedPosts: updatedPinnedPosts
+          }
+        }));
+        
+        toast({
+          title: "Post pinned successfully",
+          status: "success",
+          duration: 3000,
+        });
+      }
+      
+    } catch (error) {
+      toast({
+        title: "Error pinning/unpinning post",
+        status: "error",
+        duration: 3000,
+      });
+    } finally {
+      setLoadingPin(false);
+    }
+  };
+
+  const isPinned = communityData?.pinnedPosts?.includes(post.id) || false;
 
   return (
     <Box
@@ -314,15 +388,22 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
               transform: "scale(1.05)"
             }}
             transition="all 0.2s ease"
-            cursor="pointer"
+            cursor={loadingPin ? "not-allowed" : "pointer"}
+            opacity={loadingPin ? 0.6 : 1}
             onClick={(e) => {
               e.stopPropagation();
-              console.log("Pin post:", post.id);
+              if (!loadingPin) {
+                handlePinPost();
+              }
             }}
           >
-            <Icon as={MdPushPin} color="white" />
+            {loadingPin ? (
+              <Spinner size="sm" color="white" />
+            ) : (
+              <Icon as={MdPushPin} color="white" />
+            )}
             <Text color="white" fontSize="sm" fontWeight="medium">
-              Pin
+              {loadingPin ? "Processing..." : (isPinned ? "Unpin" : "Pin")}
             </Text>
           </HStack>
         )}

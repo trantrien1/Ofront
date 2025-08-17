@@ -16,6 +16,13 @@ import {
 } from "react-icons/io5";
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
+
+// Disable SSR for this component to prevent hydration issues
+const DynamicCommentItem = dynamic(() => Promise.resolve(CommentItemComponent), {
+  ssr: false,
+  loading: () => <CommentItemSkeleton />
+});
 
 const CommentItemSkeleton = () => (
   <Flex>
@@ -165,5 +172,4 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   );
 };
 
-const CommentItem = CommentItemComponent;
-export default CommentItem;
+export default DynamicCommentItem;

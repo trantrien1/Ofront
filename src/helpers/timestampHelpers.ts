@@ -19,6 +19,17 @@ export const timestampToISO = (timestamp: Timestamp | null | undefined): string 
 export const formatTimeAgo = (isoString: string): string => {
   if (!isoString) return "Just now";
   
+  // Check if we're on the client side
+  if (typeof window === 'undefined') {
+    // On server side, return a static format to prevent hydration mismatch
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleDateString();
+    } catch (error) {
+      return "Just now";
+    }
+  }
+  
   try {
     return moment(isoString).fromNow();
   } catch (error) {

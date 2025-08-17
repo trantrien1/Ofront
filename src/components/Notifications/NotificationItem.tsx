@@ -141,7 +141,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
           </Text>
           {notification.postTitle && (
             <Text fontSize="xs" color="gray.500" fontStyle="italic">
-              "{notification.postTitle}"
+              &ldquo;{notification.postTitle}&rdquo;
             </Text>
           )}
           {notification.communityName && (

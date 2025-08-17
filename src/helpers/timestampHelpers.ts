@@ -8,7 +8,7 @@ export const timestampToISO = (timestamp: Timestamp | null | undefined): string 
   if (!timestamp) return new Date().toISOString();
   
   // Convert Firestore timestamp to ISO string
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const date = timestamp.toDate();
   return date.toISOString();
 };
 

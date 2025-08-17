@@ -166,6 +166,7 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
                             src={item.imageURL}
                             mr={2}
                             fallbackSrc="/images/redditlogo.png"
+                            alt={`${item.id} community icon`}
                           />
                         ) : (
                           <Icon

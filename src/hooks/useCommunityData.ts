@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc, increment, writeBatch } from "firebase/firestore";
+import { doc, getDoc, increment, writeBatch, Timestamp, arrayUnion } from "firebase/firestore";
 import { useRouter } from "next/router";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilState, useSetRecoilState } from "recoil";
@@ -111,6 +111,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
       const newSnippet: CommunitySnippet = {
         communityId: community.id,
         imageURL: community.imageURL || "",
+        role: "member",
       };
       batch.set(
         doc(
@@ -121,8 +122,18 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
         newSnippet
       );
 
+      // Add user to community members
+      const newMember = {
+        userId: user?.uid!,
+        role: "member" as const,
+        joinedAt: Timestamp.now(),
+        displayName: user?.displayName || user?.email?.split('@')[0],
+        imageURL: user?.photoURL || "",
+      };
+
       batch.update(doc(firestore, "communities", community.id), {
         numberOfMembers: increment(1),
+        members: arrayUnion(newMember),
       });
 
       // perform batch writes
@@ -147,8 +158,15 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
         doc(firestore, `users/${user?.uid}/communitySnippets/${communityId}`)
       );
 
+      // Remove user from community members
+      const currentCommunity = communityStateValue.currentCommunity;
+      const updatedMembers = currentCommunity.members?.filter(
+        member => member.userId !== user?.uid
+      ) || [];
+
       batch.update(doc(firestore, "communities", communityId), {
         numberOfMembers: increment(-1),
+        members: updatedMembers,
       });
 
       await batch.commit();

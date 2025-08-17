@@ -19,6 +19,7 @@ import { Post, postState, PostVote } from "../../atoms/postsAtom";
 import PostItem from "./PostItem";
 import { useRouter } from "next/router";
 import usePosts from "../../hooks/usePosts";
+import { useCommunityPermissions } from "../../hooks/useCommunityPermissions";
 
 type PostsProps = {
   communityData?: Community;
@@ -41,6 +42,9 @@ const Posts: React.FC<PostsProps> = ({
   const { postStateValue, setPostStateValue, onVote, onDeletePost } = usePosts(
     communityData!
   );
+
+  // Get user permissions for moderation
+  const { canModerate } = useCommunityPermissions();
 
   /**
    * USE ALL BELOW INITIALLY THEN CONVERT TO A CUSTOM HOOK AFTER
@@ -177,7 +181,21 @@ const Posts: React.FC<PostsProps> = ({
     router.push(`/r/${communityData?.id!}/comments/${post.id}`);
   };
 
+  // Clear posts when community changes
   useEffect(() => {
+    if (communityData?.id) {
+      setPostStateValue((prev) => ({
+        ...prev,
+        posts: [],
+      }));
+    }
+  }, [communityData?.id]);
+
+  useEffect(() => {
+    if (!communityData?.id) {
+      return;
+    }
+    
     if (
       postStateValue.postsCache[communityData?.id!] &&
       !postStateValue.postUpdateRequired
@@ -222,8 +240,6 @@ const Posts: React.FC<PostsProps> = ({
   }, [communityData, postStateValue.postUpdateRequired]);
 
   const getPosts = async () => {
-    console.log("WE ARE GETTING POSTS!!!");
-
     setLoading(true);
     try {
       const postsQuery = query(
@@ -231,8 +247,10 @@ const Posts: React.FC<PostsProps> = ({
         where("communityId", "==", communityData?.id!),
         orderBy("createdAt", "desc")
       );
+      
       const postDocs = await getDocs(postsQuery);
       const posts = postDocs.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      
       setPostStateValue((prev) => ({
         ...prev,
         posts: posts as Post[],
@@ -244,11 +262,32 @@ const Posts: React.FC<PostsProps> = ({
       }));
     } catch (error: any) {
       console.log("getPosts error", error.message);
+      // If ordered query fails, try simple query
+      try {
+        const simpleQuery = query(
+          collection(firestore, "posts"),
+          where("communityId", "==", communityData?.id!)
+        );
+        const simpleDocs = await getDocs(simpleQuery);
+        const posts = simpleDocs.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        
+        setPostStateValue((prev) => ({
+          ...prev,
+          posts: posts as Post[],
+          postsCache: {
+            ...prev.postsCache,
+            [communityData?.id!]: posts as Post[],
+          },
+          postUpdateRequired: false,
+        }));
+      } catch (fallbackError: any) {
+        console.log("fallback error", fallbackError.message);
+      }
     }
     setLoading(false);
   };
 
-  console.log("HERE IS POST STATE", postStateValue);
+
 
   return (
     <>
@@ -269,6 +308,7 @@ const Posts: React.FC<PostsProps> = ({
               }
               userIsCreator={userId === post.creatorId}
               onSelectPost={onSelectPost}
+              canModerate={canModerate(communityData?.id || "")}
             />
           ))}
         </Stack>

@@ -7,23 +7,30 @@ import {
   Spinner,
   Stack,
   Text,
+  Box,
+  IconButton,
+  Avatar,
+  Badge,
+  HStack,
+  Button,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { NextRouter } from "next/router";
 import { AiOutlineDelete } from "react-icons/ai";
-import { BsChat, BsDot } from "react-icons/bs";
-import { FaReddit } from "react-icons/fa";
+import { BsChat, BsDot, BsGlobe } from "react-icons/bs";
+import { FaReddit, FaThumbsUp, FaShare } from "react-icons/fa";
 import {
-  IoArrowDownCircleOutline,
-  IoArrowDownCircleSharp,
   IoArrowRedoOutline,
-  IoArrowUpCircleOutline,
-  IoArrowUpCircleSharp,
   IoBookmarkOutline,
 } from "react-icons/io5";
+import { MdPushPin } from "react-icons/md";
+import { FiArrowUp, FiArrowDown, FiShare2 } from "react-icons/fi";
+import { ChatIcon } from "@chakra-ui/icons";
 import { Post } from "../../../atoms/postsAtom";
 import Link from "next/link";
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 import dynamic from "next/dynamic";
+import PostModeration from "../PostModeration";
 
 // Disable SSR for this component to prevent hydration issues
 const PostItem = dynamic(() => Promise.resolve(PostItemComponent), {
@@ -39,14 +46,14 @@ const PostItemSkeleton = () => (
     borderRadius={4}
     p={4}
   >
-    <Skeleton height="200px" width="100%" />
+    <Box height="200px" width="100%" />
   </Flex>
 );
 
 export type PostItemContentProps = {
   post: Post;
   onVote: (
-    event: React.MouseEvent<SVGElement, MouseEvent>,
+    event: React.MouseEvent<HTMLButtonElement | SVGElement, MouseEvent>,
     post: Post,
     vote: number,
     communityId: string,
@@ -59,6 +66,7 @@ export type PostItemContentProps = {
   postIdx?: number;
   userVoteValue?: number;
   homePage?: boolean;
+  canModerate?: boolean; // New prop for moderation permissions
 };
 
 const PostItemComponent: React.FC<PostItemContentProps> = ({
@@ -71,13 +79,20 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   userVoteValue,
   userIsCreator,
   homePage,
+  canModerate = false,
 }) => {
   const [loadingImage, setLoadingImage] = useState(true);
   const [loadingDelete, setLoadingDelete] = useState(false);
+  const [hidden, setHidden] = useState(false); // For spoiler functionality
   const singlePostView = !onSelectPost; // function not passed to [pid]
 
+  // Color mode values for dark theme
+  const cardBg = useColorModeValue("gray.800", "gray.800");
+  const metaColor = useColorModeValue("gray.300", "gray.300");
+  const borderCol = useColorModeValue("whiteAlpha.300", "whiteAlpha.300");
+
   const handleDelete = async (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+    event: React.MouseEvent<HTMLButtonElement | HTMLDivElement, MouseEvent>
   ) => {
     event.stopPropagation();
     setLoadingDelete(true);
@@ -101,153 +116,248 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   };
 
   return (
-    <Flex
+    <Box
+      bg={cardBg}
+      rounded="xl"
+      p={4}
       border="1px solid"
-      bg="white"
-      borderColor={singlePostView ? "white" : "gray.300"}
-      borderRadius={singlePostView ? "4px 4px 0px 0px" : 4}
+      borderColor={borderCol}
+      shadow="md"
       cursor={singlePostView ? "unset" : "pointer"}
-      _hover={{ borderColor: singlePostView ? "none" : "gray.500" }}
       onClick={() => onSelectPost && post && onSelectPost(post, postIdx!)}
     >
-      <Flex
-        direction="column"
-        align="center"
-        bg={singlePostView ? "none" : "gray.100"}
-        p={2}
-        width="40px"
-        borderRadius={singlePostView ? "0" : "3px 0px 0px 3px"}
+      {/* Header meta - Reddit Style */}
+      <HStack spacing={2} mb={2} color={metaColor} fontSize="sm">
+        <Avatar size="xs" name={post.communityId} src={post.communityImageURL} />
+        <Text fontWeight="semibold">r/{post.communityId}</Text>
+        <Text>• {formatTimeAgo(normalizeTimestamp(post.createdAt))}</Text>
+        <Text>• posted by {post.userDisplayText}</Text>
+        {post.imageURL && (
+          <Badge colorScheme="whiteAlpha" variant="subtle">SPOILER</Badge>
+        )}
+        <Button size="xs" colorScheme="blue" ml="auto" variant="solid">
+          Join
+        </Button>
+      </HStack>
+
+      {/* Title */}
+      <Text fontSize="xl" fontWeight="bold" mb={3} color="white">
+        {post.title}
+      </Text>
+
+      {/* Content */}
+      {post.body && (
+        <Text fontSize="md" color="gray.300" mb={3}>
+          {post.body}
+        </Text>
+      )}
+
+      {/* Media box with spoiler overlay */}
+      {post.imageURL && (
+        <Box
+          position="relative"
+          overflow="hidden"
+          rounded="2xl"
+          border="1px solid"
+          borderColor="whiteAlpha.300"
+          bg="black"
+          mb={3}
+        >
+          {/* Ảnh */}
+          <Box
+            as="img"
+            src={post.imageURL}
+            alt={post.title}
+            w="100%"
+            maxH="600px"
+            objectFit="cover"
+            filter={hidden ? "blur(24px) grayscale(40%) brightness(0.7)" : "none"}
+            transform={hidden ? "scale(1.02)" : "scale(1)"}
+            transition="all .25s ease"
+            onLoad={() => setLoadingImage(false)}
+          />
+
+          {/* Overlay + nút View spoiler */}
+          {hidden && (
+            <>
+              <Box
+                position="absolute"
+                inset={0}
+                bgGradient="radial(blackAlpha.700, transparent 70%)"
+              />
+              <Button
+                position="absolute"
+                top="50%"
+                left="50%"
+                transform="translate(-50%, -50%)"
+                onClick={() => setHidden(false)}
+                rounded="full"
+                px={5}
+                size="sm"
+                bg="blackAlpha.700"
+                _hover={{ bg: "blackAlpha.600" }}
+              >
+                View spoiler
+              </Button>
+            </>
+          )}
+        </Box>
+      )}
+
+      {/* Actions - Reddit Style */}
+      <Flex mt={3} gap={3} align="center" wrap="wrap">
+      <HStack
+        px={3}
+        py={1}
+        rounded="full"
+        border="1px solid"
+        borderColor="whiteAlpha.300"
+        bg="gray.800"
+        transition="all 0.2s ease"
+        cursor="pointer"
+        onClick={(e) => e.stopPropagation()}
+        spacing={3}
       >
-        <Icon
-          as={
-            userVoteValue === 1 ? IoArrowUpCircleSharp : IoArrowUpCircleOutline
-          }
-          color={userVoteValue === 1 ? "brand.100" : "gray.400"}
-          fontSize={22}
-          cursor="pointer"
+        <IconButton
+          aria-label="Upvote"
+          icon={<FiArrowUp />}
+          size="sm"
+          variant="ghost"
+          bg={userVoteValue === 1 ? "orange.400" : "gray.300"}
+          borderRadius="full"
+          border="1px solid"
+          borderColor={userVoteValue === 1 ? "orange.400" : "transparent"}
+          _hover={{
+            bg: "gray.700",
+            borderColor: "orange.500",
+            transform: "scale(1.1)"
+          }}
+          transition="all 0.2s ease"
           onClick={(event) => onVote(event, post, 1, post.communityId)}
         />
-        <Text fontSize="9pt" fontWeight={600}>
-          {post.voteStatus}
+        
+        <Text fontWeight="semibold" color="white">
+          {post.voteStatus.toLocaleString()}
         </Text>
-        <Icon
-          as={
-            userVoteValue === -1
-              ? IoArrowDownCircleSharp
-              : IoArrowDownCircleOutline
-          }
-          color={userVoteValue === -1 ? "#4379FF" : "gray.400"}
-          fontSize={22}
-          cursor="pointer"
+        
+        <IconButton
+          aria-label="Downvote"
+          icon={<FiArrowDown />}
+          size="sm"
+          variant="ghost"
+          bg={userVoteValue === -1 ? "blue.400" : "gray.300"}
+          borderRadius="full"
+          border="1px solid"
+          borderColor={userVoteValue === -1 ? "blue.400" : "transparent"}
+          _hover={{
+            bg: "gray.700",
+            borderColor: "blue.500",
+            transform: "scale(1.1)"
+          }}
+          transition="all 0.2s ease"
           onClick={(event) => onVote(event, post, -1, post.communityId)}
         />
-      </Flex>
-      <Flex direction="column" width="100%">
-        <Stack spacing={1} p="10px 10px">
-          {post.createdAt && (
-            <Stack direction="row" spacing={0.6} align="center" fontSize="9pt">
-              {homePage && (
-                <>
-                  {post.communityImageURL ? (
-                    <Image
-                      borderRadius="full"
-                      boxSize="18px"
-                      src={post.communityImageURL}
-                      mr={2}
-                    />
-                  ) : (
-                    <Icon as={FaReddit} fontSize={18} mr={1} color="blue.500" />
-                  )}
-                  <Link href={`r/${post.communityId}`}>
-                    <Text
-                      fontWeight={700}
-                      _hover={{ textDecoration: "underline" }}
-                      onClick={(event) => event.stopPropagation()}
-                    >{`r/${post.communityId}`}</Text>
-                  </Link>
-                  <Icon as={BsDot} color="gray.500" fontSize={8} />
-                </>
-              )}
-              <Text color="gray.500">
-                Posted by u/{post.userDisplayText}{" "}
-                {formatTimeAgo(normalizeTimestamp(post.createdAt))}
-              </Text>
-            </Stack>
-          )}
-          <Text fontSize="12pt" fontWeight={600}>
-            {post.title}
+      </HStack>
+
+
+        <HStack
+          px={3}
+          py={2}
+          rounded="full"
+          border="1px solid"
+          borderColor="gray.800"
+          bg="gray.700"
+          _hover={{ 
+            bg: "gray.700", 
+            borderColor: "gray.600",
+            transform: "scale(1.05)"
+          }}
+        >
+          <ChatIcon color="gray.400" />
+          <Text color="gray.400">{post.numberOfComments}</Text>
+        </HStack>
+
+        <HStack
+          px={3}
+          py={2}
+          rounded="full"
+          border="1px solid"
+          borderColor="gray.800"
+          bg="gray.700"
+          _hover={{ 
+            bg: "gray.600", 
+            borderColor: "gray.600",
+            transform: "scale(1.05)"
+          }}
+          transition="all 0.2s ease"
+          cursor="pointer"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FiShare2 color="white" />
+          <Text color="white" fontSize="sm" fontWeight="medium">
+            Share
           </Text>
-          <Text fontSize="10pt">{post.body}</Text>
-          {post.imageURL && (
-            <Flex justify="center" align="center" p={2}>
-              {loadingImage && (
-                <Skeleton height="200px" width="100%" borderRadius={4} />
-              )}
-              <Image
-                // width="80%"
-                // maxWidth="500px"
-                maxHeight="460px"
-                src={post.imageURL}
-                display={loadingImage ? "none" : "unset"}
-                onLoad={() => setLoadingImage(false)}
-                alt="Post Image"
-              />
-            </Flex>
-          )}
-        </Stack>
-        <Flex ml={1} mb={0.5} color="gray.500" fontWeight={600}>
-          <Flex
-            align="center"
-            p="8px 10px"
-            borderRadius={4}
-            _hover={{ bg: "gray.200" }}
+        </HStack>
+
+        {/* Moderation buttons */}
+        {canModerate && (
+          <HStack
+            px={3}
+            py={2}
+            rounded="full"
+            border="1px solid"
+            borderColor="gray.800"
+            bg="gray.700"
+            _hover={{ 
+              bg: "gray.600", 
+              borderColor: "gray.600",
+              transform: "scale(1.05)"
+            }}
+            transition="all 0.2s ease"
             cursor="pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("Pin post:", post.id);
+            }}
           >
-            <Icon as={BsChat} mr={2} />
-            <Text fontSize="9pt">{post.numberOfComments}</Text>
-          </Flex>
-          <Flex
-            align="center"
-            p="8px 10px"
-            borderRadius={4}
-            _hover={{ bg: "gray.200" }}
+            <Icon as={MdPushPin} color="white" />
+            <Text color="white" fontSize="sm" fontWeight="medium">
+              Pin
+            </Text>
+          </HStack>
+        )}
+
+        {userIsCreator && (
+          <HStack
+            px={3}
+            py={2}
+            rounded="full"
+            border="1px solid"
+            borderColor="gray.800"
+            bg="gray.700"
+            _hover={{ 
+              bg: "gray.600", 
+              borderColor: "gray.600",
+              transform: "scale(1.05)"
+            }}
+            transition="all 0.2s ease"
             cursor="pointer"
+            onClick={handleDelete}
           >
-            <Icon as={IoArrowRedoOutline} mr={2} />
-            <Text fontSize="9pt">Share</Text>
-          </Flex>
-          <Flex
-            align="center"
-            p="8px 10px"
-            borderRadius={4}
-            _hover={{ bg: "gray.200" }}
-            cursor="pointer"
-          >
-            <Icon as={IoBookmarkOutline} mr={2} />
-            <Text fontSize="9pt">Save</Text>
-          </Flex>
-          {userIsCreator && (
-            <Flex
-              align="center"
-              p="8px 10px"
-              borderRadius={4}
-              _hover={{ bg: "gray.200" }}
-              cursor="pointer"
-              onClick={handleDelete}
-            >
-              {loadingDelete ? (
-                <Spinner size="sm" />
-              ) : (
-                <>
-                  <Icon as={AiOutlineDelete} mr={2} />
-                  <Text fontSize="9pt">Delete</Text>
-                </>
-              )}
-            </Flex>
-          )}
-        </Flex>
+            {loadingDelete ? (
+              <Spinner size="sm" color="white" />
+            ) : (
+              <>
+                <Icon as={AiOutlineDelete} color="white" />
+                <Text color="white" fontSize="sm" fontWeight="medium">
+                  Delete
+                </Text>
+              </>
+            )}
+          </HStack>
+        )}
       </Flex>
-    </Flex>
+    </Box>
   );
 };
 

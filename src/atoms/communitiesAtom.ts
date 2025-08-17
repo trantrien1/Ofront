@@ -1,6 +1,32 @@
 import { atom } from "recoil";
 import { FieldValue, Timestamp } from "firebase/firestore";
 
+export type CommunityRole = "owner" | "admin" | "moderator" | "member";
+
+export interface CommunityMember {
+  userId: string;
+  role: CommunityRole;
+  joinedAt: Timestamp;
+  displayName?: string;
+  imageURL?: string;
+}
+
+export interface CommunityRule {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+}
+
+export interface BannedUser {
+  userId: string;
+  bannedAt: Timestamp;
+  bannedBy: string;
+  reason: string;
+  displayName?: string;
+  imageURL?: string;
+}
+
 export interface Community {
   id: string;
   creatorId: string;
@@ -9,12 +35,19 @@ export interface Community {
   createdAt?: Timestamp;
   imageURL?: string;
   displayName?: string;
+  // New fields for community management
+  description?: string;
+  rules?: CommunityRule[];
+  members?: CommunityMember[];
+  bannedUsers?: BannedUser[];
+  pinnedPosts?: string[];
 }
 
 export interface CommunitySnippet {
   communityId: string;
   isModerator?: boolean;
   imageURL?: string;
+  role?: CommunityRole;
 }
 
 interface CommunityState {

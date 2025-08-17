@@ -10,7 +10,7 @@ import {
 import type { NextPage } from "next";
 import { FaFire } from "react-icons/fa";
 import { Post } from "../atoms/postsAtom";
-import CreatePostLink from "../components/Community/CreatePostLink";
+
 import PageContentLayout from "../components/Layout/PageContent";
 import PostLoader from "../components/Post/Loader";
 import PostItem from "../components/Post/PostItem";
@@ -68,7 +68,7 @@ const Popular: NextPage = () => {
           </Text>
         </Stack>
 
-        <CreatePostLink />
+
         
         {loading ? (
           <PostLoader />

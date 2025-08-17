@@ -141,7 +141,21 @@ const AboutComponent: React.FC<AboutProps> = ({
           </Stack>
         ) : (
           <>
-            {user?.uid === communityData?.creatorId && (
+            {communityData?.description && (
+              <Box
+                bg="gray.50"
+                width="100%"
+                p={3}
+                borderRadius={4}
+                border="1px solid"
+                borderColor="gray.200"
+              >
+                <Text fontSize="10pt" color="gray.700" lineHeight="1.4">
+                  {communityData.description}
+                </Text>
+              </Box>
+            )}
+            {user?.uid === communityData?.creatorId && !communityData?.description && (
               <Box
                 bg="gray.100"
                 width="100%"

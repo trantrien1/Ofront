@@ -7,8 +7,11 @@ import safeJsonStringify from "safe-json-stringify";
 import { Community, communityState } from "../../../atoms/communitiesAtom";
 import About from "../../../components/Community/About";
 import CommunityNotFound from "../../../components/Community/CommunityNotFound";
-import CreatePostLink from "../../../components/Community/CreatePostLink";
+
 import Header from "../../../components/Community/Header";
+import CommunityManagement from "../../../components/Community/CommunityManagement";
+import CommunityRules from "../../../components/Community/CommunityRules";
+import TestManagement from "../../../components/Community/TestManagement";
 import PageContentLayout from "../../../components/Layout/PageContent";
 import Posts from "../../../components/Post/Posts";
 import { auth, firestore } from "../../../firebase/clientApp";
@@ -57,7 +60,7 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
       <PageContentLayout>
         {/* Left Content */}
         <>
-          <CreatePostLink />
+  
           <Posts
             communityData={communityData}
             userId={user?.uid}
@@ -67,6 +70,9 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
         {/* Right Content */}
         <>
           <About communityData={communityData} />
+          <TestManagement communityId={communityData.id} />
+          <CommunityRules communityData={communityData} />
+          <CommunityManagement communityData={communityData} />
         </>
       </PageContentLayout>
     </>

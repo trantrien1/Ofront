@@ -13,33 +13,129 @@ import {
   VStack,
   HStack,
   useToast,
+  Stack,
+  Divider,
+  Icon,
+  Spinner,
+  Center,
 } from "@chakra-ui/react";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "../../firebase/clientApp";
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  getDocs,
+  doc,
+  getDoc
+} from "firebase/firestore";
+import { auth, firestore } from "../../firebase/clientApp";
 import { useRouter } from "next/router";
 import { BsCalendar3, BsGeoAlt, BsLink45Deg } from "react-icons/bs";
 import { MdEdit } from "react-icons/md";
+import { FaReddit, FaBirthdayCake } from "react-icons/fa";
+import { MdDateRange } from "react-icons/md";
+import { IoMdTrophy } from "react-icons/io";
+import { Post } from "../../atoms/postsAtom";
+import PostItem from "../Post/PostItem";
+import usePosts from "../../hooks/usePosts";
+import { timestampToISO } from "../../helpers/timestampHelpers";
+
+interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  createdAt?: any;
+  karma?: number;
+  postCount?: number;
+  commentCount?: number;
+  bio?: string;
+  location?: string;
+  website?: string;
+}
 
 const PersonalHome: React.FC = () => {
-  const [user] = useAuthState(auth);
+  const [user, loadingUser] = useAuthState(auth);
   const router = useRouter();
   const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const { onVote, onDeletePost, onSelectPost } = usePosts();
 
-  // Mock data - trong thực tế sẽ lấy từ database
-  const [profileData, setProfileData] = useState({
-    displayName: user?.displayName || "User",
-    email: user?.email || "",
-    photoURL: user?.photoURL || "",
-    bio: "This is my personal bio. I love sharing and discussing interesting topics!",
-    location: "Vietnam",
-    website: "https://example.com",
-    joinDate: new Date(user?.metadata.creationTime || Date.now()),
-    karma: 1234,
-    posts: 45,
-    comments: 156,
-    communities: 12,
-  });
+  // Fetch user profile data from database
+  const fetchUserProfile = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const userDocRef = doc(firestore, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setUserProfile({
+          uid: user.uid,
+          email: user.email || "",
+          displayName: user.displayName || userData.displayName || "Anonymous User",
+          photoURL: user.photoURL || userData.photoURL || undefined,
+          createdAt: userData.createdAt,
+          karma: userData.karma || 0,
+          postCount: userData.postCount || 0,
+          commentCount: userData.commentCount || 0,
+          bio: userData.bio || "This is my personal bio. I love sharing and discussing interesting topics!",
+          location: userData.location || "Vietnam",
+          website: userData.website || "https://example.com",
+        });
+      } else {
+        // If no user document exists, create a basic profile from auth data
+        setUserProfile({
+          uid: user.uid,
+          email: user.email || "",
+          displayName: user.displayName || "Anonymous User",
+          photoURL: user.photoURL || undefined,
+          karma: 0,
+          postCount: 0,
+          commentCount: 0,
+          bio: "This is my personal bio. I love sharing and discussing interesting topics!",
+          location: "Vietnam",
+          website: "https://example.com",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch user's posts from database
+  const fetchUserPosts = async () => {
+    if (!user?.uid) return;
+    
+    setPostsLoading(true);
+    try {
+      const postsQuery = query(
+        collection(firestore, "posts"),
+        where("creatorId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      
+      const postDocs = await getDocs(postsQuery);
+      const posts = postDocs.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Post[];
+      
+      setUserPosts(posts);
+    } catch (error) {
+      console.error("Error fetching user posts:", error);
+    } finally {
+      setPostsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -47,9 +143,12 @@ const PersonalHome: React.FC = () => {
     }
   }, [user, router]);
 
-  if (!user) {
-    return null;
-  }
+  useEffect(() => {
+    if (user && !loadingUser) {
+      fetchUserProfile();
+      fetchUserPosts();
+    }
+  }, [user, loadingUser]);
 
   const formatJoinDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
@@ -58,6 +157,30 @@ const PersonalHome: React.FC = () => {
       day: "numeric",
     });
   };
+
+  if (loadingUser || loading) {
+    return (
+      <Center minH="50vh">
+        <Spinner size="xl" color="brand.100" />
+      </Center>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Center minH="50vh">
+        <Stack align="center" spacing={4}>
+          <Icon as={FaReddit} fontSize={60} color="gray.400" />
+          <Text fontSize="lg" color="gray.500">
+            Please login to view your profile
+          </Text>
+          <Button colorScheme="brand">
+            Login
+          </Button>
+        </Stack>
+      </Center>
+    );
+  }
 
   const handleEditProfile = () => {
     setIsEditing(true);
@@ -72,186 +195,240 @@ const PersonalHome: React.FC = () => {
 
   return (
     <Box maxW="1200px" mx="auto" p={4}>
-      {/* Profile Info Card (không phải header nữa) */}
-      <Box
-        bg="white"
-        borderRadius="lg"
-        boxShadow="sm"
-        p={6}
-        mb={6}
-      >
-        <Flex direction={{ base: "column", md: "row" }} align="start" gap={6}>
-          <Avatar
-            size="2xl"
-            src={profileData.photoURL}
-            name={profileData.displayName}
-            boxShadow="lg"
-          />
-
-          <Box flex={1}>
-            <Flex justify="space-between" align="start" mb={4}>
-              <Box>
-                <Text fontSize="2xl" fontWeight="bold" mb={2}>
-                  {profileData.displayName}
-                </Text>
-                <Text color="gray.600" mb={2}>
-                  u/{profileData.displayName?.toLowerCase()}
-                </Text>
-                <Text color="gray.500" fontSize="sm" mb={3}>
-                  {profileData.bio}
-                </Text>
-
-                <HStack spacing={4} mb={4}>
-                  <HStack spacing={1}>
-                    <BsCalendar3 />
-                    <Text fontSize="sm" color="gray.600">
-                      Joined {formatJoinDate(profileData.joinDate)}
-                    </Text>
-                  </HStack>
-                  {profileData.location && (
-                    <HStack spacing={1}>
-                      <BsGeoAlt />
-                      <Text fontSize="sm" color="gray.600">
-                        {profileData.location}
-                      </Text>
-                    </HStack>
-                  )}
-                  {profileData.website && (
-                    <HStack spacing={1}>
-                      <BsLink45Deg />
-                      <Text fontSize="sm" color="blue.500" cursor="pointer">
-                        {profileData.website}
-                      </Text>
-                    </HStack>
-                  )}
-                </HStack>
-              </Box>
-
-              <Button
-                leftIcon={<MdEdit />}
-                colorScheme="blue"
-                variant="outline"
-                size="sm"
-                onClick={handleEditProfile}
-              >
-                Edit Profile
-              </Button>
+      {/* Profile Header with Cover Image */}
+      <Box bg="white" borderRadius={4} border="1px solid" borderColor="gray.300" mb={4}>
+        <Box
+          h="100px"
+          bg="blue.500"
+          bgGradient="linear(to-r, blue.400, blue.600)"
+          borderRadius="4px 4px 0 0"
+        />
+        <Flex p={6} mt={-12} direction="column">
+          <Flex align="flex-end" mb={4}>
+            <Avatar
+              size="xl"
+              src={userProfile?.photoURL}
+              name={userProfile?.displayName}
+              border="4px solid white"
+              bg="brand.100"
+            />
+            <Flex ml={4} direction="column" flex={1}>
+              <Text fontSize="2xl" fontWeight="bold">
+                {userProfile?.displayName}
+              </Text>
+              <Text color="gray.500" fontSize="sm">
+                u/{userProfile?.displayName?.toLowerCase().replace(/\s+/g, '') || 'user'}
+              </Text>
+              {userProfile?.createdAt && (
+                <Flex align="center" mt={1} color="gray.500" fontSize="sm">
+                  <Icon as={FaBirthdayCake} mr={1} />
+                  <Text>
+                    Joined {new Date(timestampToISO(userProfile.createdAt)).toLocaleDateString()}
+                  </Text>
+                </Flex>
+              )}
             </Flex>
+            <Button
+              leftIcon={<MdEdit />}
+              colorScheme="blue"
+              variant="outline"
+              size="sm"
+              onClick={handleEditProfile}
+            >
+              Edit Profile
+            </Button>
+          </Flex>
 
-            {/* Stats */}
-            <HStack spacing={6}>
-              <VStack spacing={1}>
-                <Text fontSize="lg" fontWeight="bold">
-                  {profileData.karma.toLocaleString()}
+          {/* Enhanced User Stats */}
+          <Flex gap={6} wrap="wrap">
+            <Flex align="center" bg="gray.50" p={3} borderRadius={6}>
+              <Icon as={IoMdTrophy} color="orange.400" mr={2} />
+              <Box>
+                <Text fontWeight="bold" fontSize="lg">
+                  {userProfile?.karma || 0}
                 </Text>
-                <Text fontSize="sm" color="gray.600">
+                <Text fontSize="xs" color="gray.500">
                   Karma
                 </Text>
-              </VStack>
-              <VStack spacing={1}>
-                <Text fontSize="lg" fontWeight="bold">
-                  {profileData.posts}
+              </Box>
+            </Flex>
+            
+            <Flex align="center" bg="gray.50" p={3} borderRadius={6}>
+              <Icon as={MdDateRange} color="brand.100" mr={2} />
+              <Box>
+                <Text fontWeight="bold" fontSize="lg">
+                  {userPosts.length}
                 </Text>
-                <Text fontSize="sm" color="gray.600">
+                <Text fontSize="xs" color="gray.500">
                   Posts
                 </Text>
-              </VStack>
-              <VStack spacing={1}>
-                <Text fontSize="lg" fontWeight="bold">
-                  {profileData.comments}
+              </Box>
+            </Flex>
+
+            <Flex align="center" bg="gray.50" p={3} borderRadius={6}>
+              <Icon as={FaReddit} color="red.400" mr={2} />
+              <Box>
+                <Text fontWeight="bold" fontSize="lg">
+                  {userProfile?.commentCount || 0}
                 </Text>
-                <Text fontSize="sm" color="gray.600">
+                <Text fontSize="xs" color="gray.500">
                   Comments
                 </Text>
-              </VStack>
-              <VStack spacing={1}>
-                <Text fontSize="lg" fontWeight="bold">
-                  {profileData.communities}
-                </Text>
-                <Text fontSize="sm" color="gray.600">
-                  Communities
-                </Text>
-              </VStack>
+              </Box>
+            </Flex>
+          </Flex>
+          
+          {/* Bio and additional info */}
+          <Box mt={4}>
+            <Text color="gray.600" mb={2}>
+              {userProfile?.bio}
+            </Text>
+            <HStack spacing={4} mb={2}>
+              {userProfile?.location && (
+                <HStack spacing={1}>
+                  <BsGeoAlt />
+                  <Text fontSize="sm" color="gray.600">
+                    {userProfile.location}
+                  </Text>
+                </HStack>
+              )}
+              {userProfile?.website && (
+                <HStack spacing={1}>
+                  <BsLink45Deg />
+                  <Text fontSize="sm" color="blue.500" cursor="pointer">
+                    {userProfile.website}
+                  </Text>
+                </HStack>
+              )}
             </HStack>
           </Box>
         </Flex>
       </Box>
 
-      {/* Content Tabs */}
-      <Box bg="white" borderRadius="lg" boxShadow="sm">
+      {/* Enhanced Content Tabs with Real Data */}
+      <Box bg="white" borderRadius={4} border="1px solid" borderColor="gray.300">
         <Tabs variant="enclosed">
           <TabList>
-            <Tab>Posts</Tab>
-            <Tab>Comments</Tab>
-            <Tab>Upvoted</Tab>
-            <Tab>Downvoted</Tab>
-            <Tab>Communities</Tab>
+            <Tab _selected={{ color: "brand.100", borderBottomColor: "brand.100" }}>
+              Posts ({userPosts.length})
+            </Tab>
+            <Tab _selected={{ color: "brand.100", borderBottomColor: "brand.100" }}>
+              Comments
+            </Tab>
+            <Tab _selected={{ color: "brand.100", borderBottomColor: "brand.100" }}>
+              About
+            </Tab>
+            <Tab _selected={{ color: "brand.100", borderBottomColor: "brand.100" }}>
+              Communities
+            </Tab>
           </TabList>
 
           <TabPanels>
-            <TabPanel>
-              <VStack spacing={4} align="stretch">
-                <Text fontSize="lg" fontWeight="bold" mb={4}>
-                  Your Posts
-                </Text>
-                <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md">
-                  <Text color="gray.500" textAlign="center">
-                    No posts yet. Start sharing your thoughts!
-                  </Text>
-                </Box>
-              </VStack>
+            {/* Posts Tab with Real Data */}
+            <TabPanel p={0}>
+              {postsLoading ? (
+                <Center py={10}>
+                  <Spinner size="lg" color="brand.100" />
+                </Center>
+              ) : userPosts.length === 0 ? (
+                <Center py={10}>
+                  <Stack align="center" spacing={3}>
+                    <Icon as={FaReddit} fontSize={50} color="gray.300" />
+                    <Text color="gray.500" fontSize="lg">
+                      No posts yet
+                    </Text>
+                    <Text color="gray.400" fontSize="sm" textAlign="center">
+                      Start sharing your thoughts with the community!
+                    </Text>
+                  </Stack>
+                </Center>
+              ) : (
+                <Stack spacing={0}>
+                  {userPosts.map((post, index) => (
+                    <Box key={post.id}>
+                      <PostItem
+                        post={post}
+                        onVote={onVote}
+                        onDeletePost={onDeletePost}
+                        userIsCreator={true}
+                        onSelectPost={onSelectPost}
+                        userVoteValue={undefined}
+                      />
+                      {index < userPosts.length - 1 && <Divider />}
+                    </Box>
+                  ))}
+                </Stack>
+              )}
             </TabPanel>
 
+            {/* Comments Tab */}
             <TabPanel>
-              <VStack spacing={4} align="stretch">
-                <Text fontSize="lg" fontWeight="bold" mb={4}>
-                  Your Comments
-                </Text>
-                <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md">
-                  <Text color="gray.500" textAlign="center">
-                    No comments yet. Join the conversation!
+              <Center py={10}>
+                <Stack align="center" spacing={3}>
+                  <Icon as={FaReddit} fontSize={50} color="gray.300" />
+                  <Text color="gray.500" fontSize="lg">
+                    Comments coming soon
                   </Text>
-                </Box>
-              </VStack>
+                  <Text color="gray.400" fontSize="sm" textAlign="center">
+                    Your comments will be displayed here
+                  </Text>
+                </Stack>
+              </Center>
             </TabPanel>
 
+            {/* About Tab */}
             <TabPanel>
-              <VStack spacing={4} align="stretch">
-                <Text fontSize="lg" fontWeight="bold" mb={4}>
-                  Upvoted Posts
-                </Text>
-                <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md">
-                  <Text color="gray.500" textAlign="center">
-                    No upvoted posts yet.
+              <Stack spacing={4} p={4}>
+                <Box>
+                  <Text fontWeight="bold" mb={2}>About</Text>
+                  <Text color="gray.600">
+                    {userProfile?.bio || "Welcome to your profile! Here you can view your posts, comments, and activity."}
                   </Text>
                 </Box>
-              </VStack>
+                
+                <Divider />
+                
+                <Box>
+                  <Text fontWeight="bold" mb={2}>Account Details</Text>
+                  <Stack spacing={2} fontSize="sm">
+                    <Flex>
+                      <Text fontWeight="semibold" w="100px">Email:</Text>
+                      <Text color="gray.600">{userProfile?.email}</Text>
+                    </Flex>
+                    <Flex>
+                      <Text fontWeight="semibold" w="100px">User ID:</Text>
+                      <Text color="gray.600" fontSize="xs">{userProfile?.uid}</Text>
+                    </Flex>
+                    {userProfile?.location && (
+                      <Flex>
+                        <Text fontWeight="semibold" w="100px">Location:</Text>
+                        <Text color="gray.600">{userProfile.location}</Text>
+                      </Flex>
+                    )}
+                    {userProfile?.website && (
+                      <Flex>
+                        <Text fontWeight="semibold" w="100px">Website:</Text>
+                        <Text color="blue.500" cursor="pointer">{userProfile.website}</Text>
+                      </Flex>
+                    )}
+                  </Stack>
+                </Box>
+              </Stack>
             </TabPanel>
 
+            {/* Communities Tab */}
             <TabPanel>
-              <VStack spacing={4} align="stretch">
-                <Text fontSize="lg" fontWeight="bold" mb={4}>
-                  Downvoted Posts
-                </Text>
-                <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md">
-                  <Text color="gray.500" textAlign="center">
-                    No downvoted posts yet.
+              <Center py={10}>
+                <Stack align="center" spacing={3}>
+                  <Icon as={FaReddit} fontSize={50} color="gray.300" />
+                  <Text color="gray.500" fontSize="lg">
+                    Communities coming soon
                   </Text>
-                </Box>
-              </VStack>
-            </TabPanel>
-
-            <TabPanel>
-              <VStack spacing={4} align="stretch">
-                <Text fontSize="lg" fontWeight="bold" mb={4}>
-                  Your Communities
-                </Text>
-                <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md">
-                  <Text color="gray.500" textAlign="center">
-                    No communities joined yet. Discover communities!
+                  <Text color="gray.400" fontSize="sm" textAlign="center">
+                    Your joined communities will be displayed here
                   </Text>
-                </Box>
-              </VStack>
+                </Stack>
+              </Center>
             </TabPanel>
           </TabPanels>
         </Tabs>

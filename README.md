@@ -1,7 +1,6 @@
 ## Tổng quan
 
-Ứng dụng Next.js (TypeScript, Chakra UI, Recoil) chạy ở chế độ frontend-only. Tất cả Firebase và backend (Next.js API/MySQL) đã được gỡ bỏ. Các màn hình hoạt động với state cục bộ và hiển thị trống an toàn khi không có dữ liệu.
-
+Ứng dụng Next.js (TypeScript, Chakra UI, Recoil)
 ## Chạy dự án
 
 ```bash
@@ -28,8 +27,7 @@ Mở `http://localhost:3000` để xem giao diện.
 - `globals.css`: CSS global áp dụng toàn ứng dụng.
 
 ### `src/types`
-- `forum.ts`: Khai báo interface mô phỏng schema forum/blog/groups (dùng cho type an toàn phía frontend).
-
+- `forum.ts`: Khai báo interface mô phỏng schema forum/blog/groups
 ### `src/chakra`
 - `theme.ts`: Khởi tạo chủ đề Chakra UI (màu sắc, fonts, components).
 - `button.ts`: Override style cho component Button của Chakra.
@@ -46,7 +44,6 @@ Mở `http://localhost:3000` để xem giao diện.
 ### `src/helpers`
 - `timestampHelpers.ts`: Chuẩn hóa và format thời gian (time-ago, hiển thị ngày/giờ).
 - `userHelpers.ts`: Hàm tiện ích xử lý dữ liệu người dùng (ví dụ build display name).
-- `firestore.ts`: Placeholder sau khi gỡ Firebase; hiện trả về dữ liệu rỗng cho snippet (để tránh lỗi tham chiếu cũ).
 
 ### `src/hooks`
 - `useAuth.ts`: Hook xác định trạng thái người dùng. Hiện stub (user = null), set cookie rỗng, đồng bộ `userAtom` về null.
@@ -54,7 +51,7 @@ Mở `http://localhost:3000` để xem giao diện.
 - `useCommunityData.ts`: Quản lý state cộng đồng (tham gia/rời) bằng cập nhật cục bộ; chỗ gọi backend đã gỡ.
 - `useCommunityPermissions.ts`: Tính quyền user trong cộng đồng (owner/mod/member) theo state có sẵn.
 - `useDirectory.ts`: Điều khiển mở/đóng Directory và chọn mục từ Navbar.
-- `useNotifications.ts`: Trạng thái thông báo. Có placeholder fetch `/api/notifications` cho tương lai; khi không có user sẽ đặt danh sách rỗng để an toàn frontend-only.
+- `useNotifications.ts`: Trạng thái thông báo. 
 - `usePinnedPosts.ts`: Trả về danh sách bài ghim (hiện rỗng, chờ tích hợp backend sau).
 - `usePosts.ts`: Quản lý logic bài viết (thêm/sửa/xóa/ghim) ở phía client, đồng bộ với `postsAtom`.
 - `useSelectFile.ts`: Xử lý chọn và preview ảnh khi đăng bài.
@@ -93,7 +90,7 @@ Mở `http://localhost:3000` để xem giao diện.
 - `Header.tsx`: Header của trang cộng đồng (ảnh, tên, join button).
 - `JoinButton.tsx`: Nút tham gia/rời cộng đồng (cập nhật state cục bộ).
 - `CommunityInfo.tsx`: Thông tin tổng quan cộng đồng (mô tả, số liệu).
-- `CommunityManagement.tsx`: Khu vực quản trị cộng đồng (chỉnh sửa thông tin). Hành vi cập nhật hiện mang tính tối ưu lạc quan (chưa có backend).
+- `CommunityManagement.tsx`: Khu vực quản trị cộng đồng (chỉnh sửa thông tin). 
 - `CommunityRules.tsx`: Hiển thị nội quy cộng đồng.
 - `CommunityHighlights.tsx`: Khối highlight/giới thiệu nhanh.
 - `Recommendations.tsx`: Gợi ý cộng đồng khác (placeholder, không gọi backend).
@@ -127,10 +124,10 @@ Mở `http://localhost:3000` để xem giao diện.
 - `Auth/`
   - `index.tsx`: Modal xác thực (điều hướng giữa login/signup/reset).
   - `Inputs.tsx`: Input chung cho form auth.
-  - `Login.tsx`: Form đăng nhập (stub: không gọi Firebase/backend).
-  - `SignUp.tsx`: Form đăng ký (stub).
+  - `Login.tsx`: Form đăng nhập 
+  - `SignUp.tsx`: Form đăng ký 
   - `OAuthButtons.tsx`: Nút OAuth (UI, chưa tích hợp nhà cung cấp).
-  - `ResetPassword.tsx`: Form reset mật khẩu (stub).
+  - `ResetPassword.tsx`: Form reset mật khẩu 
 
 ### `src/components/PersonalHome`
 - `index.tsx`: Khối “Personal Home” bên sidebar trang chủ.
@@ -139,19 +136,10 @@ Mở `http://localhost:3000` để xem giao diện.
 - `_app.tsx`: Entry của Next.js; bọc ChakraProvider, RecoilRoot, theme,...
 - `_document.tsx`: Tùy biến Document (lang, fonts, SSR style tag).
 - `index.tsx`: Trang Home; hiển thị feed bài viết (rỗng nếu không có mock).
-- `popular.tsx`: Trang “Popular” (feed rỗng khi không có backend/mocking).
+- `popular.tsx`: Trang “Popular” 
 - `profile.tsx`: Trang hồ sơ người dùng (UI, dữ liệu stub).
 - `r/[community]/index.tsx`: Trang chi tiết community (header, about, posts...).
 - `r/[community]/submit.tsx`: Trang tạo bài trong community.
 - `r/[community]/comments/[pid].tsx`: Trang chi tiết bài viết + bình luận.
 
-## Ghi chú mô hình dữ liệu và backend
-- Firebase, Firestore, Cloud Functions: ĐÃ GỠ BỎ hoàn toàn.
-- Next.js API routes và MySQL: ĐÃ GỠ BỎ. Một số hook vẫn giữ placeholder fetch `/api/...` để dễ tái tích hợp sau; ở chế độ hiện tại (user = null) chúng sẽ không gọi mạng và luôn an toàn.
-- Ứng dụng hiện là frontend-only. Để có dữ liệu hiển thị, bạn có thể thêm “mock data” trong các component/hook tương ứng (ví dụ khởi tạo `postsAtom` hoặc nạp mẫu tại `pages/index.tsx`).
-
-## Phát triển tiếp theo (gợi ý)
-- Tích hợp backend mới (REST/GraphQL) và thay thế các chỗ placeholder.
-- Thêm mock data cục bộ để demo UI đầy đủ (posts, comments, notifications...).
-- Bổ sung kiểm thử component/hook.
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { Flex } from "@chakra-ui/react";
-import { User } from "firebase/auth";
+type User = { uid: string; email?: string | null };
 import AuthModal from "../../Modal/Auth";
 import AuthButtons from "./AuthButtons";
 import Icons from "./Icons";

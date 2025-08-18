@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { firestore } from "../firebase/clientApp";
+// Firebase removed
 import { Post } from "../atoms/postsAtom";
 
 export const usePinnedPosts = (pinnedPostIds: string[]) => {
@@ -16,14 +15,9 @@ export const usePinnedPosts = (pinnedPostIds: string[]) => {
 
       setLoading(true);
       try {
-        const postsRef = collection(firestore, "posts");
-        const q = query(postsRef, where("__name__", "in", pinnedPostIds));
-        const querySnapshot = await getDocs(q);
-        
-        const posts: Post[] = [];
-        querySnapshot.forEach((doc) => {
-          posts.push({ id: doc.id, ...doc.data() } as Post);
-        });
+        const resp = await fetch(`/api/posts`);
+        const allPosts = (await resp.json()) as Post[];
+        const posts = allPosts.filter(p => pinnedPostIds.includes(p.id));
 
         // Sort posts to match the order of pinnedPostIds
         const sortedPosts = pinnedPostIds

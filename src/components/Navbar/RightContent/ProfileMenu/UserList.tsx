@@ -1,11 +1,10 @@
 import React from "react";
 import { Flex, Icon, MenuDivider, MenuItem } from "@chakra-ui/react";
-import { signOut } from "firebase/auth";
+// Firebase removed
 import { CgProfile } from "react-icons/cg";
 import { MdOutlineLogin } from "react-icons/md";
 import { useResetRecoilState } from "recoil";
 import { communityState } from "../../../../atoms/communitiesAtom";
-import { auth } from "../../../../firebase/clientApp";
 import { useRouter } from "next/router";
 
 type UserListProps = {};
@@ -15,8 +14,9 @@ const UserList: React.FC<UserListProps> = () => {
   const router = useRouter();
 
   const logout = async () => {
-    await signOut(auth);
+    // TODO: Implement your own logout; for now reset state and go home
     resetCommunityState();
+    router.push("/");
   };
 
   const handleProfileClick = () => {

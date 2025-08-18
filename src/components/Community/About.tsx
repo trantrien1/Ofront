@@ -14,14 +14,12 @@ import { HiOutlineDotsHorizontal } from "react-icons/hi";
 import { RiCakeLine } from "react-icons/ri";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, firestore, storage } from "../../firebase/clientApp";
+// Firebase removed
 import { Community, communityState } from "../../atoms/communitiesAtom";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { normalizeTimestamp } from "../../helpers/timestampHelpers";
 import { FaReddit } from "react-icons/fa";
-import { getDownloadURL, ref, uploadString } from "firebase/storage";
-import { doc, updateDoc } from "firebase/firestore";
+// Firebase removed
 import dynamic from "next/dynamic";
 
 // Disable SSR for this component to prevent hydration issues
@@ -62,7 +60,7 @@ const AboutComponent: React.FC<AboutProps> = ({
   onCreatePage,
   loading,
 }) => {
-  const [user] = useAuthState(auth); // will revisit how 'auth' state is passed
+  const user = null as any; // Firebase removed
   const router = useRouter();
   const selectFileRef = useRef<HTMLInputElement>(null);
   const setCommunityStateValue = useSetRecoilState(communityState);
@@ -90,20 +88,12 @@ const AboutComponent: React.FC<AboutProps> = ({
     if (!selectedFile) return;
     setImageLoading(true);
     try {
-      const imageRef = ref(storage, `communities/${communityData.id}/image`);
-      await uploadString(imageRef, selectedFile, "data_url");
-      const downloadURL = await getDownloadURL(imageRef);
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        imageURL: downloadURL,
-      });
-      console.log("HERE IS DOWNLOAD URL", downloadURL);
-
-      // April 24 - added state update
+      // TODO: Implement storage via your backend; optimistic UI update
       setCommunityStateValue((prev) => ({
         ...prev,
         currentCommunity: {
           ...prev.currentCommunity,
-          imageURL: downloadURL,
+          imageURL: selectedFile,
         },
       }));
     } catch (error: any) {

@@ -1,19 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Stack } from "@chakra-ui/react";
-import {
-  collection,
-  doc,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  writeBatch,
-} from "firebase/firestore";
+// Firebase removed
 import { useRecoilState, useSetRecoilState } from "recoil";
 import { authModalState } from "../../atoms/authModalAtom";
 import { Community } from "../../atoms/communitiesAtom";
-import { firestore } from "../../firebase/clientApp";
+// Firebase removed
 import PostLoader from "./Loader";
 import { Post, postState, PostVote } from "../../atoms/postsAtom";
 import PostItem from "./PostItem";
@@ -242,47 +233,19 @@ const Posts: React.FC<PostsProps> = ({
   const getPosts = async () => {
     setLoading(true);
     try {
-      const postsQuery = query(
-        collection(firestore, "posts"),
-        where("communityId", "==", communityData?.id!),
-        orderBy("createdAt", "desc")
-      );
-      
-      const postDocs = await getDocs(postsQuery);
-      const posts = postDocs.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      
+      const resp = await fetch(`/api/posts?categoryId=${encodeURIComponent(communityData?.id || "")}`);
+      const posts = resp.ok ? await resp.json() : [];
       setPostStateValue((prev) => ({
         ...prev,
-        posts: posts as Post[],
+        posts: Array.isArray(posts) ? (posts as Post[]) : [],
         postsCache: {
           ...prev.postsCache,
-          [communityData?.id!]: posts as Post[],
+          [communityData?.id!]: Array.isArray(posts) ? (posts as Post[]) : [],
         },
         postUpdateRequired: false,
       }));
     } catch (error: any) {
       console.log("getPosts error", error.message);
-      // If ordered query fails, try simple query
-      try {
-        const simpleQuery = query(
-          collection(firestore, "posts"),
-          where("communityId", "==", communityData?.id!)
-        );
-        const simpleDocs = await getDocs(simpleQuery);
-        const posts = simpleDocs.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        
-        setPostStateValue((prev) => ({
-          ...prev,
-          posts: posts as Post[],
-          postsCache: {
-            ...prev.postsCache,
-            [communityData?.id!]: posts as Post[],
-          },
-          postUpdateRequired: false,
-        }));
-      } catch (fallbackError: any) {
-        console.log("fallback error", fallbackError.message);
-      }
     }
     setLoading(false);
   };

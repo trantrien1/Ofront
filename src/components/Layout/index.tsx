@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState } from "react";
 import { Box, Flex } from "@chakra-ui/react";
-import { useAuthState } from "react-firebase-hooks/auth";
+// import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue } from "recoil";
-import { auth } from "../../firebase/clientApp";
+// Firebase removed
 import { createCommunityModalState } from "../../atoms/communitiesAtom";
 import useAuth from "../../hooks/useAuth";
 import Navbar from "../Navbar";
@@ -25,7 +25,7 @@ export const useSidebar = () => useContext(SidebarContext);
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // useAuth(); // will implement later at end of tutorial
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const createCommunityModalStateValue = useRecoilValue(createCommunityModalState);
 
   return (

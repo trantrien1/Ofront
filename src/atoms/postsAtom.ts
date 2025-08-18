@@ -1,5 +1,5 @@
 import { atom } from "recoil";
-import { Timestamp } from "firebase/firestore";
+type Timestamp = any;
 
 export type Post = {
   id: string;

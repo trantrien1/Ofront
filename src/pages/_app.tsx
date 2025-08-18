@@ -3,7 +3,7 @@ import type { AppProps } from "next/app";
 import { RecoilRoot } from "recoil";
 import { theme } from "../chakra/theme";
 import Layout from "../components/Layout";
-import "../firebase/clientApp";
+// Firebase removed
 import "../styles/globals.css";
 
 function MyApp({ Component, pageProps }: AppProps) {

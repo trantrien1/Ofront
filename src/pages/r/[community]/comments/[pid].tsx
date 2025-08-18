@@ -1,21 +1,21 @@
 import React, { useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
+// Firebase removed
 import { useRouter } from "next/router";
-import { useAuthState } from "react-firebase-hooks/auth";
+// Firebase removed
 import { Post } from "../../../../atoms/postsAtom";
 import About from "../../../../components/Community/About";
 import PageContentLayout from "../../../../components/Layout/PageContent";
 import Comments from "../../../../components/Post/Comments";
 import PostLoader from "../../../../components/Post/Loader";
 import PostItem from "../../../../components/Post/PostItem";
-import { auth, firestore } from "../../../../firebase/clientApp";
+// Firebase removed
 import useCommunityData from "../../../../hooks/useCommunityData";
 import usePosts from "../../../../hooks/usePosts";
 
 type PostPageProps = {};
 
 const PostPage: React.FC<PostPageProps> = () => {
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const router = useRouter();
   const { community, pid } = router.query;
   const { communityStateValue } = useCommunityData();
@@ -33,12 +33,24 @@ const PostPage: React.FC<PostPageProps> = () => {
   const fetchPost = async () => {
     setLoading(true);
     try {
-      const postDocRef = doc(firestore, "posts", pid as string);
-      const postDoc = await getDoc(postDocRef);
-      setPostStateValue((prev) => ({
-        ...prev,
-        selectedPost: { id: postDoc.id, ...postDoc.data() } as Post,
-      }));
+      const resp = await fetch(`/api/posts`);
+      const posts = await resp.json();
+      const found = (posts as any[]).find(p => p.id?.toString?.() === (pid as string));
+      if (found) {
+        setPostStateValue((prev) => ({
+          ...prev,
+          selectedPost: {
+            id: found.id?.toString?.() || found.id,
+            creatorId: found.userId,
+            communityId: found.categoryId || community as string,
+            title: found.title,
+            body: found.content,
+            numberOfComments: 0,
+            voteStatus: 0,
+            userDisplayText: "",
+          } as any,
+        }));
+      }
     } catch (error: any) {
       console.log("fetchPost error", error.message);
     }

@@ -40,8 +40,8 @@ import {
 } from "react-icons/fa";
 import { HiOutlineDotsHorizontal } from "react-icons/hi";
 import { RiCakeLine } from "react-icons/ri";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, firestore, storage } from "../../firebase/clientApp";
+// import { useAuthState } from "react-firebase-hooks/auth";
+// Firebase removed
 import { 
   Community, 
   CommunityRole, 
@@ -49,11 +49,11 @@ import {
   CommunityRule, 
   BannedUser 
 } from "../../atoms/communitiesAtom";
-import { doc, updateDoc, arrayUnion, Timestamp, increment } from "firebase/firestore";
+// Firebase removed
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { communityState } from "../../atoms/communitiesAtom";
 import { normalizeTimestamp } from "../../helpers/timestampHelpers";
-import { getDownloadURL, ref, uploadString } from "firebase/storage";
+// Firebase removed
 import Link from "next/link";
 import { useRouter } from "next/router";
 
@@ -70,7 +70,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   onCreatePage,
   loading,
 }) => {
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const router = useRouter();
   const selectFileRef = useRef<HTMLInputElement>(null);
   const setCommunityStateValue = useSetRecoilState(communityState);
@@ -114,18 +114,12 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
     if (!selectedFile) return;
     setImageLoading(true);
     try {
-      const imageRef = ref(storage, `communities/${communityData.id}/image`);
-      await uploadString(imageRef, selectedFile, "data_url");
-      const downloadURL = await getDownloadURL(imageRef);
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        imageURL: downloadURL,
-      });
-
+      // TODO: Implement image upload to your own storage and update via API
       setCommunityStateValue((prev) => ({
         ...prev,
         currentCommunity: {
           ...prev.currentCommunity,
-          imageURL: downloadURL,
+          imageURL: selectedFile,
         },
       }));
     } catch (error: any) {
@@ -136,9 +130,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
 
   const handleUpdateDescription = async () => {
     try {
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        description: description
-      });
+      // TODO: Update community description via API
       toast({
         title: "Description updated",
         status: "success",
@@ -163,11 +155,16 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
         description: newRule.description,
         order: (communityData.rules?.length || 0) + 1
       };
-      
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        rules: arrayUnion(rule)
-      });
-      
+
+      // TODO: Update via API, local optimistic update
+      setCommunityStateValue(prev => ({
+        ...prev,
+        currentCommunity: {
+          ...prev.currentCommunity,
+          rules: [...(prev.currentCommunity.rules || []), rule]
+        }
+      }));
+
       setNewRule({ title: "", description: "" });
       toast({
         title: "Rule added",
@@ -190,11 +187,12 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       const updatedRules = communityData.rules?.map(rule => 
         rule.id === editingRule.id ? editingRule : rule
       ) || [];
-      
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        rules: updatedRules
-      });
-      
+      // TODO: Update via API; optimistic local update
+      setCommunityStateValue(prev => ({
+        ...prev,
+        currentCommunity: { ...prev.currentCommunity, rules: updatedRules }
+      }));
+
       setEditingRule(null);
       toast({
         title: "Rule updated",
@@ -213,10 +211,12 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   const handleDeleteRule = async (ruleId: string) => {
     try {
       const updatedRules = communityData.rules?.filter(rule => rule.id !== ruleId) || [];
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        rules: updatedRules
-      });
-      
+      // TODO: Update via API; optimistic local update
+      setCommunityStateValue(prev => ({
+        ...prev,
+        currentCommunity: { ...prev.currentCommunity, rules: updatedRules }
+      }));
+
       toast({
         title: "Rule deleted",
         status: "success",
@@ -237,17 +237,22 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
     try {
       const bannedUser: BannedUser = {
         userId: banUser.userId,
-        bannedAt: Timestamp.now(),
+        bannedAt: new Date() as any,
         bannedBy: user?.uid || "",
         reason: banUser.reason,
         displayName: communityData.members?.find(m => m.userId === banUser.userId)?.displayName,
         imageURL: communityData.members?.find(m => m.userId === banUser.userId)?.imageURL
       };
-      
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        bannedUsers: arrayUnion(bannedUser)
-      });
-      
+
+      // TODO: Update via API; optimistic local update
+      setCommunityStateValue(prev => ({
+        ...prev,
+        currentCommunity: {
+          ...prev.currentCommunity,
+          bannedUsers: [...(prev.currentCommunity.bannedUsers || []), bannedUser]
+        }
+      }));
+
       setBanUser({ userId: "", reason: "" });
       toast({
         title: "User banned",
@@ -266,10 +271,12 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   const handleUnbanUser = async (userId: string) => {
     try {
       const updatedBannedUsers = communityData.bannedUsers?.filter(banned => banned.userId !== userId) || [];
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        bannedUsers: updatedBannedUsers
-      });
-      
+      // TODO: Update via API; optimistic local update
+      setCommunityStateValue(prev => ({
+        ...prev,
+        currentCommunity: { ...prev.currentCommunity, bannedUsers: updatedBannedUsers }
+      }));
+
       toast({
         title: "User unbanned",
         status: "success",
@@ -291,11 +298,12 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       const updatedMembers = communityData.members?.map(member => 
         member.userId === userId ? { ...member, role: newRole } : member
       ) || [];
-      
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        members: updatedMembers
-      });
-      
+      // TODO: Update via API; optimistic local update
+      setCommunityStateValue(prev => ({
+        ...prev,
+        currentCommunity: { ...prev.currentCommunity, members: updatedMembers }
+      }));
+
       toast({
         title: "Role updated",
         status: "success",
@@ -317,16 +325,21 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       const memberToAdd: CommunityMember = {
         userId: newMember.userId,
         role: newMember.role,
-        joinedAt: Timestamp.now(),
+        joinedAt: new Date() as any,
         displayName: newMember.userId,
         imageURL: ""
       };
-      
-      await updateDoc(doc(firestore, "communities", communityData.id), {
-        members: arrayUnion(memberToAdd),
-        numberOfMembers: increment(1)
-      });
-      
+
+      // TODO: Update via API; optimistic local update
+      setCommunityStateValue(prev => ({
+        ...prev,
+        currentCommunity: {
+          ...prev.currentCommunity,
+          members: [...(prev.currentCommunity.members || []), memberToAdd],
+          numberOfMembers: (prev.currentCommunity.numberOfMembers || 0) + 1,
+        }
+      }));
+
       setNewMember({ userId: "", role: "member" });
       toast({
         title: "Member added",

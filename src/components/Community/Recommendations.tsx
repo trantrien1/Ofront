@@ -8,8 +8,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
-import { firestore } from "../../firebase/clientApp";
+// Firebase removed
 import { Community } from "../../atoms/communitiesAtom";
 import { FaReddit } from "react-icons/fa";
 import useCommunityData from "../../hooks/useCommunityData";
@@ -73,19 +72,8 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
   const getCommunityRecommendations = async () => {
     setLoading(true);
     try {
-      const communityQuery = query(
-        collection(firestore, "communities"),
-        orderBy("numberOfMembers", "desc"),
-        limit(5)
-      );
-      const communityDocs = await getDocs(communityQuery);
-      const communities = communityDocs.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Community[];
-      console.log("HERE ARE COMS", communities);
-
-      setCommunities(communities);
+      // TODO: Replace with communities API
+      setCommunities([]);
     } catch (error: any) {
       console.log("getCommunityRecommendations error", error.message);
     }

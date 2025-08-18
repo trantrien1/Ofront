@@ -17,7 +17,7 @@ import {
   Tooltip,
 } from "@chakra-ui/react";
 import { useRouter } from "next/router";
-import { useAuthState } from "react-firebase-hooks/auth";
+// import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import {
   FaHome,
@@ -30,7 +30,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { MdGroup } from "react-icons/md";
-import { auth } from "../../firebase/clientApp";
+// Firebase removed
 import { communityState, createCommunityModalState } from "../../atoms/communitiesAtom";
 
 // Import the context
@@ -46,7 +46,7 @@ const useSidebar = () => React.useContext(SidebarContext);
 
 const Sidebar: React.FC = () => {
   const router = useRouter();
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const communityStateValue = useRecoilValue(communityState);
   const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
   const { isOpen: isCommunitiesOpen, onToggle: onCommunitiesToggle } = useDisclosure({ defaultIsOpen: true });

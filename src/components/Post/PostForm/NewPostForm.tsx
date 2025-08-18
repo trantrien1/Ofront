@@ -9,21 +9,14 @@ import {
   Textarea,
   Image,
 } from "@chakra-ui/react";
-import { User } from "firebase/auth";
-import {
-  addDoc,
-  collection,
-  doc,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
+type User = { uid: string; email?: string };
 import { useRouter } from "next/router";
 import { BiPoll } from "react-icons/bi";
 import { BsLink45Deg, BsMic } from "react-icons/bs";
 import { IoDocumentText, IoImageOutline } from "react-icons/io5";
 import { AiFillCloseCircle } from "react-icons/ai";
 import { useRecoilState, useSetRecoilState } from "recoil";
-import { firestore, storage } from "../../../firebase/clientApp";
+// Firebase removed
 import TabItem from "./TabItem";
 import { postState } from "../../../atoms/postsAtom";
 
@@ -85,22 +78,20 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
     setLoading(true);
     const { title, body } = textInputs;
     try {
-      const postDocRef = await addDoc(collection(firestore, "posts"), {
-        communityId,
-        communityImageURL: communityImageURL || "",
-        creatorId: user.uid,
-        userDisplayText: user.email!.split("@")[0],
-        title,
-        body,
-        numberOfComments: 0,
-        voteStatus: 0,
-        createdAt: serverTimestamp(),
-        editedAt: serverTimestamp(),
-        // Save image as base64 if selected
-        imageURL: selectedFile || "",
+      const resp = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          categoryId: null,
+          title,
+          content: body,
+          type: 'forum',
+          status: 1,
+        })
       });
+      const data = await resp.json();
 
-      console.log("HERE IS NEW POST ID", postDocRef.id);
 
       // Clear the cache to cause a refetch of the posts
       setPostItems((prev) => ({
@@ -109,7 +100,6 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
       }));
       router.back();
     } catch (error) {
-      console.log("createPost error", error);
       setError("Error creating post");
     }
     setLoading(false);

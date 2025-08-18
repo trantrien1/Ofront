@@ -1,10 +1,8 @@
-import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue } from "recoil";
-import { auth } from "../firebase/clientApp";
 import { communityState, CommunityRole } from "../atoms/communitiesAtom";
 
 export const useCommunityPermissions = () => {
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const communityStateValue = useRecoilValue(communityState);
 
   const getUserRole = (communityId: string): CommunityRole => {

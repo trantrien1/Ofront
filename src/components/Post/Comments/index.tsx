@@ -1,25 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Box, Button, Flex, Icon, Stack, Text, SkeletonCircle, SkeletonText } from "@chakra-ui/react";
 import { Post, postState } from "../../../atoms/postsAtom";
-import { firestore } from "../../../firebase/clientApp";
 import { useNotifications } from "../../../hooks/useNotifications";
 import CommentItem, { Comment } from "./CommentItem";
 import CommentInput from "./Input";
-import {
-  collection,
-  doc,
-  getDocs,
-  increment,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-  writeBatch,
-} from "firebase/firestore";
 import { useSetRecoilState, useRecoilValue } from "recoil";
 import { authModalState } from "../../../atoms/authModalAtom";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "../../../firebase/clientApp";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
 import dynamic from "next/dynamic";
 
@@ -65,34 +51,23 @@ const CommentsComponent: React.FC<CommentsProps> = ({
 
     setCommentCreateLoading(true);
     try {
-      const batch = writeBatch(firestore);
-
-      // Create comment document
-      const commentDocRef = doc(collection(firestore, "comments"));
-      batch.set(commentDocRef, {
-        postId: selectedPost?.id,
-        creatorId: user.uid,
-        creatorDisplayText: user.email!.split("@")[0],
-        creatorPhotoURL: user.photoURL,
-        communityId: community,
-        text: comment,
-        postTitle: selectedPost?.title,
-        createdAt: serverTimestamp(),
-        parentId: null, // Top-level comment
-        replyCount: 0,
+      const resp = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId: selectedPost?.id,
+          userId: user.uid,
+          content: comment,
+          parentId: null,
+        }),
       });
-
-      // Update post numberOfComments
-      batch.update(doc(firestore, "posts", selectedPost?.id!), {
-        numberOfComments: increment(1),
-      });
-      await batch.commit();
+      const data = await resp.json();
 
       setComment("");
       const { id: postId, title } = selectedPost!;
       setComments((prev) => [
         {
-          id: commentDocRef.id,
+          id: data.id?.toString?.() || data.id,
           creatorId: user.uid,
           creatorDisplayText: user.email!.split("@")[0],
           creatorPhotoURL: user.photoURL,
@@ -100,9 +75,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
           postId,
           postTitle: title,
           text: comment,
-          createdAt: {
-            seconds: Date.now() / 1000,
-          },
+          createdAt: { seconds: Date.now() / 1000 } as any,
         } as Comment,
         ...prev,
       ]);
@@ -125,7 +98,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
           userId: user.uid,
           targetUserId: selectedPost?.creatorId!,
           postId: selectedPost?.id,
-          commentId: commentDocRef.id,
+          commentId: data.id?.toString?.() || data.id,
           postTitle: selectedPost?.title,
           communityName: community,
         });
@@ -144,40 +117,21 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     }
 
     try {
-      const batch = writeBatch(firestore);
-
-      // Create reply document
-      const replyDocRef = doc(collection(firestore, "comments"));
-      batch.set(replyDocRef, {
-        postId: selectedPost?.id,
-        creatorId: user.uid,
-        creatorDisplayText: user.email!.split("@")[0],
-        creatorPhotoURL: user.photoURL,
-        communityId: community,
-        text: replyText,
-        postTitle: selectedPost?.title,
-        createdAt: serverTimestamp(),
-        parentId: parentComment.id, // Link to parent comment
-        replyCount: 0,
+      const resp = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId: selectedPost?.id,
+          userId: user.uid,
+          content: replyText,
+          parentId: parentComment.id,
+        }),
       });
-
-      // Update parent comment's reply count
-      if (parentComment.id) {
-        batch.update(doc(firestore, "comments", parentComment.id), {
-          replyCount: increment(1),
-        });
-      }
-
-      // Update post numberOfComments
-      batch.update(doc(firestore, "posts", selectedPost?.id!), {
-        numberOfComments: increment(1),
-      });
-
-      await batch.commit();
+      const data = await resp.json();
 
       // Update local state
       const newReply: Comment = {
-        id: replyDocRef.id,
+        id: data.id?.toString?.() || data.id,
         creatorId: user.uid,
         creatorDisplayText: user.email!.split("@")[0],
         creatorPhotoURL: user.photoURL,
@@ -225,7 +179,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
           userId: user.uid,
           targetUserId: parentComment.creatorId,
           postId: selectedPost?.id,
-          commentId: replyDocRef.id,
+          commentId: data.id?.toString?.() || data.id,
           postTitle: selectedPost?.title,
           communityName: community,
         });
@@ -240,15 +194,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     setDeleteLoading(comment.id as string);
     try {
       if (!comment.id) throw "Comment has no ID";
-      const batch = writeBatch(firestore);
-      const commentDocRef = doc(firestore, "comments", comment.id);
-      batch.delete(commentDocRef);
-
-      batch.update(doc(firestore, "posts", comment.postId), {
-        numberOfComments: increment(-1),
-      });
-
-      await batch.commit();
+      await fetch(`/api/comments/${comment.id}`, { method: "DELETE" });
 
       setPostState((prev) => ({
         ...prev,
@@ -271,17 +217,23 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   const getPostComments = async () => {
     try {
       console.log("Fetching comments for post:", selectedPost?.id);
-      
-      // Fetch all comments for this post
-      const commentsQuery = query(
-        collection(firestore, "comments"),
-        where("postId", "==", selectedPost?.id)
-      );
-      const commentDocs = await getDocs(commentsQuery);
-      const allComments = commentDocs.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Comment[];
+
+      const resp = await fetch(`/api/comments?postId=${selectedPost?.id}`);
+      const apiComments = await resp.json();
+
+      const allComments: Comment[] = (apiComments || []).map((c: any) => ({
+        id: c.id?.toString?.() || c.id,
+        creatorId: c.userId,
+        creatorDisplayText: c.creatorDisplayText || (user?.email?.split("@")[0] || "user"),
+        creatorPhotoURL: c.creatorPhotoURL || user?.photoURL,
+        communityId: community,
+        postId: c.postId?.toString?.() || c.postId,
+        postTitle: selectedPost?.title || "",
+        text: c.content,
+        createdAt: c.createdAt ? { seconds: Math.floor(new Date(c.createdAt).getTime() / 1000) } as any : { seconds: Date.now() / 1000 } as any,
+        parentId: c.parentId ? (c.parentId.toString?.() || c.parentId) : null,
+        replyCount: 0,
+      }));
       
       console.log("All comments for this post:", allComments);
       

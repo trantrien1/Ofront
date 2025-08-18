@@ -19,17 +19,8 @@ import {
   Spinner,
   Center,
 } from "@chakra-ui/react";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  getDocs,
-  doc,
-  getDoc
-} from "firebase/firestore";
-import { auth, firestore } from "../../firebase/clientApp";
+// Firebase removed
+// Firebase removed
 import { useRouter } from "next/router";
 import { BsCalendar3, BsGeoAlt, BsLink45Deg } from "react-icons/bs";
 import { MdEdit } from "react-icons/md";
@@ -56,7 +47,7 @@ interface UserProfile {
 }
 
 const PersonalHome: React.FC = () => {
-  const [user, loadingUser] = useAuthState(auth);
+  const user = null as any; const loadingUser = false;
   const router = useRouter();
   const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -71,41 +62,7 @@ const PersonalHome: React.FC = () => {
     if (!user?.uid) return;
     
     try {
-      const userDocRef = doc(firestore, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setUserProfile({
-          uid: user.uid,
-          email: user.email || "",
-          displayName: user.displayName || userData.displayName || "Anonymous User",
-          photoURL: user.photoURL || userData.photoURL || undefined,
-          createdAt: userData.createdAt,
-          karma: userData.karma || 0,
-          postCount: userData.postCount || 0,
-          commentCount: userData.commentCount || 0,
-          bio: userData.bio || "This is my personal bio. I love sharing and discussing interesting topics!",
-          location: userData.location || "Vietnam",
-          website: userData.website || "https://example.com",
-        });
-      } else {
-        // If no user document exists, create a basic profile from auth data
-        setUserProfile({
-          uid: user.uid,
-          email: user.email || "",
-          displayName: user.displayName || "Anonymous User",
-          photoURL: user.photoURL || undefined,
-          karma: 0,
-          postCount: 0,
-          commentCount: 0,
-          bio: "This is my personal bio. I love sharing and discussing interesting topics!",
-          location: "Vietnam",
-          website: "https://example.com",
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
+      // TODO: Load profile via API in future
     } finally {
       setLoading(false);
     }
@@ -117,19 +74,9 @@ const PersonalHome: React.FC = () => {
     
     setPostsLoading(true);
     try {
-      const postsQuery = query(
-        collection(firestore, "posts"),
-        where("creatorId", "==", user.uid),
-        orderBy("createdAt", "desc")
-      );
-      
-      const postDocs = await getDocs(postsQuery);
-      const posts = postDocs.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Post[];
-      
-      setUserPosts(posts);
+      const resp = await fetch(`/api/posts?userId=${encodeURIComponent(user.uid)}`);
+      const posts = resp.ok ? await resp.json() : [];
+      setUserPosts(Array.isArray(posts) ? (posts as Post[]) : []);
     } catch (error) {
       console.error("Error fetching user posts:", error);
     } finally {

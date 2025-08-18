@@ -10,10 +10,9 @@ import {
   MenuList,
   Text,
 } from "@chakra-ui/react";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilState } from "recoil";
 import { authModalState } from "../../../../atoms/authModalAtom";
-import { auth } from "../../../../firebase/clientApp";
+// Firebase removed
 
 import NoUserList from "./NoUserList";
 import UserList from "./UserList";
@@ -26,7 +25,7 @@ type MenuWrapperProps = {};
 
 const MenuWrapper: React.FC<MenuWrapperProps> = () => {
   const [authModal, setModalState] = useRecoilState(authModalState);
-  const [user] = useAuthState(auth);
+  const user = null as any;
   return (
     <Menu>
       <MenuButton

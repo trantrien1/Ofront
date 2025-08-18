@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { useRecoilState } from "recoil";
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { firestore } from "../firebase/clientApp";
 import { notificationsState, Notification } from "../atoms/notificationsAtom";
 import useAuth from "./useAuth";
 
@@ -22,41 +20,43 @@ export const useNotifications = () => {
     }
 
     setLoading(true);
-    
-    const notificationsQuery = query(
-      collection(firestore, "notifications"),
-      where("targetUserId", "==", user.uid)
-      // Temporarily remove orderBy to avoid composite index requirement
-      // orderBy("timestamp", "desc")
-    );
+    const abort = new AbortController();
+    const load = async () => {
+      try {
+        const resp = await fetch(`/api/notifications?userId=${user.uid}`, { signal: abort.signal });
+        const data = await resp.json();
+        const sorted = (data || []).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const mapped = sorted.map((n: any) => ({
+          id: n.id?.toString?.() || n.id,
+          type: n.type || "comment",
+          message: n.content,
+          userId: n.userId || "",
+          targetUserId: n.userId,
+          postId: n.postId,
+          commentId: n.commentId,
+          postTitle: n.postTitle,
+          communityName: n.communityName,
+          timestamp: { toDate: () => new Date(n.createdAt) } as any,
+          read: !!n.isRead,
+        })) as Notification[];
 
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      const notifications = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Notification[];
+        const unreadCount = mapped.filter(n => !n.read).length;
+        setNotificationsStateValue(prev => ({
+          ...prev,
+          notifications: mapped,
+          unreadCount,
+          loading: false,
+        }));
+      } catch (e) {
+        if (!(e as any).name?.includes("Abort")) {
+          console.error("Error fetching notifications:", e);
+          setLoading(false);
+        }
+      }
+    };
+    load();
 
-      // Sort notifications by timestamp in descending order on client side
-      const sortedNotifications = notifications.sort((a, b) => {
-        const aTime = a.timestamp?.toDate?.() || new Date();
-        const bTime = b.timestamp?.toDate?.() || new Date();
-        return bTime.getTime() - aTime.getTime();
-      });
-
-      const unreadCount = sortedNotifications.filter(n => !n.read).length;
-
-      setNotificationsStateValue(prev => ({
-        ...prev,
-        notifications: sortedNotifications,
-        unreadCount,
-        loading: false,
-      }));
-    }, (error) => {
-      console.error("Error fetching notifications:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    return () => abort.abort();
   }, [user, setNotificationsStateValue]);
 
   // Mark notification as read
@@ -64,9 +64,10 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      const notificationRef = doc(firestore, "notifications", notificationId);
-      await updateDoc(notificationRef, {
-        read: true,
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: notificationId, read: true })
       });
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -79,13 +80,13 @@ export const useNotifications = () => {
 
     try {
       const unreadNotifications = notificationsStateValue.notifications.filter(n => !n.read);
-      
-      const updatePromises = unreadNotifications.map(notification => {
-        const notificationRef = doc(firestore, "notifications", notification.id);
-        return updateDoc(notificationRef, { read: true });
-      });
-
-      await Promise.all(updatePromises);
+      await Promise.all(
+        unreadNotifications.map(n => fetch("/api/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: n.id, read: true })
+        }))
+      );
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     }
@@ -94,10 +95,13 @@ export const useNotifications = () => {
   // Create notification (called when someone comments, likes, etc.)
   const createNotification = async (notificationData: Omit<Notification, "id" | "timestamp" | "read">) => {
     try {
-      await addDoc(collection(firestore, "notifications"), {
-        ...notificationData,
-        timestamp: serverTimestamp(),
-        read: false,
+      await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: notificationData.targetUserId,
+          content: `${notificationData.message}`
+        })
       });
     } catch (error) {
       console.error("Error creating notification:", error);

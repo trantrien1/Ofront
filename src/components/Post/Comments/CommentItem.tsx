@@ -9,7 +9,7 @@ import {
   Text,
   Button,
 } from "@chakra-ui/react";
-import { Timestamp } from "firebase/firestore";
+type Timestamp = any;
 import { FaReddit, FaThumbsUp } from "react-icons/fa";
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 import { useRouter } from "next/router";

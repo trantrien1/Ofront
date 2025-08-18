@@ -31,8 +31,6 @@ import Link from "next/link";
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 import dynamic from "next/dynamic";
 import PostModeration from "../PostModeration";
-import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { firestore } from "../../../firebase/clientApp";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { communityState } from "../../../atoms/communitiesAtom";
 import { useToast } from "@chakra-ui/react";
@@ -130,52 +128,25 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const handlePinPost = async () => {
     setLoadingPin(true);
     try {
-      const communityRef = doc(firestore, "communities", post.communityId);
       const isPinned = communityData?.pinnedPosts?.includes(post.id);
-      
-      if (isPinned) {
-        // Unpin post
-        await updateDoc(communityRef, {
-          pinnedPosts: arrayRemove(post.id)
-        });
-        
-        // Update local state
-        const updatedPinnedPosts = communityData.pinnedPosts?.filter(id => id !== post.id) || [];
-        setCommunityStateValue(prev => ({
-          ...prev,
-          currentCommunity: {
-            ...prev.currentCommunity,
-            pinnedPosts: updatedPinnedPosts
-          }
-        }));
-        
-        toast({
-          title: "Post unpinned successfully",
-          status: "success",
-          duration: 3000,
-        });
-      } else {
-        // Pin post
-        await updateDoc(communityRef, {
-          pinnedPosts: arrayUnion(post.id)
-        });
-        
-        // Update local state
-        const updatedPinnedPosts = [...(communityData.pinnedPosts || []), post.id];
-        setCommunityStateValue(prev => ({
-          ...prev,
-          currentCommunity: {
-            ...prev.currentCommunity,
-            pinnedPosts: updatedPinnedPosts
-          }
-        }));
-        
-        toast({
-          title: "Post pinned successfully",
-          status: "success",
-          duration: 3000,
-        });
-      }
+      const updatedPinnedPosts = isPinned
+        ? (communityData.pinnedPosts || []).filter((id) => id !== post.id)
+        : [...(communityData.pinnedPosts || []), post.id];
+
+      // Optimistic local update; TODO: call API to persist
+      setCommunityStateValue((prev) => ({
+        ...prev,
+        currentCommunity: {
+          ...prev.currentCommunity,
+          pinnedPosts: updatedPinnedPosts,
+        },
+      }));
+
+      toast({
+        title: isPinned ? "Post unpinned successfully" : "Post pinned successfully",
+        status: "success",
+        duration: 3000,
+      });
       
     } catch (error) {
       toast({

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc, increment, writeBatch, Timestamp, arrayUnion } from "firebase/firestore";
+// Firebase removed
 import { useRouter } from "next/router";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilState, useSetRecoilState } from "recoil";
 import { authModalState } from "../atoms/authModalAtom";
 import {
@@ -10,12 +9,12 @@ import {
   communityState,
   defaultCommunity,
 } from "../atoms/communitiesAtom";
-import { auth, firestore } from "../firebase/clientApp";
+// Firebase removed
 import { getMySnippets } from "../helpers/firestore";
 
 // Add ssrCommunityData near end as small optimization
 const useCommunityData = (ssrCommunityData?: boolean) => {
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const router = useRouter();
   const [communityStateValue, setCommunityStateValue] =
     useRecoilState(communityState);
@@ -58,12 +57,8 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
     console.log("GETTING COMMUNITY DATA");
 
     try {
-      const communityDocRef = doc(
-        firestore,
-        "communities",
-        communityId as string
-      );
-      const communityDoc = await getDoc(communityDocRef);
+      // TODO: Fetch from API
+      const communityDoc = { id: communityId, data: () => ({}) } as any;
       // setCommunityStateValue((prev) => ({
       //   ...prev,
       //   visitedCommunities: {
@@ -77,8 +72,8 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
       setCommunityStateValue((prev) => ({
         ...prev,
         currentCommunity: {
-          id: communityDoc.id,
-          ...communityDoc.data(),
+          id: communityId,
+          ...(communityDoc.data?.() || {}),
         } as Community,
       }));
     } catch (error: any) {
@@ -106,38 +101,22 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   const joinCommunity = async (community: Community) => {
     console.log("JOINING COMMUNITY: ", community.id);
     try {
-      const batch = writeBatch(firestore);
-
       const newSnippet: CommunitySnippet = {
         communityId: community.id,
         imageURL: community.imageURL || "",
         role: "member",
       };
-      batch.set(
-        doc(
-          firestore,
-          `users/${user?.uid}/communitySnippets`,
-          community.id // will for sure have this value at this point
-        ),
-        newSnippet
-      );
 
       // Add user to community members
       const newMember = {
-        userId: user?.uid!,
+        userId: user?.uid || "",
         role: "member" as const,
-        joinedAt: Timestamp.now(),
-        displayName: user?.displayName || user?.email?.split('@')[0],
-        imageURL: user?.photoURL || "",
+        joinedAt: new Date() as any,
+        displayName: "",
+        imageURL: "",
       };
 
-      batch.update(doc(firestore, "communities", community.id), {
-        numberOfMembers: increment(1),
-        members: arrayUnion(newMember),
-      });
-
-      // perform batch writes
-      await batch.commit();
+      // TODO: Call API to join community and persist member
 
       // Add current community to snippet
       setCommunityStateValue((prev) => ({
@@ -152,24 +131,12 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
 
   const leaveCommunity = async (communityId: string) => {
     try {
-      const batch = writeBatch(firestore);
-
-      batch.delete(
-        doc(firestore, `users/${user?.uid}/communitySnippets/${communityId}`)
-      );
-
       // Remove user from community members
       const currentCommunity = communityStateValue.currentCommunity;
       const updatedMembers = currentCommunity.members?.filter(
-        member => member.userId !== user?.uid
+        member => member.userId !== (user?.uid || "")
       ) || [];
-
-      batch.update(doc(firestore, "communities", communityId), {
-        numberOfMembers: increment(-1),
-        members: updatedMembers,
-      });
-
-      await batch.commit();
+      // TODO: Call API to leave community and persist update
 
       setCommunityStateValue((prev) => ({
         ...prev,

@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { Button, Flex, Text } from "@chakra-ui/react";
-import { useCreateUserWithEmailAndPassword } from "react-firebase-hooks/auth";
 import { ModalView } from "../../../atoms/authModalAtom";
-import { auth } from "../../../firebase/clientApp";
-import { FIREBASE_ERRORS } from "../../../firebase/errors";
+// Firebase removed
 import InputItem from "../../Layout/InputItem";
 
 type SignUpProps = {
@@ -17,8 +15,8 @@ const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
     confirmPassword: "",
   });
   const [formError, setFormError] = useState("");
-  const [createUserWithEmailAndPassword, _, loading, authError] =
-    useCreateUserWithEmailAndPassword(auth);
+  const loading = false;
+  const authError: any = null;
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -31,8 +29,7 @@ const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
       return setFormError("Passwords do not match");
     }
 
-    // Valid form inputs
-    createUserWithEmailAndPassword(form.email, form.password);
+    // TODO: Call your own signup API
   };
 
   const onChange = ({
@@ -67,8 +64,7 @@ const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
         onChange={onChange}
       />
       <Text textAlign="center" mt={2} fontSize="10pt" color="red">
-        {formError ||
-          (authError?.message && FIREBASE_ERRORS[authError.message as keyof typeof FIREBASE_ERRORS])}
+        {formError}
       </Text>
       <Button
         width="100%"

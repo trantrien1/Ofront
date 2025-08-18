@@ -14,13 +14,13 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
+// Firebase removed
 import { useRouter } from "next/router";
 import { BsFillEyeFill, BsFillPersonFill } from "react-icons/bs";
 import { HiLockClosed } from "react-icons/hi";
 import { useSetRecoilState, useRecoilValue } from "recoil";
 import { communityState, createCommunityModalState } from "../../../atoms/communitiesAtom";
-import { firestore } from "../../../firebase/clientApp";
+// Firebase removed
 import ModalWrapper from "../ModalWrapper";
 
 type CreateCommunityModalProps = {
@@ -70,29 +70,7 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
 
     setLoading(true);
     try {
-      // Create community document and communitySnippet subcollection document on user
-      const communityDocRef = doc(firestore, "communities", name);
-      await runTransaction(firestore, async (transaction) => {
-        const communityDoc = await transaction.get(communityDocRef);
-        if (communityDoc.exists()) {
-          throw new Error(`Sorry, /r${name} is taken. Try another.`);
-        }
-
-        transaction.set(communityDocRef, {
-          creatorId: userId,
-          createdAt: serverTimestamp(),
-          numberOfMembers: 1,
-          privacyType: "public",
-        });
-
-        transaction.set(
-          doc(firestore, `users/${userId}/communitySnippets`, name),
-          {
-            communityId: name,
-            isModerator: true,
-          }
-        );
-      });
+      // TODO: Create via API (communities table + user snippet equivalent)
     } catch (error: any) {
       setNameError(error.message);
     }

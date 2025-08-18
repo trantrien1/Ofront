@@ -1,5 +1,5 @@
 import { atom } from "recoil";
-import { FieldValue, Timestamp } from "firebase/firestore";
+type Timestamp = any;
 
 export type CommunityRole = "owner" | "admin" | "moderator" | "member";
 

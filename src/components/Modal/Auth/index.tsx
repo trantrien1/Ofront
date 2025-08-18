@@ -8,11 +8,11 @@ import {
   ModalHeader,
   ModalOverlay,
 } from "@chakra-ui/react";
-import { useAuthState } from "react-firebase-hooks/auth";
+// Firebase removed
 import { useRecoilState, useRecoilValue } from "recoil";
 import { authModalState } from "../../../atoms/authModalAtom";
 import { userState } from "../../../atoms/userAtom";
-import { auth } from "../../../firebase/clientApp";
+// Firebase removed
 import AuthInputs from "./Inputs";
 import OAuthButtons from "./OAuthButtons";
 import ResetPassword from "./ResetPassword";
@@ -29,7 +29,7 @@ const AuthModal: React.FC<AuthModalProps> = () => {
     }));
 
   const currentUser = useRecoilValue(userState);
-  const [user, error] = useAuthState(auth);
+  const user = null as any;
 
   // Can implement at the end
   // useEffect(() => {

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
+// Firebase removed
 import type { GetServerSidePropsContext, NextPage } from "next";
-import { useAuthState } from "react-firebase-hooks/auth";
+// Firebase removed
 import { useRecoilState } from "recoil";
 import safeJsonStringify from "safe-json-stringify";
 import { Community, communityState } from "../../../atoms/communitiesAtom";
@@ -13,14 +13,14 @@ import CommunityHighlights from "../../../components/Community/CommunityHighligh
 import PageContentLayout from "../../../components/Layout/PageContent";
 import Posts from "../../../components/Post/Posts";
 import { usePinnedPosts } from "../../../hooks/usePinnedPosts";
-import { auth, firestore } from "../../../firebase/clientApp";
+// Firebase removed
 
 interface CommunityPageProps {
   communityData: Community;
 }
 
 const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
-  const [user, loadingUser] = useAuthState(auth);
+  const user = null as any; const loadingUser = false;
 
   const [communityStateValue, setCommunityStateValue] =
     useRecoilState(communityState);
@@ -89,19 +89,10 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   console.log("GET SERVER SIDE PROPS RUNNING");
 
   try {
-    const communityDocRef = doc(
-      firestore,
-      "communities",
-      context.query.community as string
-    );
-    const communityDoc = await getDoc(communityDocRef);
+    // TODO: Fetch community by slug from API/DB
     return {
       props: {
-        communityData: communityDoc.exists()
-          ? JSON.parse(
-              safeJsonStringify({ id: communityDoc.id, ...communityDoc.data() }) // needed for dates
-            )
-          : "",
+        communityData: "",
       },
     };
   } catch (error) {

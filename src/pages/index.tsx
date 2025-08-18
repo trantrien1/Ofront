@@ -1,19 +1,9 @@
 import { useEffect } from "react";
 import { Stack } from "@chakra-ui/react";
-import {
-  collection,
-  DocumentData,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  QuerySnapshot,
-  where,
-} from "firebase/firestore";
+// Firebase removed
 import type { NextPage } from "next";
 import { useRouter } from "next/router";
-import { useAuthState } from "react-firebase-hooks/auth";
+// import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue } from "recoil";
 import { communityState } from "../atoms/communitiesAtom";
 import { Post, PostVote } from "../atoms/postsAtom";
@@ -22,13 +12,14 @@ import Recommendations from "../components/Community/Recommendations";
 import PageContentLayout from "../components/Layout/PageContent";
 import PostLoader from "../components/Post/Loader";
 import PostItem from "../components/Post/PostItem";
-import { auth, firestore } from "../firebase/clientApp";
+// Firebase removed
 import usePosts from "../hooks/usePosts";
 
 
 
 const Home: NextPage = () => {
-  const [user, loadingUser] = useAuthState(auth);
+  const user = null as any;
+  const loadingUser = false;
   const {
     postStateValue,
     setPostStateValue,
@@ -54,52 +45,18 @@ const Home: NextPage = () => {
       if (communityStateValue.mySnippets.length) {
         console.log("GETTING POSTS IN USER COMMUNITIES");
 
-        const myCommunityIds = communityStateValue.mySnippets.map(
-          (snippet) => snippet.communityId
-        );
-        // Getting 2 posts from 3 communities that user has joined
-        let postPromises: Array<Promise<QuerySnapshot<DocumentData>>> = [];
-        [0, 1, 2].forEach((index) => {
-          if (!myCommunityIds[index]) return;
-
-          postPromises.push(
-            getDocs(
-              query(
-                collection(firestore, "posts"),
-                where("communityId", "==", myCommunityIds[index]),
-                limit(3)
-              )
-            )
-          );
-        });
-        const queryResults = await Promise.all(postPromises);
-        /**
-         * queryResults is an array of length 3, each with 0-2 posts from
-         * 3 communities that the user has joined
-         */
-        queryResults.forEach((result) => {
-          const posts = result.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })) as Post[];
-          feedPosts.push(...posts);
-        });
+        // TODO: Replace with user feed API; fallback to general posts for now
+        const resp = await fetch(`/api/posts`);
+        const posts = resp.ok ? await resp.json() : [];
+        if (Array.isArray(posts)) feedPosts.push(...(posts as Post[]));
       }
       // User has not joined any communities yet
       else {
         console.log("USER HAS NO COMMUNITIES - GETTING GENERAL POSTS");
 
-        const postQuery = query(
-          collection(firestore, "posts"),
-          orderBy("voteStatus", "desc"),
-          limit(10)
-        );
-        const postDocs = await getDocs(postQuery);
-        const posts = postDocs.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Post[];
-        feedPosts.push(...posts);
+        const resp = await fetch(`/api/posts`);
+        const posts = resp.ok ? await resp.json() : [];
+        if (Array.isArray(posts)) feedPosts.push(...(posts as Post[]));
       }
 
       console.log("HERE ARE FEED POSTS", feedPosts);
@@ -121,21 +78,13 @@ const Home: NextPage = () => {
     console.log("GETTING NO USER FEED");
     setLoading(true);
     try {
-      const postQuery = query(
-        collection(firestore, "posts"),
-        orderBy("voteStatus", "desc"),
-        limit(10)
-      );
-      const postDocs = await getDocs(postQuery);
-      const posts = postDocs.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const resp = await fetch(`/api/posts`);
+      const posts = resp.ok ? await resp.json() : [];
       console.log("NO USER FEED", posts);
 
       setPostStateValue((prev) => ({
         ...prev,
-        posts: posts as Post[],
+        posts: Array.isArray(posts) ? (posts as Post[]) : [],
       }));
     } catch (error: any) {
       console.log("getNoUserHomePosts error", error.message);
@@ -144,24 +93,9 @@ const Home: NextPage = () => {
   };
 
   const getUserPostVotes = async () => {
-    const postIds = postStateValue.posts.map((post) => post.id);
-    const postVotesQuery = query(
-      collection(firestore, `users/${user?.uid}/postVotes`),
-      where("postId", "in", postIds)
-    );
-    const unsubscribe = onSnapshot(postVotesQuery, (querySnapshot) => {
-      const postVotes = querySnapshot.docs.map((postVote) => ({
-        id: postVote.id,
-        ...postVote.data(),
-      }));
-
-      setPostStateValue((prev) => ({
-        ...prev,
-        postVotes: postVotes as PostVote[],
-      }));
-    });
-
-    return () => unsubscribe();
+    // TODO: Load votes via API; for now, clear
+    setPostStateValue((prev) => ({ ...prev, postVotes: [] }));
+    return () => {};
   };
 
   useEffect(() => {

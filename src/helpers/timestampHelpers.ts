@@ -1,5 +1,5 @@
 import moment from "moment";
-import { Timestamp } from "firebase/firestore";
+type Timestamp = any;
 
 /**
  * Convert Firestore timestamp to ISO string for consistent server-client rendering

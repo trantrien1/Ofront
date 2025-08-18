@@ -1,25 +1,15 @@
 import React, { useEffect, useState } from "react";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  onSnapshot,
-  query,
-  where,
-  writeBatch,
-} from "firebase/firestore";
-import { deleteObject, ref } from "firebase/storage";
-import { useAuthState } from "react-firebase-hooks/auth";
+// Firebase removed
 import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { authModalState } from "../atoms/authModalAtom";
 import { Community, communityState } from "../atoms/communitiesAtom";
 import { Post, postState, PostVote } from "../atoms/postsAtom";
-import { auth, firestore, storage } from "../firebase/clientApp";
+// Firebase removed
 import { useRouter } from "next/router";
 
 const usePosts = (communityData?: Community) => {
-  const [user, loadingUser] = useAuthState(auth);
+  const user = null as any;
+  const loadingUser = false;
   const [postStateValue, setPostStateValue] = useRecoilState(postState);
   const setAuthModalState = useSetRecoilState(authModalState);
   const [loading, setLoading] = useState(false);
@@ -61,31 +51,18 @@ const usePosts = (communityData?: Community) => {
 
     try {
       let voteChange = vote;
-      const batch = writeBatch(firestore);
-
       const updatedPost = { ...post };
       const updatedPosts = [...postStateValue.posts];
       let updatedPostVotes = [...postStateValue.postVotes];
 
       // New vote
       if (!existingVote) {
-        const postVoteRef = doc(
-          collection(firestore, "users", `${user.uid}/postVotes`)
-        );
-
         const newVote: PostVote = {
-          id: postVoteRef.id,
+          id: `${user?.uid || "anon"}_${post.id}`,
           postId: post.id,
           communityId,
           voteValue: vote,
         };
-
-        console.log("NEW VOTE!!!", newVote);
-
-        // APRIL 25 - DON'T THINK WE NEED THIS
-        // newVote.id = postVoteRef.id;
-
-        batch.set(postVoteRef, newVote);
 
         updatedPost.voteStatus = voteStatus + vote;
         updatedPostVotes = [...updatedPostVotes, newVote];
@@ -93,12 +70,6 @@ const usePosts = (communityData?: Community) => {
       // Removing existing vote
       else {
         // Used for both possible cases of batch writes
-        const postVoteRef = doc(
-          firestore,
-          "users",
-          `${user.uid}/postVotes/${existingVote.id}`
-        );
-
         // Removing vote
         if (existingVote.voteValue === vote) {
           voteChange *= -1;
@@ -106,7 +77,6 @@ const usePosts = (communityData?: Community) => {
           updatedPostVotes = updatedPostVotes.filter(
             (vote) => vote.id !== existingVote.id
           );
-          batch.delete(postVoteRef);
         }
         // Changing vote
         else {
@@ -124,9 +94,6 @@ const usePosts = (communityData?: Community) => {
               voteValue: vote,
             };
           }
-          batch.update(postVoteRef, {
-            voteValue: vote,
-          });
         }
       }
 
@@ -163,10 +130,7 @@ const usePosts = (communityData?: Community) => {
       // Optimistically update the UI
       setPostStateValue(updatedState);
 
-      // Update database
-      const postRef = doc(firestore, "posts", post.id);
-      batch.update(postRef, { voteStatus: voteStatus + voteChange });
-      await batch.commit();
+      // TODO: Replace with API call for votes. For now, UI-only update.
     } catch (error) {
       console.log("onVote error", error);
     }
@@ -177,14 +141,7 @@ const usePosts = (communityData?: Community) => {
 
     try {
       // if post has an image url, delete it from storage
-      if (post.imageURL) {
-        const imageRef = ref(storage, `posts/${post.id}/image`);
-        await deleteObject(imageRef);
-      }
-
-      // delete post from posts collection
-      const postDocRef = doc(firestore, "posts", post.id);
-      await deleteDoc(postDocRef);
+      // TODO: call DELETE /api/posts?id=... once implemented
 
       // Update post state
       setPostStateValue((prev) => ({
@@ -210,15 +167,8 @@ const usePosts = (communityData?: Community) => {
   };
 
   const getCommunityPostVotes = async (communityId: string) => {
-    const postVotesQuery = query(
-      collection(firestore, `users/${user?.uid}/postVotes`),
-      where("communityId", "==", communityId)
-    );
-    const postVoteDocs = await getDocs(postVotesQuery);
-    const postVotes = postVoteDocs.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    // TODO: fetch post votes from API once implemented
+    const postVotes: any[] = [];
     setPostStateValue((prev) => ({
       ...prev,
       postVotes: postVotes as PostVote[],

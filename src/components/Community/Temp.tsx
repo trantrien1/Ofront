@@ -1,17 +1,16 @@
 import { Flex, Icon, Input } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import React from "react";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { BsLink45Deg } from "react-icons/bs";
 import { FaReddit } from "react-icons/fa";
 import { IoImageOutline } from "react-icons/io5";
 import { useSetRecoilState } from "recoil";
 import { authModalState } from "../../atoms/authModalAtom";
-import { auth } from "../../firebase/clientApp";
+// Firebase removed
 
 const CreatePostLink: React.FC = () => {
   const router = useRouter();
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const setAuthModalState = useSetRecoilState(authModalState);
 
   const onClick = () => {

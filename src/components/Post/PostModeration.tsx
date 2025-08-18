@@ -26,9 +26,7 @@ import {
   FaExclamationTriangle,
   FaShieldAlt 
 } from "react-icons/fa";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, firestore } from "../../firebase/clientApp";
-import { doc, deleteDoc, updateDoc, arrayUnion, Timestamp } from "firebase/firestore";
+// Firebase removed
 import { useCommunityPermissions } from "../../hooks/useCommunityPermissions";
 import { BannedUser } from "../../atoms/communitiesAtom";
 
@@ -51,7 +49,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
   onPostDeleted,
   onPostPinned,
 }) => {
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const toast = useToast();
   const { canDeletePosts, canPinPosts, canBanUsers } = useCommunityPermissions();
   
@@ -63,11 +61,11 @@ const PostModeration: React.FC<PostModerationProps> = ({
   // Check if user has moderation permissions
   const canModerate = canDeletePosts(communityId) || canPinPosts(communityId) || canBanUsers(communityId);
   
-  if (!canModerate || !user) return null;
+  if (!canModerate) return null;
 
   const handleDeletePost = async () => {
     try {
-      await deleteDoc(doc(firestore, "posts", postId));
+      // TODO: DELETE /api/posts?id=...
       toast({
         title: "Post deleted",
         status: "success",
@@ -86,19 +84,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
 
   const handlePinPost = async () => {
     try {
-      const communityRef = doc(firestore, "communities", communityId);
-      
-      if (isPinned) {
-        // Unpin post
-        await updateDoc(communityRef, {
-          pinnedPosts: arrayUnion(postId)
-        });
-      } else {
-        // Pin post
-        await updateDoc(communityRef, {
-          pinnedPosts: arrayUnion(postId)
-        });
-      }
+      // TODO: toggle pin via API
       
       toast({
         title: isPinned ? "Post unpinned" : "Post pinned",
@@ -121,15 +107,12 @@ const PostModeration: React.FC<PostModerationProps> = ({
     try {
       const bannedUser: BannedUser = {
         userId: authorId,
-        bannedAt: Timestamp.now(),
-        bannedBy: user.uid,
+        bannedAt: new Date() as any,
+        bannedBy: user?.uid || "",
         reason: banReason,
         displayName: authorName,
       };
-      
-      await updateDoc(doc(firestore, "communities", communityId), {
-        bannedUsers: arrayUnion(bannedUser)
-      });
+      // TODO: call API to ban user
       
       toast({
         title: "User banned",

@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import { Box, Flex, Icon, MenuItem, Text } from "@chakra-ui/react";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { FaReddit } from "react-icons/fa";
 import { GrAdd } from "react-icons/gr";
 import { useRecoilValue } from "recoil";
 import { communityState } from "../../../atoms/communitiesAtom";
-import { auth } from "../../../firebase/clientApp";
+// Firebase removed
 import CreateCommunityModal from "../../Modal/CreateCommunity";
 import MenuListItem from "./MenuListItem";
 
@@ -14,7 +13,7 @@ type CommunitiesProps = {
 };
 
 const Communities: React.FC<CommunitiesProps> = ({ menuOpen }) => {
-  const [user] = useAuthState(auth);
+  const user = null as any;
   const [open, setOpen] = useState(false);
   const mySnippets = useRecoilValue(communityState).mySnippets;
 

@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { Button, Flex, Icon, Input, Text } from "@chakra-ui/react";
-import { useSendPasswordResetEmail } from "react-firebase-hooks/auth";
 import { BsDot, BsReddit } from "react-icons/bs";
 import { authModalState, ModalView } from "../../../atoms/authModalAtom";
-import { auth } from "../../../firebase/clientApp";
+// Firebase removed
 import { useSetRecoilState } from "recoil";
 
 type ResetPasswordProps = {
@@ -14,13 +13,13 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ toggleView }) => {
   const setAuthModalState = useSetRecoilState(authModalState);
   const [email, setEmail] = useState("");
   const [success, setSuccess] = useState(false);
-  const [sendPasswordResetEmail, sending, error] =
-    useSendPasswordResetEmail(auth);
+  const sending = false;
+  const error: any = null;
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    await sendPasswordResetEmail(email);
+    // TODO: Call your backend to send reset email
     setSuccess(true);
   };
   return (

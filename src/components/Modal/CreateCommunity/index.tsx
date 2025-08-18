@@ -18,8 +18,8 @@ import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/router";
 import { BsFillEyeFill, BsFillPersonFill } from "react-icons/bs";
 import { HiLockClosed } from "react-icons/hi";
-import { useSetRecoilState } from "recoil";
-import { communityState } from "../../../atoms/communitiesAtom";
+import { useSetRecoilState, useRecoilValue } from "recoil";
+import { communityState, createCommunityModalState } from "../../../atoms/communitiesAtom";
 import { firestore } from "../../../firebase/clientApp";
 import ModalWrapper from "../ModalWrapper";
 
@@ -35,12 +35,22 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
   userId,
 }) => {
   const setSnippetState = useSetRecoilState(communityState);
+  const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
   const [name, setName] = useState("");
   const [charsRemaining, setCharsRemaining] = useState(21);
   const [nameError, setNameError] = useState("");
   const [communityType, setCommunityType] = useState("public");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const handleCloseModal = () => {
+    setCreateCommunityModal({ open: false });
+    setName("");
+    setCharsRemaining(21);
+    setNameError("");
+    setCommunityType("public");
+    setLoading(false);
+  };
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.value.length > 21) return;
@@ -91,7 +101,7 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
       ...prev,
       mySnippets: [],
     }));
-    handleClose();
+    handleCloseModal();
     router.push(`r/${name}`);
     setLoading(false);
   };
@@ -107,7 +117,7 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
   };
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={handleClose}>
+    <ModalWrapper isOpen={isOpen} onClose={handleCloseModal}>
       <ModalHeader
         display="flex"
         flexDirection="column"
@@ -213,7 +223,7 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
         </ModalBody>
       </Box>
       <ModalFooter bg="gray.100" borderRadius="0px 0px 10px 10px">
-        <Button variant="outline" height="30px" mr={2} onClick={handleClose}>
+        <Button variant="outline" height="30px" mr={2} onClick={handleCloseModal}>
           Cancel
         </Button>
         <Button

@@ -83,3 +83,17 @@ export const communityState = atom<CommunityState>({
   key: `atoms/communities/communityState_${Date.now()}_${Math.random()}`,
   default: defaultCommunityState,
 });
+
+// Add create community modal state
+export interface CreateCommunityModalState {
+  open: boolean;
+}
+
+const defaultCreateCommunityModalState: CreateCommunityModalState = {
+  open: false,
+};
+
+export const createCommunityModalState = atom<CreateCommunityModalState>({
+  key: `atoms/communities/createCommunityModalState_${Date.now()}_${Math.random()}`,
+  default: defaultCreateCommunityModalState,
+});

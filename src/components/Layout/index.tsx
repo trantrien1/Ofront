@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState } from "react";
 import { Box, Flex } from "@chakra-ui/react";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { useRecoilValue } from "recoil";
 import { auth } from "../../firebase/clientApp";
+import { createCommunityModalState } from "../../atoms/communitiesAtom";
 import useAuth from "../../hooks/useAuth";
 import Navbar from "../Navbar";
 import Sidebar from "./Sidebar";
 import AuthModal from "../Modal/Auth";
+import CreateCommunityModal from "../Modal/CreateCommunity";
 import ClientOnlyWrapper from "./ClientOnlyWrapper";
 
 // Create context for sidebar state
@@ -22,6 +25,8 @@ export const useSidebar = () => useContext(SidebarContext);
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // useAuth(); // will implement later at end of tutorial
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [user] = useAuthState(auth);
+  const createCommunityModalStateValue = useRecoilValue(createCommunityModalState);
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
@@ -55,6 +60,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </Flex>
           
           <AuthModal />
+          {user && (
+            <CreateCommunityModal
+              isOpen={createCommunityModalStateValue.open}
+              handleClose={() => {}}
+              userId={user.uid}
+            />
+          )}
         </Box>
       </ClientOnlyWrapper>
     </SidebarContext.Provider>

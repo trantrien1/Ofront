@@ -18,7 +18,7 @@ import {
 } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { useRecoilValue } from "recoil";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import {
   FaHome,
   FaFire,
@@ -31,7 +31,7 @@ import {
 } from "react-icons/fa";
 import { MdGroup } from "react-icons/md";
 import { auth } from "../../firebase/clientApp";
-import { communityState } from "../../atoms/communitiesAtom";
+import { communityState, createCommunityModalState } from "../../atoms/communitiesAtom";
 
 // Import the context
 const SidebarContext = React.createContext<{
@@ -48,6 +48,7 @@ const Sidebar: React.FC = () => {
   const router = useRouter();
   const [user] = useAuthState(auth);
   const communityStateValue = useRecoilValue(communityState);
+  const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
   const { isOpen: isCommunitiesOpen, onToggle: onCommunitiesToggle } = useDisclosure({ defaultIsOpen: true });
   
   // Use local state for now, but this can be connected to global context later
@@ -66,8 +67,7 @@ const Sidebar: React.FC = () => {
   };
 
   const handleCreateCommunity = () => {
-    // TODO: Open create community modal
-    console.log("Create community clicked");
+    setCreateCommunityModal({ open: true });
   };
 
   const handleManageCommunities = () => {

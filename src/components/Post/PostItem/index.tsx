@@ -24,7 +24,7 @@ import {
   IoBookmarkOutline,
 } from "react-icons/io5";
 import { MdPushPin } from "react-icons/md";
-import { FiArrowUp, FiArrowDown, FiShare2 } from "react-icons/fi";
+import { FiShare2 } from "react-icons/fi";
 import { ChatIcon } from "@chakra-ui/icons";
 import { Post } from "../../../atoms/postsAtom";
 import Link from "next/link";
@@ -318,13 +318,14 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         spacing={3}
       >
         <IconButton
-          aria-label="Upvote"
-          icon={<FiArrowUp />}
+          aria-label="Like"
+          icon={<FaThumbsUp />}
           size="sm"
           variant="ghost"
-          bg={userVoteValue === 1 ? "orange.400" : "gray.300"}
+          bg={userVoteValue === 1 ? "blue.400" : "gray.300"}
+          color={userVoteValue === 1 ? "white" : "gray.800"}
           borderRadius="full"
-          borderColor={userVoteValue === 1 ? "orange.400" : "transparent"}
+          borderColor={userVoteValue === 1 ? "blue.400" : "transparent"}
           _hover={{
             bg: "gray.200",
             transform: "scale(1.1)"
@@ -332,26 +333,9 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           transition="all 0.2s ease"
           onClick={(event) => onVote(event, post, 1, post.communityId)}
         />
-        
         <Text fontWeight="semibold" color="black">
           {post.voteStatus.toLocaleString()}
         </Text>
-        
-        <IconButton
-          aria-label="Downvote"
-          icon={<FiArrowDown />}
-          size="sm"
-          variant="ghost"
-          bg={userVoteValue === -1 ? "blue.400" : "gray.300"}
-          borderRadius="full"
-          borderColor={userVoteValue === -1 ? "blue.400" : "transparent"}
-          _hover={{
-            bg: "gray.200",
-            transform: "scale(1.1)"
-          }}
-          transition="all 0.2s ease"
-          onClick={(event) => onVote(event, post, -1, post.communityId)}
-        />
       </HStack>
 
 

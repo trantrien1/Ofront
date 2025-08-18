@@ -10,11 +10,7 @@ import {
   Button,
 } from "@chakra-ui/react";
 import { Timestamp } from "firebase/firestore";
-import { FaReddit } from "react-icons/fa";
-import {
-  IoArrowDownCircleOutline,
-  IoArrowUpCircleOutline,
-} from "react-icons/io5";
+import { FaReddit, FaThumbsUp } from "react-icons/fa";
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
@@ -165,8 +161,8 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             fontWeight={600}
             color="gray.500"
           >
-            <Icon as={IoArrowUpCircleOutline} />
-            <Icon as={IoArrowDownCircleOutline} />
+            <Icon as={FaThumbsUp} />
+            <Text fontSize="9pt">Like</Text>
             <Text 
               fontSize="9pt" 
               _hover={{ color: "blue.500" }}

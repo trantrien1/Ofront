@@ -51,23 +51,13 @@ const CommentsComponent: React.FC<CommentsProps> = ({
 
     setCommentCreateLoading(true);
     try {
-      const resp = await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postId: selectedPost?.id,
-          userId: user.uid,
-          content: comment,
-          parentId: null,
-        }),
-      });
-      const data = await resp.json();
+      const newId = `${Date.now()}`;
 
       setComment("");
       const { id: postId, title } = selectedPost!;
       setComments((prev) => [
         {
-          id: data.id?.toString?.() || data.id,
+          id: newId,
           creatorId: user.uid,
           creatorDisplayText: user.email!.split("@")[0],
           creatorPhotoURL: user.photoURL,
@@ -91,18 +81,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       }));
 
       // Create notification for post creator
-      if (selectedPost?.creatorId !== user.uid) {
-        createNotification({
-          type: "comment",
-          message: "commented on your post",
-          userId: user.uid,
-          targetUserId: selectedPost?.creatorId!,
-          postId: selectedPost?.id,
-          commentId: data.id?.toString?.() || data.id,
-          postTitle: selectedPost?.title,
-          communityName: community,
-        });
-      }
+      // no-op notification in frontend-only mode
 
     } catch (error: any) {
       console.log("onCreateComment error", error.message);
@@ -117,21 +96,11 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     }
 
     try {
-      const resp = await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postId: selectedPost?.id,
-          userId: user.uid,
-          content: replyText,
-          parentId: parentComment.id,
-        }),
-      });
-      const data = await resp.json();
+      const newId = `${Date.now()}`;
 
       // Update local state
       const newReply: Comment = {
-        id: data.id?.toString?.() || data.id,
+        id: newId,
         creatorId: user.uid,
         creatorDisplayText: user.email!.split("@")[0],
         creatorPhotoURL: user.photoURL,
@@ -172,18 +141,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       }));
 
       // Create notification for parent comment creator
-      if (parentComment.creatorId !== user.uid) {
-        createNotification({
-          type: "comment",
-          message: "replied to your comment",
-          userId: user.uid,
-          targetUserId: parentComment.creatorId,
-          postId: selectedPost?.id,
-          commentId: data.id?.toString?.() || data.id,
-          postTitle: selectedPost?.title,
-          communityName: community,
-        });
-      }
+      // no-op notification in frontend-only mode
 
     } catch (error: any) {
       console.log("onReply error", error.message);
@@ -194,7 +152,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     setDeleteLoading(comment.id as string);
     try {
       if (!comment.id) throw "Comment has no ID";
-      await fetch(`/api/comments/${comment.id}`, { method: "DELETE" });
+      // frontend-only: just remove from state
 
       setPostState((prev) => ({
         ...prev,

@@ -1,34 +1,157 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+## Tổng quan
 
-## Getting Started
+Ứng dụng Next.js (TypeScript, Chakra UI, Recoil) chạy ở chế độ frontend-only. Tất cả Firebase và backend (Next.js API/MySQL) đã được gỡ bỏ. Các màn hình hoạt động với state cục bộ và hiển thị trống an toàn khi không có dữ liệu.
 
-First, run the development server:
+## Chạy dự án
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Mở `http://localhost:3000` để xem giao diện.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## Kiến trúc và chức năng từng file
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+### Gốc dự án
+- `next-env.d.ts`: Khai báo type hỗ trợ Next.js cho TypeScript.
+- `next.config.js`: Cấu hình Next.js (images, env, v.v.).
+- `package.json`: Thông tin gói, scripts (`dev`, `build`, `start`), dependencies.
+- `package-lock.json`: Khóa phiên bản dependencies.
+- `tsconfig.json`: Cấu hình TypeScript.
+- `README.md`: Tài liệu dự án (file này).
+- `public/`:
+  - `favicon.ico`, `vercel.svg`: Tài nguyên tĩnh.
+  - `images/`: Ảnh sử dụng trong UI (`googlelogo.png`, `redditFace.svg`, ...).
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+### `src/styles`
+- `globals.css`: CSS global áp dụng toàn ứng dụng.
 
-## Learn More
+### `src/types`
+- `forum.ts`: Khai báo interface mô phỏng schema forum/blog/groups (dùng cho type an toàn phía frontend).
 
-To learn more about Next.js, take a look at the following resources:
+### `src/chakra`
+- `theme.ts`: Khởi tạo chủ đề Chakra UI (màu sắc, fonts, components).
+- `button.ts`: Override style cho component Button của Chakra.
+- `input.ts`: Override style cho component Input của Chakra.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### `src/atoms` (Recoil state)
+- `authModalAtom.ts`: Trạng thái mở/đóng modal đăng nhập/đăng ký và tab hiện tại.
+- `communitiesAtom.ts`: Trạng thái communities, snippet của người dùng, tham gia/rời cộng đồng.
+- `directoryMenuAtom.ts`: Trạng thái menu Directory trên Navbar (mở/đóng, mục đã chọn).
+- `notificationsAtom.ts`: Danh sách thông báo, số lượng chưa đọc, trạng thái tải.
+- `postsAtom.ts`: Danh sách bài viết, bài đã chọn, cache bài viết, votes.
+- `userAtom.ts`: Thông tin user hiện tại ở frontend (stub, không có backend).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+### `src/helpers`
+- `timestampHelpers.ts`: Chuẩn hóa và format thời gian (time-ago, hiển thị ngày/giờ).
+- `userHelpers.ts`: Hàm tiện ích xử lý dữ liệu người dùng (ví dụ build display name).
+- `firestore.ts`: Placeholder sau khi gỡ Firebase; hiện trả về dữ liệu rỗng cho snippet (để tránh lỗi tham chiếu cũ).
 
-## Deploy on Vercel
+### `src/hooks`
+- `useAuth.ts`: Hook xác định trạng thái người dùng. Hiện stub (user = null), set cookie rỗng, đồng bộ `userAtom` về null.
+- `useClientSide.ts`: Phát hiện đang chạy phía client để tránh lỗi SSR.
+- `useCommunityData.ts`: Quản lý state cộng đồng (tham gia/rời) bằng cập nhật cục bộ; chỗ gọi backend đã gỡ.
+- `useCommunityPermissions.ts`: Tính quyền user trong cộng đồng (owner/mod/member) theo state có sẵn.
+- `useDirectory.ts`: Điều khiển mở/đóng Directory và chọn mục từ Navbar.
+- `useNotifications.ts`: Trạng thái thông báo. Có placeholder fetch `/api/notifications` cho tương lai; khi không có user sẽ đặt danh sách rỗng để an toàn frontend-only.
+- `usePinnedPosts.ts`: Trả về danh sách bài ghim (hiện rỗng, chờ tích hợp backend sau).
+- `usePosts.ts`: Quản lý logic bài viết (thêm/sửa/xóa/ghim) ở phía client, đồng bộ với `postsAtom`.
+- `useSelectFile.ts`: Xử lý chọn và preview ảnh khi đăng bài.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### `src/components/Layout`
+- `ClientOnlyWrapper.tsx`: Chỉ render con khi chạy bên client để tránh mismatch SSR.
+- `index.tsx`: Khung layout chính (Navbar, nội dung, sidebar khi cần).
+- `InputField.tsx`, `InputItem.tsx`: Trường nhập liệu dựng sẵn dùng cho form.
+- `PageContent.tsx`: Bố cục 2 cột linh hoạt (nội dung chính + phụ/ sidebar).
+- `Sidebar.tsx`: Vùng sidebar dùng trong các trang chi tiết.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### `src/components/Navbar`
+- `index.tsx`: Navbar chính (logo, search, directory, user area).
+- `SearchInput.tsx`: Ô tìm kiếm ở Navbar.
+- `RightContent/`
+  - `index.tsx`: Vùng phải của Navbar (auth buttons / menu người dùng).
+  - `AuthButtons.tsx`: Nút Đăng nhập/Đăng ký (mở modal auth).
+  - `ActionIcon.tsx`: Icon action chung (message, notifications...).
+  - `Icons.tsx`: Tập hợp các icon dùng trong Navbar RightContent.
+  - `ProfileMenu/`
+    - `MenuWrapper.tsx`: Dropdown menu người dùng (đăng xuất, profile...).
+    - `NoUserList.tsx`: Danh sách menu khi chưa đăng nhập.
+    - `UserList.tsx`: Danh sách menu khi đã đăng nhập (hiện hoạt động ở chế độ stub, không có Firebase).
+- `Directory/`
+  - `index.tsx`: Dropdown Directory tổng hợp mục.
+  - `Communities.tsx`: Danh sách cộng đồng.
+  - `Moderating.tsx`: Mục cộng đồng đang moderating.
+  - `MyCommunities.tsx`: Cộng đồng đã tham gia.
+  - `MenuListItem.tsx`: Item tiêu chuẩn trong menu Directory.
+
+### `src/components/Notifications`
+- `NotificationDropdown.tsx`: Dropdown hiển thị thông báo.
+- `NotificationItem.tsx`: Một item thông báo.
+
+### `src/components/Community`
+- `Header.tsx`: Header của trang cộng đồng (ảnh, tên, join button).
+- `JoinButton.tsx`: Nút tham gia/rời cộng đồng (cập nhật state cục bộ).
+- `CommunityInfo.tsx`: Thông tin tổng quan cộng đồng (mô tả, số liệu).
+- `CommunityManagement.tsx`: Khu vực quản trị cộng đồng (chỉnh sửa thông tin). Hành vi cập nhật hiện mang tính tối ưu lạc quan (chưa có backend).
+- `CommunityRules.tsx`: Hiển thị nội quy cộng đồng.
+- `CommunityHighlights.tsx`: Khối highlight/giới thiệu nhanh.
+- `Recommendations.tsx`: Gợi ý cộng đồng khác (placeholder, không gọi backend).
+- `About.tsx`: Box “About Community”.
+- `CommunityNotFound.tsx`: Hiển thị khi cộng đồng không tồn tại.
+- `Temp.tsx`: Thành phần tạm thời/phụ trợ UI.
+
+### `src/components/Post`
+- `Posts.tsx`: Danh sách bài viết cho trang/community; hiện render từ `postsAtom` (mặc định rỗng).
+- `PostsHome.tsx`: Wrapper danh sách bài viết cho trang Home.
+- `PostItem/index.tsx`: Hiển thị 1 bài viết; hỗ trợ vote/pin/delete dạng stub và cập nhật UI lạc quan.
+- `PostModeration.tsx`: Hành động moderation (pin/unpin, ban) dạng UI stub.
+- `Loader.tsx`: Skeleton/loader cho danh sách bài viết.
+- `PostForm/`
+  - `NewPostForm.tsx`: Form tạo bài viết (tab text/link/image), quản lý state cục bộ.
+  - `TextInputs.tsx`: Trường nhập tiêu đề/nội dung.
+  - `ImageUpload.tsx`: Chọn và preview ảnh.
+  - `TabItem.tsx`: Tab selector cho form post.
+- `Comments/`
+  - `index.tsx`: Quản lý danh sách bình luận theo post; thêm/sửa/xóa/reply trong state cục bộ; tạo id tạm `Date.now()`; không gọi backend.
+  - `CommentItem.tsx`: Hiển thị 1 bình luận, hỗ trợ like (UI), reply lồng nhau, highlight theo hash URL.
+  - `Input.tsx`: Ô nhập bình luận mới.
+  - `ReplyInput.tsx`: Ô nhập trả lời một bình luận.
+
+### `src/components/Main`
+- `index.tsx`: Thành phần trang chính tổng hợp khối UI.
+
+### `src/components/Modal`
+- `ModalWrapper.tsx`: Khung modal dùng chung.
+- `CreateCommunity/index.tsx`: Modal tạo cộng đồng (UI; cập nhật cục bộ, chưa lưu backend).
+- `Auth/`
+  - `index.tsx`: Modal xác thực (điều hướng giữa login/signup/reset).
+  - `Inputs.tsx`: Input chung cho form auth.
+  - `Login.tsx`: Form đăng nhập (stub: không gọi Firebase/backend).
+  - `SignUp.tsx`: Form đăng ký (stub).
+  - `OAuthButtons.tsx`: Nút OAuth (UI, chưa tích hợp nhà cung cấp).
+  - `ResetPassword.tsx`: Form reset mật khẩu (stub).
+
+### `src/components/PersonalHome`
+- `index.tsx`: Khối “Personal Home” bên sidebar trang chủ.
+
+### `src/pages`
+- `_app.tsx`: Entry của Next.js; bọc ChakraProvider, RecoilRoot, theme,...
+- `_document.tsx`: Tùy biến Document (lang, fonts, SSR style tag).
+- `index.tsx`: Trang Home; hiển thị feed bài viết (rỗng nếu không có mock).
+- `popular.tsx`: Trang “Popular” (feed rỗng khi không có backend/mocking).
+- `profile.tsx`: Trang hồ sơ người dùng (UI, dữ liệu stub).
+- `r/[community]/index.tsx`: Trang chi tiết community (header, about, posts...).
+- `r/[community]/submit.tsx`: Trang tạo bài trong community.
+- `r/[community]/comments/[pid].tsx`: Trang chi tiết bài viết + bình luận.
+
+## Ghi chú mô hình dữ liệu và backend
+- Firebase, Firestore, Cloud Functions: ĐÃ GỠ BỎ hoàn toàn.
+- Next.js API routes và MySQL: ĐÃ GỠ BỎ. Một số hook vẫn giữ placeholder fetch `/api/...` để dễ tái tích hợp sau; ở chế độ hiện tại (user = null) chúng sẽ không gọi mạng và luôn an toàn.
+- Ứng dụng hiện là frontend-only. Để có dữ liệu hiển thị, bạn có thể thêm “mock data” trong các component/hook tương ứng (ví dụ khởi tạo `postsAtom` hoặc nạp mẫu tại `pages/index.tsx`).
+
+## Phát triển tiếp theo (gợi ý)
+- Tích hợp backend mới (REST/GraphQL) và thay thế các chỗ placeholder.
+- Thêm mock data cục bộ để demo UI đầy đủ (posts, comments, notifications...).
+- Bổ sung kiểm thử component/hook.
+

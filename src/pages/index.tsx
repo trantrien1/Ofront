@@ -46,17 +46,16 @@ const Home: NextPage = () => {
         console.log("GETTING POSTS IN USER COMMUNITIES");
 
         // TODO: Replace with user feed API; fallback to general posts for now
-        const resp = await fetch(`/api/posts`);
-        const posts = resp.ok ? await resp.json() : [];
-        if (Array.isArray(posts)) feedPosts.push(...(posts as Post[]));
+        // No backend: use empty list (or add mock data here)
+        const posts: Post[] = [];
+        feedPosts.push(...posts);
       }
       // User has not joined any communities yet
       else {
         console.log("USER HAS NO COMMUNITIES - GETTING GENERAL POSTS");
 
-        const resp = await fetch(`/api/posts`);
-        const posts = resp.ok ? await resp.json() : [];
-        if (Array.isArray(posts)) feedPosts.push(...(posts as Post[]));
+        const posts: Post[] = [];
+        feedPosts.push(...posts);
       }
 
       console.log("HERE ARE FEED POSTS", feedPosts);
@@ -78,13 +77,12 @@ const Home: NextPage = () => {
     console.log("GETTING NO USER FEED");
     setLoading(true);
     try {
-      const resp = await fetch(`/api/posts`);
-      const posts = resp.ok ? await resp.json() : [];
+      const posts: Post[] = [];
       console.log("NO USER FEED", posts);
 
       setPostStateValue((prev) => ({
         ...prev,
-        posts: Array.isArray(posts) ? (posts as Post[]) : [],
+        posts,
       }));
     } catch (error: any) {
       console.log("getNoUserHomePosts error", error.message);

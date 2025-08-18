@@ -17,6 +17,7 @@ export type Post = {
   };
   imageURL?: string;
   postIdx?: number;
+  visibility?: "public" | "community";
   createdAt?: Timestamp;
   editedAt?: Timestamp;
 };

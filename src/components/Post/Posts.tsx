@@ -233,14 +233,13 @@ const Posts: React.FC<PostsProps> = ({
   const getPosts = async () => {
     setLoading(true);
     try {
-      const resp = await fetch(`/api/posts?categoryId=${encodeURIComponent(communityData?.id || "")}`);
-      const posts = resp.ok ? await resp.json() : [];
+      const posts: Post[] = [];
       setPostStateValue((prev) => ({
         ...prev,
-        posts: Array.isArray(posts) ? (posts as Post[]) : [],
+        posts,
         postsCache: {
           ...prev.postsCache,
-          [communityData?.id!]: Array.isArray(posts) ? (posts as Post[]) : [],
+          [communityData?.id!]: posts,
         },
         postUpdateRequired: false,
       }));

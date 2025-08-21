@@ -45,7 +45,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
       }));
       setLoading(false);
     } catch (error: any) {
-      console.log("Error getting user snippets", error);
+  console.error("Error getting user snippets", error);
       setError(error.message);
     }
     setLoading(false);
@@ -54,8 +54,6 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   const getCommunityData = async (communityId: string) => {
     // this causes weird memory leak error - not sure why
     // setLoading(true);
-    console.log("GETTING COMMUNITY DATA");
-
     try {
       // TODO: Fetch from API
       const communityDoc = { id: communityId, data: () => ({}) } as any;
@@ -77,13 +75,13 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
         } as Community,
       }));
     } catch (error: any) {
-      console.log("getCommunityData error", error.message);
+      console.error("getCommunityData error", error.message);
     }
     setLoading(false);
   };
 
   const onJoinLeaveCommunity = (community: Community, isJoined?: boolean) => {
-    console.log("ON JOIN LEAVE", community.id);
+  // Join/leave triggered for community id: (see UI state)
 
     if (!user) {
       setAuthModalState({ open: true, view: "login" });
@@ -99,7 +97,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   };
 
   const joinCommunity = async (community: Community) => {
-    console.log("JOINING COMMUNITY: ", community.id);
+  // attempt to join community
     try {
       const newSnippet: CommunitySnippet = {
         communityId: community.id,
@@ -124,7 +122,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
         mySnippets: [...prev.mySnippets, newSnippet],
       }));
     } catch (error) {
-      console.log("joinCommunity error", error);
+      console.error("joinCommunity error", error);
     }
     setLoading(false);
   };
@@ -145,7 +143,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
         ),
       }));
     } catch (error) {
-      console.log("leaveCommunity error", error);
+      console.error("leaveCommunity error", error);
     }
     setLoading(false);
   };

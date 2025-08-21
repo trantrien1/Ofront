@@ -28,7 +28,7 @@ const CreateCommmunityPostPage: NextPage = () => {
     }
   }, [user, loadingUser, communityStateValue.currentCommunity]);
 
-  console.log("HERE IS USER", user, loadingUser);
+  // Debug: removed noisy console.log
 
   return (
     <PageContentLayout maxWidth="1060px">

@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/router";
 // import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue, useSetRecoilState } from "recoil";
+import { userState } from "../../atoms/userAtom";
 import {
   FaHome,
   FaFire,
@@ -46,7 +47,7 @@ const useSidebar = () => React.useContext(SidebarContext);
 
 const Sidebar: React.FC = () => {
   const router = useRouter();
-  const user = null as any;
+  const user = useRecoilValue(userState) as any;
   const communityStateValue = useRecoilValue(communityState);
   const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
   const { isOpen: isCommunitiesOpen, onToggle: onCommunitiesToggle } = useDisclosure({ defaultIsOpen: true });
@@ -72,7 +73,7 @@ const Sidebar: React.FC = () => {
 
   const handleManageCommunities = () => {
     // TODO: Navigate to manage communities page
-    console.log("Manage communities clicked");
+  // Navigation not implemented yet
   };
 
   const toggleSidebar = () => {
@@ -352,9 +353,9 @@ const Sidebar: React.FC = () => {
                   />
                   {!isCollapsed && (
                     <Box flex={1}>
-                      <Text fontWeight="500" fontSize="sm">
-                        {user.displayName || "User"}
-                      </Text>
+                          <Text fontWeight="500" fontSize="sm">
+                            {user.displayName || user.uid || "User"}
+                          </Text>
                       <Text fontSize="xs" color="gray.500">
                         View Profile
                       </Text>

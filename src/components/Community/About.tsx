@@ -97,7 +97,7 @@ const AboutComponent: React.FC<AboutProps> = ({
         },
       }));
     } catch (error: any) {
-      console.log("updateImage error", error.message);
+  console.error("updateImage error", error?.message || error);
     }
     // April 24 - removed reload
     // window.location.reload();

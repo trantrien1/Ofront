@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-// Firebase removed
 import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { authModalState } from "../atoms/authModalAtom";
 import { Community, communityState } from "../atoms/communitiesAtom";
 import { Post, postState, PostVote } from "../atoms/postsAtom";
-// Firebase removed
 import { useRouter } from "next/router";
+import { userState } from "../atoms/userAtom";
+import { likePost } from "../services/posts.service";
 
 const usePosts = (communityData?: Community) => {
-  const user = null as any;
+  const user = useRecoilValue(userState) as any;
   const loadingUser = false;
   const [postStateValue, setPostStateValue] = useRecoilState(postState);
   const setAuthModalState = useSetRecoilState(authModalState);
@@ -18,21 +18,38 @@ const usePosts = (communityData?: Community) => {
   const communityStateValue = useRecoilValue(communityState);
 
   const onSelectPost = (post: Post, postIdx: number) => {
-    console.log("HERE IS STUFF", post, postIdx);
-
+    console.log("=== usePosts onSelectPost called ===");
+    console.log("Setting selectedPost:", { 
+      postId: post?.id, 
+      postTitle: post?.title?.slice(0, 50),
+      postIdx 
+    });
+    
     setPostStateValue((prev) => ({
       ...prev,
       selectedPost: { ...post, postIdx },
     }));
-    router.push(`/r/${post.communityId}/comments/${post.id}`);
+
+    // Navigate directly to post comments without community - posts are from users now
+    const targetUrl = `/comments/${post.id}`;
+    console.log("✅ Navigating to:", targetUrl);
+    
+    // Use router.push with callback to log navigation result
+    router.push(targetUrl).then(() => {
+      console.log("✅ Navigation completed successfully");
+    }).catch((err) => {
+      console.error("❌ Navigation failed:", err);
+    });
+    
+    console.log("Navigation command sent");
+    console.log("====================================");
   };
 
   const onVote = async (
     event: React.MouseEvent<HTMLButtonElement | SVGElement, MouseEvent>,
     post: Post,
     vote: number,
-    communityId: string
-    // postIdx?: number
+    communityId?: string
   ) => {
     event.stopPropagation();
     if (!user?.uid) {
@@ -40,149 +57,107 @@ const usePosts = (communityData?: Community) => {
       return;
     }
 
-    const { voteStatus } = post;
-    // const existingVote = post.currentUserVoteStatus;
-    const existingVote = postStateValue.postVotes.find(
-      (vote) => vote.postId === post.id
-    );
+    const currentCommunityId = communityId || post.communityId || communityStateValue.currentCommunity?.id;
 
-    // is this an upvote or a downvote?
-    // has this user voted on this post already? was it up or down?
+    // Determine existing vote (from mapped post data or recoil cache)
+    const existingVote = post.currentUserVoteStatus
+      ? {
+          id: post.currentUserVoteStatus.id,
+          postId: post.id,
+          communityId: currentCommunityId,
+          voteValue: post.currentUserVoteStatus.voteValue,
+        }
+      : postStateValue.postVotes.find((v) => v.postId === post.id);
 
     try {
-      let voteChange = vote;
-      const updatedPost = { ...post };
+      // Prepare copies for optimistic update
+      const updatedPost: any = { ...post };
       const updatedPosts = [...postStateValue.posts];
-      let updatedPostVotes = [...postStateValue.postVotes];
+      let updatedPostVotes: PostVote[] = [...postStateValue.postVotes];
 
-      // New vote
-      if (!existingVote) {
+      const existing: any = existingVote as any;
+
+      if (!existing) {
         const newVote: PostVote = {
           id: `${user?.uid || "anon"}_${post.id}`,
           postId: post.id,
-          communityId,
+          communityId: currentCommunityId || "",
           voteValue: vote,
         };
 
-        updatedPost.voteStatus = voteStatus + vote;
+        updatedPost.currentUserVoteStatus = { id: newVote.id, voteValue: vote } as any;
+        updatedPost.voteStatus = (post.voteStatus || 0) + vote;
         updatedPostVotes = [...updatedPostVotes, newVote];
-      }
-      // Removing existing vote
-      else {
-        // Used for both possible cases of batch writes
-        // Removing vote
-        if (existingVote.voteValue === vote) {
-          voteChange *= -1;
-          updatedPost.voteStatus = voteStatus - vote;
-          updatedPostVotes = updatedPostVotes.filter(
-            (vote) => vote.id !== existingVote.id
-          );
+      } else if (existing.voteValue === vote) {
+        // removing existing vote
+        updatedPost.voteStatus = (post.voteStatus || 0) - vote;
+        updatedPost.currentUserVoteStatus = undefined;
+        updatedPostVotes = updatedPostVotes.filter((v) => v.postId !== post.id);
+      } else {
+        // flipping vote
+        updatedPost.voteStatus = (post.voteStatus || 0) + 2 * vote;
+        const voteIdx = updatedPostVotes.findIndex((v) => v.postId === post.id);
+        if (voteIdx !== -1) {
+          updatedPostVotes[voteIdx] = { ...updatedPostVotes[voteIdx], voteValue: vote };
         }
-        // Changing vote
-        else {
-          voteChange = 2 * vote;
-          updatedPost.voteStatus = voteStatus + 2 * vote;
-          const voteIdx = postStateValue.postVotes.findIndex(
-            (vote) => vote.id === existingVote.id
-          );
-          // console.log("HERE IS VOTE INDEX", voteIdx);
-
-          // Vote was found - findIndex returns -1 if not found
-          if (voteIdx !== -1) {
-            updatedPostVotes[voteIdx] = {
-              ...existingVote,
-              voteValue: vote,
-            };
-          }
-        }
+        updatedPost.currentUserVoteStatus = { id: existing.id, voteValue: vote } as any;
       }
 
-      let updatedState = { ...postStateValue, postVotes: updatedPostVotes };
+      const idx = postStateValue.posts.findIndex((p) => p.id === post.id);
+      if (idx !== -1) updatedPosts[idx] = updatedPost;
 
-      const postIdx = postStateValue.posts.findIndex(
-        (item) => item.id === post.id
-      );
-
-      // if (postIdx !== undefined) {
-      updatedPosts[postIdx!] = updatedPost;
-      updatedState = {
-        ...updatedState,
+      const updatedState = {
+        ...postStateValue,
         posts: updatedPosts,
+        postVotes: updatedPostVotes,
         postsCache: {
-          ...updatedState.postsCache,
-          [communityId]: updatedPosts,
+          ...postStateValue.postsCache,
+          [currentCommunityId || ""]: updatedPosts,
         },
-      };
-      // }
+      } as typeof postStateValue;
 
-      /**
-       * Optimistically update the UI
-       * Used for single page view [pid]
-       * since we don't have real-time listener there
-       */
-      if (updatedState.selectedPost) {
-        updatedState = {
-          ...updatedState,
-          selectedPost: updatedPost,
-        };
+      if (updatedState.selectedPost && updatedState.selectedPost.id === post.id) {
+        updatedState.selectedPost = updatedPost;
       }
 
-      // Optimistically update the UI
       setPostStateValue(updatedState);
 
-      // TODO: Replace with API call for votes. For now, UI-only update.
+      try {
+        // backend likePost expects { postId, commentId } shape; commentId may be undefined for post likes
+        await likePost({ postId: post.id, commentId: undefined });
+      } catch (e) {
+        console.error("Failed to persist like to backend", e);
+      }
     } catch (error) {
-      console.log("onVote error", error);
+      console.error("onVote error", error);
     }
   };
 
   const onDeletePost = async (post: Post): Promise<boolean> => {
-    console.log("DELETING POST: ", post.id);
-
     try {
-      // if post has an image url, delete it from storage
-      // TODO: call DELETE /api/posts?id=... once implemented
-
-      // Update post state
       setPostStateValue((prev) => ({
         ...prev,
         posts: prev.posts.filter((item) => item.id !== post.id),
         postsCache: {
           ...prev.postsCache,
-          [post.communityId]: prev.postsCache[post.communityId]?.filter(
-            (item) => item.id !== post.id
-          ),
+          [post.communityId]: prev.postsCache[post.communityId]?.filter((item) => item.id !== post.id),
         },
       }));
 
-      /**
-       * Cloud Function will trigger on post delete
-       * to delete all comments with postId === post.id
-       */
       return true;
     } catch (error) {
-      console.log("THERE WAS AN ERROR", error);
+      console.error("onDeletePost error", error);
       return false;
     }
   };
 
   const getCommunityPostVotes = async (communityId: string) => {
-    // TODO: fetch post votes from API once implemented
+    // placeholder: backend integration can be added later to fetch post votes for the community
     const postVotes: any[] = [];
     setPostStateValue((prev) => ({
       ...prev,
       postVotes: postVotes as PostVote[],
     }));
-
-    // const unsubscribe = onSnapshot(postVotesQuery, (querySnapshot) => {
-    //   const postVotes = querySnapshot.docs.map((postVote) => ({
-    //     id: postVote.id,
-    //     ...postVote.data(),
-    //   }));
-
-    // });
-
-    // return () => unsubscribe();
   };
 
   useEffect(() => {
@@ -190,32 +165,7 @@ const usePosts = (communityData?: Community) => {
     getCommunityPostVotes(communityStateValue.currentCommunity.id);
   }, [user, communityStateValue.currentCommunity]);
 
-  /**
-   * DO THIS INITIALLY FOR POST VOTES
-   */
-  // useEffect(() => {
-  //   if (!user?.uid || !communityData) return;
-  //   const postVotesQuery = query(
-  //     collection(firestore, `users/${user?.uid}/postVotes`),
-  //     where("communityId", "==", communityData?.id)
-  //   );
-  //   const unsubscribe = onSnapshot(postVotesQuery, (querySnapshot) => {
-  //     const postVotes = querySnapshot.docs.map((postVote) => ({
-  //       id: postVote.id,
-  //       ...postVote.data(),
-  //     }));
-
-  //     setPostStateValue((prev) => ({
-  //       ...prev,
-  //       postVotes: postVotes as PostVote[],
-  //     }));
-  //   });
-
-  //   return () => unsubscribe();
-  // }, [user, communityData]);
-
   useEffect(() => {
-    // Logout or no authenticated user
     if (!user?.uid && !loadingUser) {
       setPostStateValue((prev) => ({
         ...prev,

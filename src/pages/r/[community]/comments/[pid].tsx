@@ -52,7 +52,7 @@ const PostPage: React.FC<PostPageProps> = () => {
         }));
       }
     } catch (error: any) {
-      console.log("fetchPost error", error.message);
+      console.error("fetchPost error", error?.message || error);
     }
     setLoading(false);
   };

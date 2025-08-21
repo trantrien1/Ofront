@@ -5,8 +5,21 @@ export const getCommentsByPost = async (options) => {
 	return response.data;
 };
 
-export default {
-	getCommentsByPost,
+export const getCommentsByPostId = async (postId, params = {}) => {
+	if (!postId) throw new Error('postId is required');
+	const url = `comment/get/by-posts/${postId}`;
+	const response = await request.get(url, { params });
+	return response.data;
 };
 
+export const createComment = async (payload) => {
+	// payload: { content, postId }
+	const response = await request.post("comment/create", payload);
+	return response.data;
+};
 
+export default {
+	getCommentsByPost,
+	getCommentsByPostId,
+	createComment,
+};

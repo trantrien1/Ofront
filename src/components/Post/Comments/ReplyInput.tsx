@@ -24,9 +24,9 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
 }) => {
   return (
     <Box ml={8} mt={2} borderLeft="2px solid" borderColor="gray.200" pl={4}>
-      {parentCommentText && (
+        {parentCommentText && (
         <Text fontSize="8pt" color="gray.500" mb={2}>
-          Replying to: "{parentCommentText.length > 50 ? parentCommentText.substring(0, 50) + '...' : parentCommentText}"
+          Replying to: &quot;{parentCommentText.length > 50 ? parentCommentText.substring(0, 50) + '...' : parentCommentText}&quot;
         </Text>
       )}
       <Flex direction="column" position="relative">

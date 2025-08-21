@@ -110,12 +110,12 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       const success = await onDeletePost(post);
       if (!success) throw new Error("Failed to delete post");
 
-      console.log("Post successfully deleted");
+  // Post successfully deleted
 
       // Could proably move this logic to onDeletePost function
       if (router) router.back();
     } catch (error: any) {
-      console.log("Error deleting post", error.message);
+  console.error("Error deleting post", error?.message || error);
       /**
        * Don't need to setLoading false if no error
        * as item will be removed from DOM
@@ -320,6 +320,26 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             bg: "gray.350", 
             borderColor: "gray.600",
             transform: "scale(1.05)"
+          }}
+          cursor="pointer"
+          onClick={(e) => {
+            // prevent parent post click and navigate to comments
+            e.stopPropagation();
+            console.log("=== COMMENT BUTTON CLICKED ===");
+            console.log("PostItem: comment button clicked", { 
+              postId: post?.id, 
+              postTitle: post?.title?.slice(0, 50),
+              hasOnSelectPost: !!onSelectPost,
+              postIdx: postIdx ?? 0
+            });
+            console.log("================================");
+            
+            if (onSelectPost) {
+              console.log("Calling onSelectPost...");
+              onSelectPost(post, postIdx ?? 0);
+            } else {
+              console.log("onSelectPost is not available!");
+            }
           }}
         >
           <ChatIcon color="gray.350" />

@@ -34,6 +34,12 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   selectedPost,
   community,
 }) => {
+  console.log("=== Comments Component Render ===");
+  console.log("User passed to Comments:", user);
+  console.log("Selected post:", selectedPost?.id, selectedPost?.title);
+  console.log("Community:", community);
+  console.log("===================================");
+  
   const [comment, setComment] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentFetchLoading, setCommentFetchLoading] = useState(true);
@@ -45,30 +51,42 @@ const CommentsComponent: React.FC<CommentsProps> = ({
 
   const onCreateComment = async (comment: string) => {
     if (!user) {
+      console.log("❌ No user found, opening auth modal");
       setAuthModalState({ open: true, view: "login" });
+      return;
+    }
+
+    console.log("=== CREATING COMMENT ===");
+    console.log("User:", { uid: user.uid, email: user.email });
+    console.log("Comment content:", comment);
+    console.log("Post ID:", selectedPost?.id);
+    console.log("Selected post:", selectedPost);
+
+    if (!selectedPost?.id) {
+      console.error("❌ No selected post or post ID");
       return;
     }
 
     setCommentCreateLoading(true);
     try {
       const newId = `${Date.now()}`;
-
       setComment("");
       const { id: postId, title } = selectedPost!;
-      setComments((prev) => [
-        {
-          id: newId,
-          creatorId: user.uid,
-          creatorDisplayText: user.email!.split("@")[0],
-          creatorPhotoURL: user.photoURL,
-          communityId: community,
-          postId,
-          postTitle: title,
-          text: comment,
-          createdAt: { seconds: Date.now() / 1000 } as any,
-        } as Comment,
-        ...prev,
-      ]);
+      
+      const optimisticComment = {
+        id: newId,
+        creatorId: user.uid,
+        creatorDisplayText: user.email?.split("@")[0] || user.displayName || user.uid || "user",
+        creatorPhotoURL: user.photoURL,
+        communityId: community,
+        postId,
+        postTitle: title,
+        text: comment,
+        createdAt: { seconds: Date.now() / 1000 } as any,
+      } as Comment;
+
+      console.log("Adding optimistic comment:", optimisticComment);
+      setComments((prev) => [optimisticComment, ...prev]);
 
       // Fetch posts again to update number of comments
       setPostState((prev) => ({
@@ -80,11 +98,32 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         postUpdateRequired: true,
       }));
 
-      // Create notification for post creator
-      // no-op notification in frontend-only mode
+      // Persist comment to backend
+      try {
+        console.log("Calling backend to create comment...");
+        console.log("Payload:", { content: comment, postId });
+        const { CommentsService } = await import("../../../services/index");
+        const result = await CommentsService.createComment({ content: comment, postId });
+        console.log("Backend comment create result:", result);
+        console.log("✅ Comment created successfully!");
+        console.log("=========================");
+      } catch (err: any) {
+        console.error("❌ createComment backend error", err?.message || err);
+        console.error("Full error:", err);
+        // Remove optimistic comment on error
+        setComments((prev) => prev.filter(c => c.id !== newId));
+        setPostState((prev) => ({
+          ...prev,
+          selectedPost: {
+            ...prev.selectedPost,
+            numberOfComments: Math.max(0, prev.selectedPost?.numberOfComments! - 1),
+          } as Post,
+        }));
+      }
 
     } catch (error: any) {
-      console.log("onCreateComment error", error.message);
+      console.error("❌ onCreateComment error", error?.message || error);
+      console.error("Full error:", error);
     }
     setCommentCreateLoading(false);
   };
@@ -102,7 +141,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       const newReply: Comment = {
         id: newId,
         creatorId: user.uid,
-        creatorDisplayText: user.email!.split("@")[0],
+        creatorDisplayText: user.email?.split("@")[0] || user.displayName || user.uid || "user",
         creatorPhotoURL: user.photoURL,
         communityId: community,
         postId: selectedPost?.id!,
@@ -144,7 +183,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       // no-op notification in frontend-only mode
 
     } catch (error: any) {
-      console.log("onReply error", error.message);
+  console.error("onReply error", error?.message || error);
     }
   };
 
@@ -166,7 +205,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       setComments((prev) => prev.filter((item) => item.id !== comment.id));
       // return true;
     } catch (error: any) {
-      console.log("Error deletig comment", error.message);
+  console.error("Error deleting comment", error?.message || error);
       // return false;
     }
     setDeleteLoading("");
@@ -174,15 +213,18 @@ const CommentsComponent: React.FC<CommentsProps> = ({
 
   const getPostComments = async () => {
     try {
+      console.log("=== FETCHING COMMENTS ===");
       console.log("Fetching comments for post:", selectedPost?.id);
 
       const { CommentsService } = await import("../../../services/index");
-      const apiComments = await CommentsService.getCommentsByPost({ postId: selectedPost?.id });
+      const apiComments = await CommentsService.getCommentsByPostId(selectedPost?.id);
+
+      console.log("Raw API comments received:", apiComments);
 
       const allComments: Comment[] = (apiComments || []).map((c: any) => ({
         id: c.id?.toString?.() || c.id,
         creatorId: c.userId,
-        creatorDisplayText: c.creatorDisplayText || (user?.email?.split("@")[0] || "user"),
+        creatorDisplayText: c.user?.username || c.creatorDisplayText || (user?.email?.split("@")[0] || "user"),
         creatorPhotoURL: c.creatorPhotoURL || user?.photoURL,
         communityId: community,
         postId: c.postId?.toString?.() || c.postId,
@@ -193,7 +235,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         replyCount: 0,
       }));
       
-      console.log("All comments for this post:", allComments);
+      console.log("Mapped comments:", allComments);
       
       // Organize comments into a tree structure
       const commentMap = new Map<string, Comment>();
@@ -220,32 +262,19 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         }
       });
       
-      console.log("Organized comments:", topLevelComments);
+      console.log("Final organized comments:", topLevelComments);
+      console.log("=========================");
       setComments(topLevelComments);
       
     } catch (error: any) {
-      console.log("getPostComments error", error.message);
-      console.log("Full error:", error);
+      console.error("getPostComments error", error?.message || error);
     }
     setCommentFetchLoading(false);
-  };
-
-  useEffect(() => {
+  };  useEffect(() => {
     if (selectedPost?.id) {
-      console.log("HERE IS SELECTED POST", selectedPost.id);
       getPostComments();
     }
   }, [selectedPost?.id]);
-
-  // Move console.log inside useEffect to avoid hydration issues
-  useEffect(() => {
-    console.log("Comments component state:", {
-      comments: comments,
-      commentsLength: comments.length,
-      loading: commentFetchLoading,
-      selectedPostId: selectedPost?.id
-    });
-  }, [comments, commentFetchLoading, selectedPost?.id]);
 
   // Don't render if no selectedPost
   if (!selectedPost?.id) {

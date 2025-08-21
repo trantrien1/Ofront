@@ -2,7 +2,8 @@ import React from "react";
 import { Box, Flex, Image } from "@chakra-ui/react";
 type NavUser = { uid: string; email?: string | null };
 // Firebase removed
-import { useSetRecoilState } from "recoil";
+import { useSetRecoilState, useRecoilValue } from "recoil";
+import { userState } from "../../atoms/userAtom";
 import {
   defaultMenuItem,
   directoryMenuState,
@@ -15,7 +16,7 @@ import router from "next/router";
 import useDirectory from "../../hooks/useDirectory";
 
 const Navbar: React.FC = () => {
-  const user = null as any;
+  const user = useRecoilValue(userState) as any;
 
   // Use <Link> for initial build; implement directory logic near end
   const { onSelectMenuItem } = useDirectory();

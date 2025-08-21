@@ -3,6 +3,9 @@ import { Button, Flex, Text } from "@chakra-ui/react";
 import { ModalView } from "../../../atoms/authModalAtom";
 // Firebase removed
 import InputItem from "../../Layout/InputItem";
+import { UsersService } from "../../../services";
+import { useSetRecoilState } from "recoil";
+import { authModalState } from "../../../atoms/authModalAtom";
 
 type SignUpProps = {
   toggleView: (view: ModalView) => void;
@@ -10,13 +13,16 @@ type SignUpProps = {
 
 const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
   const [form, setForm] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
+  email: "",
+  username: "",
+  password: "",
+  confirmPassword: "",
   });
   const [formError, setFormError] = useState("");
   const loading = false;
   const authError: any = null;
+
+  const setModal = useSetRecoilState(authModalState);
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -29,7 +35,21 @@ const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
       return setFormError("Passwords do not match");
     }
 
-    // TODO: Call your own signup API
+    (async () => {
+      try {
+        const payload = { username: form.username || form.email.split('@')[0], email: form.email, password: form.password };
+        const data: any = await UsersService.register(payload);
+
+  // Registration succeeded — prompt user to log in.
+  // Open the auth modal and switch to the login view so the user can authenticate.
+  setFormError("Registration successful. Please log in.");
+  setModal((s) => ({ ...s, open: true, view: "login" }));
+  // also call toggleView to update the modal's internal view if needed
+  toggleView("login");
+      } catch (err: any) {
+        setFormError(err?.message || "Signup failed");
+      }
+    })();
   };
 
   const onChange = ({
@@ -43,6 +63,13 @@ const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
 
   return (
     <form onSubmit={onSubmit}>
+      <InputItem
+        name="username"
+        placeholder="username"
+        type="text"
+        mb={2}
+        onChange={onChange}
+      />
       <InputItem
         name="email"
         placeholder="email"

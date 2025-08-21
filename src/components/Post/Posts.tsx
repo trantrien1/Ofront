@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Stack } from "@chakra-ui/react";
-// Firebase removed
+
 import { useRecoilState, useSetRecoilState } from "recoil";
 import { authModalState } from "../../atoms/authModalAtom";
 import { Community } from "../../atoms/communitiesAtom";
-// Firebase removed
+
 import PostLoader from "./Loader";
 import { Post, postState, PostVote } from "../../atoms/postsAtom";
 import PostItem from "./PostItem";
 import { useRouter } from "next/router";
 import usePosts from "../../hooks/usePosts";
+import { PostsService } from "../../services";
 import { useCommunityPermissions } from "../../hooks/useCommunityPermissions";
 
 type PostsProps = {
@@ -183,21 +184,27 @@ const Posts: React.FC<PostsProps> = ({
   }, [communityData?.id]);
 
   useEffect(() => {
-    if (!communityData?.id) {
-      return;
-    }
-    
-    if (
-      postStateValue.postsCache[communityData?.id!] &&
-      !postStateValue.postUpdateRequired
-    ) {
-      setPostStateValue((prev) => ({
-        ...prev,
-        posts: postStateValue.postsCache[communityData?.id!],
-      }));
+    // If we have a community id, try to use cache else fetch
+    if (communityData?.id) {
+      if (
+        postStateValue.postsCache[communityData?.id!] &&
+        !postStateValue.postUpdateRequired
+      ) {
+        setPostStateValue((prev) => ({
+          ...prev,
+          posts: postStateValue.postsCache[communityData?.id!],
+        }));
+        return;
+      }
+
+      getPosts();
       return;
     }
 
+    // No communityData: fetch global posts if needed
+    if (!postStateValue.postUpdateRequired && postStateValue.posts.length > 0) {
+      return;
+    }
     getPosts();
     /**
      * REAL-TIME POST LISTENER
@@ -233,7 +240,9 @@ const Posts: React.FC<PostsProps> = ({
   const getPosts = async () => {
     setLoading(true);
     try {
-      const posts: Post[] = [];
+      // Fetch posts from backend via PostsService (proxy to upstream)
+      const response = await PostsService.getPosts({});
+      const posts: Post[] = (response as Post[]) || [];
       setPostStateValue((prev) => ({
         ...prev,
         posts,
@@ -244,7 +253,7 @@ const Posts: React.FC<PostsProps> = ({
         postUpdateRequired: false,
       }));
     } catch (error: any) {
-      console.log("getPosts error", error.message);
+      console.error("getPosts error", error?.message || error);
     }
     setLoading(false);
   };

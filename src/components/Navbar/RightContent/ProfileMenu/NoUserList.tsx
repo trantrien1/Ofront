@@ -2,12 +2,17 @@ import React from "react";
 import { MenuItem, Flex, Icon } from "@chakra-ui/react";
 import { MdOutlineLogin } from "react-icons/md";
 import { AuthModalState } from "../../../../atoms/authModalAtom";
+import { useRecoilValue } from "recoil";
+import { userState } from "../../../../atoms/userAtom";
 
 type NoUserListProps = {
   setModalState: (value: AuthModalState) => void;
 };
 
 const NoUserList: React.FC<NoUserListProps> = ({ setModalState }) => {
+  const user = useRecoilValue(userState) as any;
+  if (user) return null;
+
   return (
     <>
       <MenuItem

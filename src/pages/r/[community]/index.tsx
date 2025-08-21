@@ -86,8 +86,6 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
 export default CommunityPage;
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
-  console.log("GET SERVER SIDE PROPS RUNNING");
-
   try {
     // TODO: Fetch community by slug from API/DB
     return {
@@ -97,7 +95,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     };
   } catch (error) {
     // Could create error page here
-    console.log("getServerSideProps error - [community]", error);
+    console.error("getServerSideProps error - [community]", error);
     return {
       props: {
         communityData: "",

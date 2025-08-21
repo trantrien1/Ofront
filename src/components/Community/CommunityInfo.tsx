@@ -123,7 +123,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
         },
       }));
     } catch (error: any) {
-      console.log("updateImage error", error.message);
+  console.error("updateImage error", error?.message || error);
     }
     setImageLoading(false);
   };

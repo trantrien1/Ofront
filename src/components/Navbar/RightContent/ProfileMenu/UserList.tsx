@@ -3,9 +3,12 @@ import { Flex, Icon, MenuDivider, MenuItem } from "@chakra-ui/react";
 // Firebase removed
 import { CgProfile } from "react-icons/cg";
 import { MdOutlineLogin } from "react-icons/md";
-import { useResetRecoilState } from "recoil";
+import { useResetRecoilState, useSetRecoilState } from "recoil";
 import { communityState } from "../../../../atoms/communitiesAtom";
 import { useRouter } from "next/router";
+import nookies from "nookies";
+import { request } from "../../../../services";
+import { userState } from "../../../../atoms/userAtom";
 
 type UserListProps = {};
 
@@ -13,9 +16,27 @@ const UserList: React.FC<UserListProps> = () => {
   const resetCommunityState = useResetRecoilState(communityState);
   const router = useRouter();
 
+  const setCurrentUser = useSetRecoilState(userState);
+
   const logout = async () => {
-    // TODO: Implement your own logout; for now reset state and go home
+    // Clear token cookie
+    try {
+      nookies.destroy(undefined, "token");
+    } catch (e) {
+      // ignore
+    }
+
+    // Remove default Authorization header
+    try {
+      if (request && request.defaults && request.defaults.headers) {
+        delete request.defaults.headers.common["Authorization"];
+      }
+    } catch (e) {}
+
+    // Reset application state and user
     resetCommunityState();
+    setCurrentUser(null);
+
     router.push("/");
   };
 

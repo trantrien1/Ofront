@@ -14,11 +14,13 @@ import PostLoader from "../components/Post/Loader";
 import PostItem from "../components/Post/PostItem";
 // Firebase removed
 import usePosts from "../hooks/usePosts";
+import { userState } from "../atoms/userAtom";
+import PostsService from "../services/posts.service";
 
 
 
 const Home: NextPage = () => {
-  const user = null as any;
+  const user = useRecoilValue(userState) as any;
   const loadingUser = false;
   const {
     postStateValue,
@@ -32,7 +34,6 @@ const Home: NextPage = () => {
   const communityStateValue = useRecoilValue(communityState);
 
   const getUserHomePosts = async () => {
-    console.log("GETTING USER FEED");
     setLoading(true);
     try {
       /**
@@ -42,8 +43,7 @@ const Home: NextPage = () => {
       const feedPosts: Post[] = [];
 
       // User has joined communities
-      if (communityStateValue.mySnippets.length) {
-        console.log("GETTING POSTS IN USER COMMUNITIES");
+  if (communityStateValue.mySnippets.length) {
 
         // TODO: Replace with user feed API; fallback to general posts for now
         // No backend: use empty list (or add mock data here)
@@ -51,14 +51,13 @@ const Home: NextPage = () => {
         feedPosts.push(...posts);
       }
       // User has not joined any communities yet
-      else {
-        console.log("USER HAS NO COMMUNITIES - GETTING GENERAL POSTS");
+  else {
 
         const posts: Post[] = [];
         feedPosts.push(...posts);
       }
 
-      console.log("HERE ARE FEED POSTS", feedPosts);
+  // feedPosts ready
 
       setPostStateValue((prev) => ({
         ...prev,
@@ -68,24 +67,24 @@ const Home: NextPage = () => {
       // if not in any, get 5 communities ordered by number of members
       // for each one, get 2 posts ordered by voteStatus and set these to postState posts
     } catch (error: any) {
-      console.log("getUserHomePosts error", error.message);
+      console.error("getUserHomePosts error", error.message);
     }
     setLoading(false);
   };
 
   const getNoUserHomePosts = async () => {
-    console.log("GETTING NO USER FEED");
     setLoading(true);
     try {
-      const posts: Post[] = [];
-      console.log("NO USER FEED", posts);
+      // Fetch public/general posts from backend via PostsService
+      const posts: Post[] = await PostsService.getPosts();
+  // posts loaded for no-user feed
 
       setPostStateValue((prev) => ({
         ...prev,
-        posts,
+        posts: posts || [],
       }));
     } catch (error: any) {
-      console.log("getNoUserHomePosts error", error.message);
+      console.error("getNoUserHomePosts error", error.message);
     }
     setLoading(false);
   };

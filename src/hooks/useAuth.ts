@@ -3,35 +3,50 @@ import { useRecoilState } from "recoil";
 import { userState } from "../atoms/userAtom";
 import nookies from "nookies";
 
+// lightweight JWT payload decode (no verification)
+const decodeJwt = (token: string) => {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payload = parts[1];
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json);
+  } catch (e) {
+    return null;
+  }
+};
+
 const useAuth = () => {
-  const user = null as any; // Firebase removed
   const [currentUser, setCurrentUser] = useRecoilState(userState);
 
   useEffect(() => {
-    console.log("HERE IS USER", user);
-
-    user ? setUserCookie(user) : nookies.set(undefined, "token", "");
-  }, [user]);
-
-  const setUserCookie = async (_user: any) => {
-    nookies.set(undefined, "token", "");
-  };
-
-  // Firebase removed; no user document creation
-
-  useEffect(() => {
-    // User has logged out; firebase auth state has been cleared
-    if (!user?.uid) {
+    const cookies = nookies.get(undefined);
+    const token = cookies?.token;
+    if (!token) {
       setCurrentUser(null);
       return;
     }
 
-    // No Firebase listener; set current user to null
-    setCurrentUser(null);
-    return () => {};
-  }, [user, currentUser]);
+    const payload = decodeJwt(token);
+    if (!payload) {
+      setCurrentUser(null);
+      return;
+    }
 
-  return { user, currentUser };
+    // Map payload to UserData shape where possible
+    const user = {
+      uid: payload.sub || payload.uid || payload.username || "",
+      email: payload.email || null,
+      displayName: payload.name || null,
+      photoURL: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any;
+
+    setCurrentUser(user);
+  }, []);
+
+  return { currentUser, user: currentUser };
 };
 
 export default useAuth;

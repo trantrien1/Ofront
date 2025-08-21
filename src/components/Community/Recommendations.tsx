@@ -75,7 +75,7 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
       // TODO: Replace with communities API
       setCommunities([]);
     } catch (error: any) {
-      console.log("getCommunityRecommendations error", error.message);
+  console.error("getCommunityRecommendations error", error?.message || error);
     }
     setLoading(false);
   };

@@ -113,7 +113,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
       setReplyText("");
       setShowReplyInput(false);
     } catch (error: any) {
-      console.log("Error creating reply:", error.message);
+  console.error("Error creating reply:", error?.message || error);
     }
     setReplyLoading(false);
   };

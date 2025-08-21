@@ -5,12 +5,12 @@ import useAuth from "./useAuth";
 
 export const useNotifications = () => {
   const [notificationsStateValue, setNotificationsStateValue] = useRecoilState(notificationsState);
-  const { user } = useAuth();
+  const { currentUser } = useAuth() as any;
   const [loading, setLoading] = useState(false);
 
   // Fetch notifications for current user
   useEffect(() => {
-    if (!user) {
+  if (!currentUser) {
       setNotificationsStateValue(prev => ({
         ...prev,
         notifications: [],
@@ -19,12 +19,22 @@ export const useNotifications = () => {
       return;
     }
 
+    // Disable notifications fetching for now to avoid 500 errors
+    console.log("Notifications disabled - skipping fetch for user:", (currentUser as any).uid);
+    setNotificationsStateValue(prev => ({
+      ...prev,
+      notifications: [],
+      unreadCount: 0,
+      loading: false,
+    }));
+    return;
+
     setLoading(true);
     const abort = new AbortController();
-    const load = async () => {
+  const load = async () => {
       try {
         const { NotificationsService } = await import("../services");
-        const data = await NotificationsService.getUserNotifications(user.uid);
+  const data = await NotificationsService.getUserNotifications((currentUser as any).uid);
         const sorted = (data || []).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const mapped = sorted.map((n: any) => ({
           id: n.id?.toString?.() || n.id,
@@ -57,11 +67,15 @@ export const useNotifications = () => {
     load();
 
     return () => abort.abort();
-  }, [user, setNotificationsStateValue]);
+  }, [currentUser, setNotificationsStateValue]);
 
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
-    if (!user) return;
+    if (!currentUser) return;
+
+    // Disabled for now
+    console.log("markAsRead disabled for notificationId:", notificationId);
+    return;
 
     try {
       const { NotificationsService } = await import("../services");
@@ -73,7 +87,11 @@ export const useNotifications = () => {
 
   // Mark all notifications as read
   const markAllAsRead = async () => {
-    if (!user) return;
+    if (!currentUser) return;
+
+    // Disabled for now
+    console.log("markAllAsRead disabled");
+    return;
 
     try {
       const { NotificationsService } = await import("../services");
@@ -86,6 +104,10 @@ export const useNotifications = () => {
 
   // Create notification (called when someone comments, likes, etc.)
   const createNotification = async (notificationData: Omit<Notification, "id" | "timestamp" | "read">) => {
+    // Disabled for now
+    console.log("createNotification disabled for:", notificationData);
+    return;
+
     try {
       const { NotificationsService } = await import("../services");
       await NotificationsService.createNotification({

@@ -176,8 +176,8 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     try {
       console.log("Fetching comments for post:", selectedPost?.id);
 
-      const resp = await fetch(`/api/comments?postId=${selectedPost?.id}`);
-      const apiComments = await resp.json();
+      const { CommentsService } = await import("../../../services/index");
+      const apiComments = await CommentsService.getCommentsByPost({ postId: selectedPost?.id });
 
       const allComments: Comment[] = (apiComments || []).map((c: any) => ({
         id: c.id?.toString?.() || c.id,

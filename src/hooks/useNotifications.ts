@@ -23,8 +23,8 @@ export const useNotifications = () => {
     const abort = new AbortController();
     const load = async () => {
       try {
-        const resp = await fetch(`/api/notifications?userId=${user.uid}`, { signal: abort.signal });
-        const data = await resp.json();
+        const { NotificationsService } = await import("../services");
+        const data = await NotificationsService.getUserNotifications(user.uid);
         const sorted = (data || []).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const mapped = sorted.map((n: any) => ({
           id: n.id?.toString?.() || n.id,
@@ -64,11 +64,8 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: notificationId, read: true })
-      });
+      const { NotificationsService } = await import("../services");
+      await NotificationsService.markNotificationAsRead(notificationId);
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -79,14 +76,9 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
+      const { NotificationsService } = await import("../services");
       const unreadNotifications = notificationsStateValue.notifications.filter(n => !n.read);
-      await Promise.all(
-        unreadNotifications.map(n => fetch("/api/notifications", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: n.id, read: true })
-        }))
-      );
+      await NotificationsService.markManyNotificationsAsRead(unreadNotifications.map(n => n.id));
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     }
@@ -95,13 +87,10 @@ export const useNotifications = () => {
   // Create notification (called when someone comments, likes, etc.)
   const createNotification = async (notificationData: Omit<Notification, "id" | "timestamp" | "read">) => {
     try {
-      await fetch("/api/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: notificationData.targetUserId,
-          content: `${notificationData.message}`
-        })
+      const { NotificationsService } = await import("../services");
+      await NotificationsService.createNotification({
+        userId: notificationData.targetUserId,
+        content: `${notificationData.message}`,
       });
     } catch (error) {
       console.error("Error creating notification:", error);

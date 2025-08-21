@@ -15,8 +15,8 @@ export const usePinnedPosts = (pinnedPostIds: string[]) => {
 
       setLoading(true);
       try {
-        const resp = await fetch(`/api/posts`);
-        const allPosts = (await resp.json()) as Post[];
+        const { PostsService } = await import("../services");
+        const allPosts = (await PostsService.getPosts()) as Post[];
         const posts = allPosts.filter(p => pinnedPostIds.includes(p.id));
 
         // Sort posts to match the order of pinnedPostIds

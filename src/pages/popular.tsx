@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Stack, Text, Center, Spinner, Icon } from "@chakra-ui/react";
-// Firebase removed
+
 import type { NextPage } from "next";
 import { FaFire } from "react-icons/fa";
 import { Post } from "../atoms/postsAtom";
@@ -8,7 +8,7 @@ import { Post } from "../atoms/postsAtom";
 import PageContentLayout from "../components/Layout/PageContent";
 import PostLoader from "../components/Post/Loader";
 import PostItem from "../components/Post/PostItem";
-// Firebase removed
+
 import usePosts from "../hooks/usePosts";
 
 const Popular: NextPage = () => {
@@ -19,8 +19,8 @@ const Popular: NextPage = () => {
   const getPopularPosts = async () => {
     setLoading(true);
     try {
-      const resp = await fetch(`/api/posts`);
-      const posts = await resp.json();
+      const { PostsService } = await import("../services/index");
+      const posts = await PostsService.getPosts();
       setPopularPosts(posts as Post[]);
     } catch (error) {
       console.error("Error fetching popular posts:", error);

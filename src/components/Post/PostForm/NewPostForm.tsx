@@ -21,7 +21,7 @@ import { BsLink45Deg, BsMic } from "react-icons/bs";
 import { IoDocumentText, IoImageOutline } from "react-icons/io5";
 import { AiFillCloseCircle } from "react-icons/ai";
 import { useRecoilState, useSetRecoilState } from "recoil";
-// Firebase removed
+
 import TabItem from "./TabItem";
 import { postState } from "../../../atoms/postsAtom";
 

@@ -33,8 +33,8 @@ const PostPage: React.FC<PostPageProps> = () => {
   const fetchPost = async () => {
     setLoading(true);
     try {
-      const resp = await fetch(`/api/posts`);
-      const posts = await resp.json();
+      const { PostsService } = await import("../../../../services");
+      const posts = await PostsService.getPosts();
       const found = (posts as any[]).find(p => p.id?.toString?.() === (pid as string));
       if (found) {
         setPostStateValue((prev) => ({

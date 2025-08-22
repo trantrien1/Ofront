@@ -4,6 +4,7 @@ import { ModalView } from "../../../atoms/authModalAtom";
 // Firebase removed
 import InputItem from "../../Layout/InputItem";
 import { UsersService, request } from "../../../services";
+import { updateRequestToken } from "../../../services/request";
 import nookies from "nookies";
 import { useSetRecoilState } from "recoil";
 import { userState } from "../../../atoms/userAtom";
@@ -57,6 +58,7 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
           token = data?.token || data?.accessToken || data?.data?.token;
         }
 
+
         if (!token) {
           setFormError("Login succeeded but no token returned");
           return;
@@ -72,15 +74,36 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
         };
         token = normalize(token);
 
-  // store cookie (explicit SameSite/path to ensure browser sends it to local API)
+  // store cookie with long expiration (explicit SameSite/path to ensure browser sends it to local API)
   // Token is checked above; assert it's a string for TypeScript
         // only set cookie if token is a string (TypeScript guard)
         if (typeof token === "string") {
-          nookies.set(undefined, "token", token, { path: "/", sameSite: "lax" });
+          try {
+            // Primary method: use nookies
+            nookies.set(undefined, "token", token, { 
+              path: "/", 
+              sameSite: "lax",
+              maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+              httpOnly: false, // allow client-side access
+              secure: false // set to true in production with HTTPS
+            });
+          } catch (e) {
+            // Fallback method: direct document.cookie for environments like VS Code Simple Browser
+            const expires = new Date();
+            expires.setDate(expires.getDate() + 30); // 30 days
+            document.cookie = `token=${token}; path=/; SameSite=Lax; expires=${expires.toUTCString()}`;
+          }
+          
+          // BACKUP: Also store in localStorage for VS Code Simple Browser compatibility
+          try {
+            localStorage.setItem("authToken", token);
+          } catch (e) {
+            // ignore
+          }
         }
 
         // set default header for axios instance used across services
-        request.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        updateRequestToken(token);
 
         // decode token payload and set current user in Recoil (lightweight decode)
         let jwtPayload: any = null;
@@ -104,6 +127,7 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
         } as any;
 
         setUser(user);
+        
         // close modal
         setModal((s) => ({ ...s, open: false }));
 

@@ -15,9 +15,9 @@ import useDirectory from "../../../hooks/useDirectory";
 import NotificationDropdown from "../../Notifications/NotificationDropdown";
 import CreatePostModal from "../../Modal/CreatePost";
 
-type ActionIconsProps = {};
+type ActionIconsProps = { onOpenChat?: () => void };
 
-const ActionIcons: React.FC<ActionIconsProps> = () => {
+const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
   const { toggleMenuOpen } = useDirectory();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
@@ -88,6 +88,7 @@ const ActionIcons: React.FC<ActionIconsProps> = () => {
           cursor="pointer"
           borderRadius={4}
           _hover={{ bg: "gray.200" }}
+          onClick={onOpenChat}
         >
           <Icon as={BsChatDots} fontSize={20} />
         </Flex>

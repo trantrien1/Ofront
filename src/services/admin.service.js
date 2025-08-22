@@ -41,7 +41,7 @@ export const getReports = async (status = 'all') => {
   }
 };
 
-export const updatePostStatus = async (postId: number, status: string) => {
+export const updatePostStatus = async (postId, status) => {
   try {
     const response = await request.put(`admin/posts/${postId}/status`, { status });
     return response.data;
@@ -51,7 +51,7 @@ export const updatePostStatus = async (postId: number, status: string) => {
   }
 };
 
-export const deletePost = async (postId: number) => {
+export const deletePost = async (postId) => {
   try {
     const response = await request.delete(`admin/posts/${postId}`);
     return response.data;
@@ -61,7 +61,7 @@ export const deletePost = async (postId: number) => {
   }
 };
 
-export const updateUserStatus = async (userId: number, status: string) => {
+export const updateUserStatus = async (userId, status) => {
   try {
     const response = await request.put(`admin/users/${userId}/status`, { status });
     return response.data;
@@ -71,7 +71,7 @@ export const updateUserStatus = async (userId: number, status: string) => {
   }
 };
 
-export const deleteUser = async (userId: number) => {
+export const deleteUser = async (userId) => {
   try {
     const response = await request.delete(`admin/users/${userId}`);
     return response.data;
@@ -81,7 +81,7 @@ export const deleteUser = async (userId: number) => {
   }
 };
 
-export const updateReportStatus = async (reportId: number, status: string) => {
+export const updateReportStatus = async (reportId, status) => {
   try {
     const response = await request.put(`admin/reports/${reportId}/status`, { status });
     return response.data;
@@ -91,7 +91,7 @@ export const updateReportStatus = async (reportId: number, status: string) => {
   }
 };
 
-export const banUser = async (userId: number, reason: string, duration?: number) => {
+export const banUser = async (userId, reason, duration) => {
   try {
     const response = await request.post(`admin/users/${userId}/ban`, { reason, duration });
     return response.data;
@@ -101,7 +101,7 @@ export const banUser = async (userId: number, reason: string, duration?: number)
   }
 };
 
-export const unbanUser = async (userId: number) => {
+export const unbanUser = async (userId) => {
   try {
     const response = await request.post(`admin/users/${userId}/unban`);
     return response.data;

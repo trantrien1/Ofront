@@ -20,11 +20,26 @@ export const getPosts = async (options = {}) => {
 	const url = `post/get${query ? "?" + query : ""}`;
 	const response = await request.get(url);
 
+	console.debug("PostsService.getPosts: raw response=", response.data);
+
 	// Map upstream post shape to frontend Post type
 	try {
 		const raw = response.data;
+		let postsArray = [];
+		
+		// Handle different response formats
 		if (Array.isArray(raw)) {
-			const mapped = raw.map((p) => {
+			postsArray = raw;
+		} else if (raw && Array.isArray(raw.posts)) {
+			// Handle mock data format: {posts: [...]}
+			postsArray = raw.posts;
+		} else if (raw && raw.data && Array.isArray(raw.data)) {
+			// Handle wrapped data format: {data: [...]}
+			postsArray = raw.data;
+		}
+		
+		if (postsArray.length > 0) {
+			const mapped = postsArray.map((p) => {
 				// Use username from userOfPost field in database
 				const correctUsername = extractUsername(p.userOfPost);
 
@@ -48,10 +63,17 @@ export const getPosts = async (options = {}) => {
 				};
 			});
 			response.data = mapped;
+		} else {
+			// If no posts, return empty array
+			response.data = [];
 		}
 	} catch (e) {
 		console.debug("PostsService.getPosts: mapping error", e);
+		// Fallback to empty array if mapping fails
+		response.data = [];
 	}
+	
+	console.debug("PostsService.getPosts: final response=", response.data);
 	return response.data;
 };
 

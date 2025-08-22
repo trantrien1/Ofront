@@ -2,7 +2,7 @@ import { Flex, Icon, Input } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import React from "react";
 import { BsLink45Deg } from "react-icons/bs";
-import { FaReddit } from "react-icons/fa";
+import { Image } from "@chakra-ui/react";
 import { IoImageOutline } from "react-icons/io5";
 import { useSetRecoilState } from "recoil";
 import { authModalState } from "../../atoms/authModalAtom";
@@ -34,7 +34,7 @@ const CreatePostLink: React.FC = () => {
       p={2}
       mb={4}
     >
-      <Icon as={FaReddit} fontSize={36} color="gray.300" mr={4} />
+  <Image src="/images/logo.png" alt="logo" boxSize="36px" mr={4} />
       <Input
         placeholder="Create Post"
         fontSize="10pt"

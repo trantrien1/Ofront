@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Flex, Textarea, Button, Text, Avatar, Box } from "@chakra-ui/react";
 type User = { uid: string; email?: string; photoURL?: string };
-import { FaReddit } from "react-icons/fa";
 
 type ReplyInputProps = {
   comment: string;

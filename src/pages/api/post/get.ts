@@ -2,74 +2,68 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-  const { query } = req;
-    const queryString = new URLSearchParams(query as Record<string, string>).toString();
+    const { query } = req;
+    // Build query string without empty params (e.g., omit title= or typeSort= when empty)
+    const params = new URLSearchParams();
+    Object.entries(query as Record<string, any>).forEach(([key, value]) => {
+      const val = Array.isArray(value) ? value.find((v) => v !== "" && v != null) : value;
+      if (val !== "" && val != null) params.set(key, String(val));
+    });
+    const queryString = params.toString();
     const upstream = `https://rehearten-production.up.railway.app/post/get${queryString ? "?" + queryString : ""}`;
 
-    // read token cookie from incoming request
-    let token = req.cookies?.token;
-
-    // Development helper: allow a demo token to be supplied via env var
-    // so developers can see posts without performing an interactive login.
-    // Set DEV_DEMO_TOKEN in your local environment (NOT for production).
-    if (!token && process.env.DEV_DEMO_TOKEN) {
-      token = process.env.DEV_DEMO_TOKEN;
+    // Extract token from cookie or Authorization header
+    let token = req.cookies?.token as string | undefined;
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) token = authHeader.substring(7);
     }
 
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-      // Ask upstream not to return 304 by using no-cache on the forwarded request
-      // (some upstreams may respond 304 if conditional validators are present or caching rules apply)
-      "Cache-Control": "no-cache",
-    };
+    // Build headers for upstream
+    const headers: Record<string, string> = { Accept: "application/json" };
+    const cookieParts: string[] = [];
     if (token) {
-      // upstream expects token in Cookie header (empirically)
-      headers["Cookie"] = `token=${token}`;
-    } else {
-      // No token available – upstream will likely reject; include debug header
+      cookieParts.push(`token=${token}`);
+      headers["Authorization"] = `Bearer ${token}`;
     }
+    // Forward upstream session if available (from our proxy cookie or direct)
+    const upstreamSession =
+      req.cookies?.UPSTREAM_JSESSIONID ||
+      req.cookies?.JSESSIONID ||
+      (req.cookies as any)?.jsessionid;
+    if (upstreamSession) cookieParts.push(`JSESSIONID=${upstreamSession}`);
+    if (cookieParts.length > 0) headers["Cookie"] = cookieParts.join("; ");
+
+  console.log("Proxy headers:", headers);
   let r = await fetch(upstream, { headers });
-  let text = await r.text();
+    let text = await r.text();
 
-  // If upstream responded with 304 Not Modified, retry once forcing no-cache
-  if (r.status === 304) {
-    // Retry with explicit no-cache to force a full response
-    const retryHeaders = { ...headers, "Cache-Control": "no-cache" } as Record<string, string>;
-    const r2 = await fetch(upstream, { headers: retryHeaders });
-    const t2 = await r2.text();
-    // replace with retry response
-    r = r2;
-    text = t2;
-    // Surface debug info to the client in dev
+    // Pass-through response
     if (process.env.NODE_ENV !== "production") {
-      // mark that upstream initially returned 304
-      // we'll set response header later before sending
-      (res as any).locals = { ...(res as any).locals, upstreamWas304: "1" };
-    }
-  }
-
-    // if upstream returned an error, expose details in dev to help debugging
-    if (r.status >= 400 && process.env.NODE_ENV !== "production") {
-      let parsed: any = text;
-      try {
-        parsed = JSON.parse(text);
-      } catch (e) {}
-      // include whether token was present on incoming request to help debugging
       res.setHeader("x-proxy-had-token", token ? "1" : "0");
-      return res.status(r.status).json({ upstreamStatus: r.status, upstreamBody: parsed, upstreamHeaders: Object.fromEntries(r.headers.entries()) });
+      if (headers["Cookie"]) res.setHeader("x-proxy-cookie", headers["Cookie"]);
     }
 
-    // try parse JSON
-    try {
-      const data = JSON.parse(text);
-      if (process.env.NODE_ENV !== "production") {
-        res.setHeader("x-proxy-had-token", token ? "1" : "0");
-      }
-      res.status(r.status).json(data);
-    } catch (e) {
-      res.status(r.status).send(text);
+    // If 304, try once with no-cache
+    if (r.status === 304) {
+      const retryHeaders = { ...headers, "Cache-Control": "no-cache" } as Record<string, string>;
+      const r2 = await fetch(upstream, { headers: retryHeaders });
+      const t2 = await r2.text();
+      r = r2;
+      text = t2;
     }
+
+    const contentType = r.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      try {
+        const data = JSON.parse(text || "null");
+        return res.status(r.status).json(data);
+      } catch {
+        // fall back to text
+      }
+    }
+    return res.status(r.status).send(text);
   } catch (err: any) {
-    res.status(500).json({ error: err?.message || "proxy error" });
+    return res.status(500).json({ error: err?.message || "proxy error" });
   }
 }

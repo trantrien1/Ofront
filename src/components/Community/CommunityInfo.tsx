@@ -528,12 +528,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                         alt="Community Image"
                       />
                     ) : (
-                      <Icon
-                        as={FaReddit}
-                        fontSize={40}
-                        color="brand.100"
-                        mr={2}
-                      />
+                      <Image borderRadius="full" boxSize="40px" src="/images/logo.png" alt="logo" />
                     )}
                   </Flex>
                   {selectedFile &&

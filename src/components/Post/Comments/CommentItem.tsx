@@ -11,6 +11,7 @@ import {
 } from "@chakra-ui/react";
 type Timestamp = any;
 import { FaReddit, FaThumbsUp } from "react-icons/fa";
+import { Image } from "@chakra-ui/react";
 import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
@@ -25,7 +26,7 @@ const DynamicCommentItem = dynamic(() => Promise.resolve(CommentItemComponent), 
 const CommentItemSkeleton = () => (
   <Flex>
     <Box mr={2}>
-      <Icon as={FaReddit} fontSize={30} color="gray.300" />
+      <Image src="/images/logo.png" alt="logo" boxSize="30px" borderRadius="full" />
     </Box>
     <Stack spacing={1} flex={1}>
       <Text fontSize="sm" color="gray.500">Loading comment...</Text>
@@ -136,7 +137,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
         ml={level * 4} // Indent based on nesting level
       >
         <Box mr={2}>
-          <Icon as={FaReddit} fontSize={30} color="gray.300" />
+          <Image src="/images/logo.png" alt="logo" boxSize="30px" borderRadius="full" />
         </Box>
         <Stack spacing={1} flex={1}>
           <Stack direction="row" align="center" spacing={2} fontSize="8pt">

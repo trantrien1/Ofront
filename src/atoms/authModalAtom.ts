@@ -1,4 +1,4 @@
-import { atom } from "recoil";
+import { atom, type RecoilState } from "recoil";
 
 export interface AuthModalState {
   open: boolean;
@@ -12,7 +12,15 @@ const defaultModalState: AuthModalState = {
   view: "login",
 };
 
-export const authModalState = atom<AuthModalState>({
-  key: `atoms/auth/authModalState_${Date.now()}_${Math.random()}`,
-  default: defaultModalState,
-});
+declare global {
+  // eslint-disable-next-line no-var
+  var __recoil_authModalState: RecoilState<AuthModalState> | undefined;
+}
+
+export const authModalState: RecoilState<AuthModalState> = (globalThis as any)
+  .__recoil_authModalState ??=
+  atom<AuthModalState>({
+    // Stable key to avoid HMR resets
+    key: "atoms/auth/authModalState",
+    default: defaultModalState,
+  });

@@ -87,7 +87,7 @@ const AdminIndex: React.FC = () => {
           <AlertIcon />
           <AlertTitle>Access Denied!</AlertTitle>
           <AlertDescription>
-            You don't have permission to access the admin panel. Only administrators can access this area.
+            You don&apos;t have permission to access the admin panel. Only administrators can access this area.
             <br />
             Current user: {(user as UserData)?.email || (user as UserData)?.displayName || 'Unknown'}
           </AlertDescription>

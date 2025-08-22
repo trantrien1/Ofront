@@ -24,7 +24,8 @@ import {
 import { useRouter } from "next/router";
 import { BsCalendar3, BsGeoAlt, BsLink45Deg } from "react-icons/bs";
 import { MdEdit } from "react-icons/md";
-import { FaReddit, FaBirthdayCake } from "react-icons/fa";
+import { FaBirthdayCake } from "react-icons/fa";
+import { Image as ChakraImage } from "@chakra-ui/react";
 import { MdDateRange } from "react-icons/md";
 import { IoMdTrophy } from "react-icons/io";
 import { Post } from "../../atoms/postsAtom";
@@ -117,7 +118,7 @@ const PersonalHome: React.FC = () => {
     return (
       <Center minH="50vh">
         <Stack align="center" spacing={4}>
-          <Icon as={FaReddit} fontSize={60} color="gray.400" />
+          <ChakraImage src="/images/logo.png" alt="logo" boxSize="60px" borderRadius="full" />
           <Text fontSize="lg" color="gray.500">
             Please login to view your profile
           </Text>
@@ -213,7 +214,7 @@ const PersonalHome: React.FC = () => {
             </Flex>
 
             <Flex align="center" bg="gray.50" p={3} borderRadius={6}>
-              <Icon as={FaReddit} color="red.400" mr={2} />
+              <ChakraImage src="/images/logo.png" alt="logo" boxSize="24px" borderRadius="full" mr={2} />
               <Box>
                 <Text fontWeight="bold" fontSize="lg">
                   {userProfile?.commentCount || 0}
@@ -280,7 +281,7 @@ const PersonalHome: React.FC = () => {
               ) : userPosts.length === 0 ? (
                 <Center py={10}>
                   <Stack align="center" spacing={3}>
-                    <Icon as={FaReddit} fontSize={50} color="gray.300" />
+                    <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
                     <Text color="gray.500" fontSize="lg">
                       No posts yet
                     </Text>
@@ -312,7 +313,7 @@ const PersonalHome: React.FC = () => {
             <TabPanel>
               <Center py={10}>
                 <Stack align="center" spacing={3}>
-                  <Icon as={FaReddit} fontSize={50} color="gray.300" />
+                  <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
                   <Text color="gray.500" fontSize="lg">
                     Comments coming soon
                   </Text>
@@ -367,7 +368,7 @@ const PersonalHome: React.FC = () => {
             <TabPanel>
               <Center py={10}>
                 <Stack align="center" spacing={3}>
-                  <Icon as={FaReddit} fontSize={50} color="gray.300" />
+                  <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
                   <Text color="gray.500" fontSize="lg">
                     Communities coming soon
                   </Text>

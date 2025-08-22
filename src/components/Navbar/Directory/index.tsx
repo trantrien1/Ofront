@@ -47,12 +47,7 @@ const Directory: React.FC = () => {
                       mr={2}
                     />
                   ) : (
-                    <Icon
-                      fontSize={24}
-                      mr={{ base: 1, md: 2 }}
-                      color={directoryState.selectedMenuItem.iconColor}
-                      as={directoryState.selectedMenuItem.icon}
-                    />
+                    <Image borderRadius="full" boxSize="24px" src="/images/logo.png" mr={2} />
                   )}
                   <Box
                     display={{ base: "none", lg: "flex" }}

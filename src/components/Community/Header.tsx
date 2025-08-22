@@ -1,6 +1,5 @@
 import React from "react";
 import { Box, Button, Flex, Icon, Image, Text } from "@chakra-ui/react";
-import { FaReddit } from "react-icons/fa";
 import { Community } from "../../atoms/communitiesAtom";
 import useCommunityData from "../../hooks/useCommunityData";
 import dynamic from "next/dynamic";
@@ -16,15 +15,7 @@ const HeaderSkeleton = () => (
     <Box height="50%" bg="blue.400" />
     <Flex justifyContent="center" bg="white" height="50%">
       <Flex width="95%" maxWidth="860px">
-        <Icon
-          as={FaReddit}
-          fontSize={64}
-          position="relative"
-          top={-3}
-          color="blue.500"
-          border="4px solid white"
-          borderRadius="50%"
-        />
+  <Image src="/images/logo.png" alt="logo" boxSize="64px" position="relative" top={-3} border="4px solid white" borderRadius="full" />
         <Flex padding="10px 16px">
           <Flex direction="column" mr={6}>
             <Text fontWeight={800} fontSize="16pt">
@@ -84,15 +75,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ communityData }) => {
               border="4px solid white"
             />
           ) : (
-            <Icon
-              as={FaReddit}
-              fontSize={64}
-              position="relative"
-              top={-3}
-              color="blue.500"
-              border="4px solid white"
-              borderRadius="50%"
-            />
+            <Image src="/images/logo.png" alt="logo" boxSize="64px" position="relative" top={-3} border="4px solid white" borderRadius="full" />
           )}
           <Flex padding="10px 16px">
             <Flex direction="column" mr={6}>

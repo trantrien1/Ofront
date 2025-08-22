@@ -41,6 +41,7 @@ const Communities: React.FC<CommunitiesProps> = ({ menuOpen }) => {
                 link={`/r/${snippet.communityId}`}
                 icon={FaReddit}
                 iconColor="brand.100"
+                imageURL={snippet.imageURL || "/images/logo.png"}
               />
             ))}
         </Box>
@@ -63,11 +64,11 @@ const Communities: React.FC<CommunitiesProps> = ({ menuOpen }) => {
         {mySnippets.map((snippet) => (
           <MenuListItem
             key={snippet.communityId}
-            icon={FaReddit}
             displayText={`r/${snippet.communityId}`}
             link={`/r/${snippet.communityId}`}
+            icon={FaReddit}
             iconColor="blue.500"
-            imageURL={snippet.imageURL}
+            imageURL={snippet.imageURL || "/images/logo.png"}
           />
         ))}
       </Box>

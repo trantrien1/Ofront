@@ -147,23 +147,13 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
                         <Text mr={2}>{index + 1}</Text>
                       </Flex>
                       <Flex align="center" width="80%">
-                        {item.imageURL ? (
-                          <Image
-                            borderRadius="full"
-                            boxSize="28px"
-                            src={item.imageURL}
-                            mr={2}
-                            fallbackSrc="/images/redditlogo.png"
-                            alt={`${item.id} community icon`}
-                          />
-                        ) : (
-                          <Icon
-                            as={FaReddit}
-                            fontSize={30}
-                            color="brand.100"
-                            mr={2}
-                          />
-                        )}
+                        <Image
+                          borderRadius="full"
+                          boxSize="28px"
+                          src={item.imageURL || "/images/logo.png"}
+                          mr={2}
+                          alt={`${item.id} community icon`}
+                        />
                         <span
                           style={{
                             whiteSpace: "nowrap",

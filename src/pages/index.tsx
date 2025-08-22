@@ -135,7 +135,7 @@ const Home: NextPage = () => {
           <PostLoader />
         ) : (
           <Stack>
-            {postStateValue.posts.map((post: Post, index) => (
+            {Array.isArray(postStateValue.posts) && postStateValue.posts.map((post: Post, index) => (
               <PostItem
                 key={post.id}
                 post={post}

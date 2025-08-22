@@ -18,6 +18,7 @@ import NoUserList from "./NoUserList";
 import UserList from "./UserList";
 
 import { FaRedditSquare } from "react-icons/fa";
+import { Image } from "@chakra-ui/react";
 import { VscAccount } from "react-icons/vsc";
 import { IoSparkles } from "react-icons/io5";
 
@@ -38,12 +39,7 @@ const MenuWrapper: React.FC<MenuWrapperProps> = () => {
           <Flex alignItems="center">
             {user ? (
               <>
-                <Icon
-                  fontSize={24}
-                  mr={1}
-                  color="gray.300"
-                  as={FaRedditSquare}
-                />
+                <Image src="/images/logo.png" alt="logo" boxSize="24px" mr={1} />
                 <Box
                   display={{ base: "none", lg: "flex" }}
                   flexDirection="column"

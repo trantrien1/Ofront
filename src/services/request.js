@@ -10,6 +10,15 @@ let token = "";
 try {
 	const cookies = nookies.get(undefined);
 	token = cookies?.token || "";
+	
+	// Fallback: try localStorage if no cookie (VS Code Simple Browser compatibility)
+	if (!token && typeof window !== "undefined") {
+		try {
+			token = localStorage.getItem("authToken") || "";
+		} catch (e) {
+			// localStorage not available
+		}
+	}
 } catch (e) {
 	token = "";
 }
@@ -26,6 +35,21 @@ if (token) {
 		console.debug("request: initialized with token (length)", token.length);
 	} catch (e) {}
 }
+
+// Function to update token after login
+export const updateRequestToken = (newToken) => {
+	try {
+		if (newToken) {
+			request.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+			console.debug("request: token updated (length)", newToken.length);
+		} else {
+			delete request.defaults.headers.common["Authorization"];
+			console.debug("request: token cleared");
+		}
+	} catch (e) {
+		console.error("request: failed to update token", e);
+	}
+};
 
 // Response interceptor: if we get 401, clear token and reload (force logout)
 request.interceptors.response.use(

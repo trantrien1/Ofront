@@ -7,8 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-  console.debug("/api/login proxy: incoming headers:", req.headers);
-  console.debug("/api/login proxy: incoming body:", req.body);
+  // minimal logging
     const upstream = `https://rehearten-production.up.railway.app/login`;
 
     const r = await fetch(upstream, {
@@ -21,15 +20,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
   const text = await r.text();
-  console.debug(`/api/login proxy: upstream status=${r.status} body:`, text);
+  // minimal upstream logging in dev only
 
-    // try parse JSON
+    // Handle successful login response (status 200)
+    if (r.status === 200 && text.trim().length > 0) {
+  // detect if plain token string
+      
+      // Check if it's a JWT token (starts with ey... or looks like a token)
+      const isToken = text.trim().includes('.');
+      
+      if (isToken) {
+        console.log("/api/login proxy: DETECTED JWT TOKEN, letting frontend handle cookie");
+        // Also forward upstream session cookie (e.g., JSESSIONID) if present,
+        // storing it under our own cookie name so we can replay it in API proxies.
+        const setCookie = r.headers.get("set-cookie");
+        if (setCookie) {
+          // Try to extract JSESSIONID value
+          const m = setCookie.match(/JSESSIONID=([^;]+)/i);
+          if (m && m[1]) {
+            const jsid = m[1];
+            // Set a proxy cookie on our domain
+            res.setHeader("Set-Cookie", `UPSTREAM_JSESSIONID=${jsid}; Path=/; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}; HttpOnly`);
+          }
+        }
+        // Return the token to frontend so it can set the cookie
+        return res.status(200).json({
+          token: text.trim(),
+          success: true,
+          message: "Login successful",
+        });
+      } else {
+        console.log("/api/login proxy: NOT A TOKEN, proceeding to JSON parse");
+      }
+    } else {
+      console.log("/api/login proxy: NOT status 200 or empty response");
+    }
+
+    // try parse JSON for other responses
     try {
       const data = JSON.parse(text);
       // forward Set-Cookie from upstream if present so browser can store token
       const setCookie = r.headers.get("set-cookie");
       if (setCookie) {
-        res.setHeader("Set-Cookie", setCookie);
+        // Enhance cookie with better options for persistence
+        const enhancedCookie = setCookie
+          .replace(/; Path=\//g, '') // remove existing path
+          .replace(/; SameSite=\w+/g, '') // remove existing samesite
+          + '; Path=/; SameSite=Lax; Max-Age=' + (30 * 24 * 60 * 60); // 30 days
+        res.setHeader("Set-Cookie", enhancedCookie);
       }
       if (r.status >= 400 && process.env.NODE_ENV !== "production") {
         // return upstream info to help debugging in dev

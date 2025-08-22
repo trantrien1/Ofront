@@ -322,7 +322,7 @@ const Sidebar: React.FC = () => {
               )}
               <CommunityItem
                 name="VietNamNation"
-                icon="/images/redditlogo.png"
+                icon="/images/logo.png"
                 memberCount={15420}
                 path="/r/VietNamNation"
               />

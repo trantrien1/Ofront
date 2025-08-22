@@ -19,9 +19,15 @@ const UserList: React.FC<UserListProps> = () => {
   const setCurrentUser = useSetRecoilState(userState);
 
   const logout = async () => {
-    // Clear token cookie
+    // Clear token cookie with proper options
     try {
-      nookies.destroy(undefined, "token");
+      nookies.destroy(undefined, "token", { path: "/" });
+      // Also try to clear with different path options to be sure
+      nookies.set(undefined, "token", "", { 
+        path: "/", 
+        maxAge: -1, // immediately expire
+        sameSite: "lax"
+      });
     } catch (e) {
       // ignore
     }

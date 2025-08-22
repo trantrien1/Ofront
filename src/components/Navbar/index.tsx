@@ -35,12 +35,7 @@ const Navbar: React.FC = () => {
         cursor="pointer"
         onClick={() => onSelectMenuItem(defaultMenuItem)}
       >
-        <Image src="/images/redditFace.svg" height="30px" />
-        <Image
-          display={{ base: "none", md: "unset" }}
-          src="/images/redditText.svg"
-          height="46px"
-        />
+        <Image src="/images/logo.png" height="36px" alt="Brand Logo" />
       </Flex>
 
       <SearchInput user={user as unknown as NavUser} />

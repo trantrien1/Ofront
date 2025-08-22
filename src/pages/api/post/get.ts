@@ -2,8 +2,6 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-  console.debug("/api/post/get proxy: incoming headers:", req.headers);
-  console.debug("/api/post/get proxy: incoming cookies:", req.cookies);
   const { query } = req;
     const queryString = new URLSearchParams(query as Record<string, string>).toString();
     const upstream = `https://rehearten-production.up.railway.app/post/get${queryString ? "?" + queryString : ""}`;
@@ -29,15 +27,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       headers["Cookie"] = `token=${token}`;
     } else {
       // No token available – upstream will likely reject; include debug header
-      console.debug("proxy: no token provided for upstream request to post/get");
     }
   let r = await fetch(upstream, { headers });
   let text = await r.text();
-  console.debug(`/api/post/get proxy: upstream status=${r.status}`);
 
   // If upstream responded with 304 Not Modified, retry once forcing no-cache
   if (r.status === 304) {
-    console.debug("/api/post/get proxy: upstream returned 304, retrying with no-cache");
     // Retry with explicit no-cache to force a full response
     const retryHeaders = { ...headers, "Cache-Control": "no-cache" } as Record<string, string>;
     const r2 = await fetch(upstream, { headers: retryHeaders });

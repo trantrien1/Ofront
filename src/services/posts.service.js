@@ -19,40 +19,40 @@ export const getPosts = async (options = {}) => {
 	// use relative path so axios baseURL resolves to the proxy endpoint
 	const url = `post/get${query ? "?" + query : ""}`;
 	const response = await request.get(url);
-	// debug log (can be removed later)
-	console.debug("PostsService.getPosts: fetched", Array.isArray(response.data) ? response.data.length : typeof response.data);
 
 	// Map upstream post shape to frontend Post type
 	try {
 		const raw = response.data;
 		if (Array.isArray(raw)) {
-			const mapped = raw.map((p) => ({
-				id: String(p.id),
-				communityId: p.communityId || "",
-				communityImageURL: p.communityImageURL || null,
-				userDisplayText: p.userOfPost?.username || p.userOfPost?.displayName || p.userDisplayText || "",
-				creatorId: p.userOfPost?.id || p.userOfPost?.username || p.creatorId || "",
-				title: p.title || "",
-				body: p.content || p.body || "",
-				numberOfComments: p.numberOfComments || 0,
-				voteStatus: typeof p.countLike === "number" ? p.countLike : 0,
-				currentUserVoteStatus: p.userIsLike ? { id: `${p.userOfPost?.username || "u"}_${p.id}`, voteValue: 1 } : undefined,
-				imageURL: p.userOfPost?.urlAvatar || p.imageURL || null,
-				postIdx: undefined,
-				visibility: p.visibility || "public",
-				createdAt: p.createdAt ? new Date(p.createdAt) : undefined,
-				editedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
-			}));
-			return mapped;
+			const mapped = raw.map((p) => {
+				// Use username from userOfPost field in database
+				const correctUsername = extractUsername(p.userOfPost);
+
+				return {
+					id: String(p.id),
+					communityId: p.communityId || p.communityDisplayText || "general",
+					communityImageURL: p.communityImageURL || null,
+					userDisplayText: correctUsername,
+					userUID: p.userUID || p.userOfPost?.userUID || "",
+					title: p.title || "",
+					body: p.body || "",
+					numberOfComments: Number(p.numberOfComments) || 0,
+					voteStatus: Number(p.voteStatus) || Number(p.likes) || Number(p.numberOfLikes) || Number(p.upvotes) || Number(p.voteCount) || 0,
+					imageURL: p.imageURL || null,
+					postType: p.postType || "",
+					createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
+					editedAt: p.editedAt ? new Date(p.editedAt) : null,
+					communityDisplayText: p.communityDisplayText || p.communityId || "",
+					isPinned: Boolean(p.isPinned),
+					communityRuleNumber: p.communityRuleNumber || null,
+				};
+			});
+			response.data = mapped;
 		}
 	} catch (e) {
 		console.debug("PostsService.getPosts: mapping error", e);
 	}
 	return response.data;
-};
-
-export default {
-	getPosts,
 };
 
 export const likePost = async ({ postId, commentId } = {}) => {
@@ -63,4 +63,23 @@ export const likePost = async ({ postId, commentId } = {}) => {
 	return response.data;
 };
 
+export const createPost = async (postData) => {
+	// Create new post via API proxy
+	const response = await request.post("post/create", postData);
+	try { console.debug("PostsService.createPost: response=", response.data); } catch (e) {}
+	return response.data;
+};
 
+export default {
+	getPosts,
+	likePost,
+	createPost
+};
+function extractUsername(userOfPost) {
+  if (!userOfPost) return "anonymous";
+  if (typeof userOfPost === "string") return userOfPost;      // trường hợp backend trả string
+  if (typeof userOfPost === "object" && userOfPost.username) {
+    return userOfPost.username;                               // trường hợp backend trả object
+  }
+  return "anonymous";
+}

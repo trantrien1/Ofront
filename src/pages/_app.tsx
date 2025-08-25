@@ -4,14 +4,29 @@ import { RecoilRoot } from "recoil";
 import { theme } from "../chakra/theme";
 import Layout from "../components/Layout";
 import { useAuthRestore } from "../hooks/useAuthRestore";
+import ClientOnlyWrapper from "../components/Layout/ClientOnlyWrapper";
+import ToastProvider from "../components/Notifications/ToastProvider";
 // Firebase removed
 import "../styles/globals.css";
 
+
+
 function AppWithAuth(props: AppProps) {
   useAuthRestore();
+  const Comp: any = props.Component as any;
+  const noLayout = !!Comp?.noLayout;
   
+  if (noLayout) {
+    return (
+      <ClientOnlyWrapper>
+        <ToastProvider />
+        <props.Component {...props.pageProps} />
+      </ClientOnlyWrapper>
+    );
+  }
   return (
     <Layout>
+      <ToastProvider />
       <props.Component {...props.pageProps} />
     </Layout>
   );

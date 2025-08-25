@@ -179,6 +179,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       {/* Header meta - Reddit Style */}
       <HStack spacing={2} mb={2} color={metaColor} fontSize="sm">
         <Avatar size="xs" name={post.userDisplayText} src={post.communityImageURL} />
+        <Text>Posted by</Text>
         <Text fontWeight="semibold">{post.userDisplayText}</Text>
         <Text>• {formatTimeAgo(normalizeTimestamp(post.createdAt))}</Text>
         {post.imageURL && (

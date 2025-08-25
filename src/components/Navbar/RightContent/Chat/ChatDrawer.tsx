@@ -19,10 +19,17 @@ import {
   useDisclosure,
   useToast,
 } from "@chakra-ui/react";
+import { keyframes as emotionKeyframes } from "@emotion/react";
 import { ChatIcon, ArrowUpIcon } from "@chakra-ui/icons";
 import { BsRobot, BsPeople } from "react-icons/bs";
 
-type Message = { id: string; from: "user" | "bot" | "peer"; text: string; time: number };
+type Message = { id: string; from: "user" | "bot" | "peer"; text: string; time: number; thinking?: boolean };
+
+// Define typing animation once
+const typingDots = emotionKeyframes`
+  0%, 80%, 100% { transform: scale(0.8); opacity: .4; }
+  40% { transform: scale(1.2); opacity: 1; }
+`;
 
 export const useChatDrawer = () => {
   return useDisclosure();
@@ -35,7 +42,15 @@ const MessageBubble: React.FC<{ m: Message }> = ({ m }) => {
   return (
     <Flex w="100%" justify={isSelf ? "flex-end" : "flex-start"}>
       <Box maxW="75%" bg={bg} color={color} px={3} py={2} borderRadius="md">
-        <Text fontSize="sm">{m.text}</Text>
+        {m.thinking ? (
+          <HStack spacing={2} minH="22px">
+            <Box as="span" w="10px" h="10px" borderRadius="full" bg={m.from === "bot" ? "purple.500" : "whiteAlpha.800"} animation={`${typingDots} 1s infinite ease-in-out`} />
+            <Box as="span" w="10px" h="10px" borderRadius="full" bg={m.from === "bot" ? "purple.500" : "whiteAlpha.800"} animation={`${typingDots} 1s infinite ease-in-out`} style={{ animationDelay: "0.15s" }} />
+            <Box as="span" w="10px" h="10px" borderRadius="full" bg={m.from === "bot" ? "purple.500" : "whiteAlpha.800"} animation={`${typingDots} 1s infinite ease-in-out`} style={{ animationDelay: "0.3s" }} />
+          </HStack>
+        ) : (
+          <Text fontSize="sm">{m.text}</Text>
+        )}
       </Box>
     </Flex>
   );
@@ -78,7 +93,7 @@ const ChatPanel: React.FC<{ messages: Message[] }> = ({ messages }) => {
     [messages]
   );
   return (
-  <VStack align="stretch" spacing={3} overflowY="auto" maxH="calc(100vh - 220px)">
+    <VStack align="stretch" spacing={3} overflowY="auto" flex={1} minH={0}>
       {list}
       <Box ref={bottomRef} />
     </VStack>
@@ -106,16 +121,24 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
     const userMsg: Message = { id: `u-${Date.now()}`, from: "user", text, time: Date.now() };
     setBotMessages((arr) => [...arr, userMsg]);
     try {
-      // Minimal local echo bot; replace with your API call later
-      const reply: Message = {
-        id: `b-${Date.now() + 1}`,
-        from: "bot",
-        text: `Bot: ${text}`,
-        time: Date.now() + 1,
-      };
-      setTimeout(() => setBotMessages((arr) => [...arr, reply]), 200);
+      const history = botMessages.map((m) => ({ from: m.from === 'bot' ? 'bot' : 'user', text: m.text }));
+  // Add placeholder thinking message
+  const placeholderId = `b-${Date.now() + 1}`;
+  setBotMessages((arr) => [...arr, { id: placeholderId, from: 'bot', text: '', time: Date.now() + 1, thinking: true }]);
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: text, history }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
+      const botText = (data?.reply || '').toString();
+  // Replace placeholder with real reply
+  setBotMessages((arr) => arr.map((m) => m.id === placeholderId ? { ...m, text: botText || '...', thinking: false } : m));
     } catch (e: any) {
-      toast({ status: "error", title: "Chatbot error", description: e?.message || "Failed" });
+  // Replace placeholder with error text if exists
+  setBotMessages((arr) => arr.map((m) => m.thinking ? { ...m, text: 'Chatbot error', thinking: false } : m));
+  toast({ status: 'error', title: 'Chatbot error', description: e?.message || 'Failed' });
     }
   };
 
@@ -190,7 +213,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
             </VStack>
 
             {/* Main panel */}
-            <Flex flex={1} direction="column" p={4} gap={3}>
+            <Flex flex={1} direction="column" p={4} gap={3} minH={0}>
               {activeView === "bot" ? (
                 <>
                   <ChatPanel messages={botMessages} />

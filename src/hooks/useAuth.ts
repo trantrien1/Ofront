@@ -5,20 +5,26 @@ import nookies from "nookies";
 import request from "../services/request";
 import { updateRequestToken } from "../services/request";
 
-// lightweight JWT payload decode (no verification)
+// lightweight JWT payload decode (no verification) - works on server and client
 const decodeJwt = (token: string) => {
   try {
     const parts = token.split(".");
     if (parts.length < 2) return null;
     const payload = parts[1];
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded =
+      typeof window !== "undefined" && typeof window.atob === "function"
+        ? window.atob(b64)
+        : Buffer.from(b64, "base64").toString("binary");
+    return JSON.parse(decoded);
   } catch (e) {
     return null;
   }
 };
 
 const useAuth = () => {
+  const isClient = typeof window !== 'undefined';
+  // Always call hooks in the same order; guard side-effects internally
   const [currentUser, setCurrentUser] = useRecoilState(userState);
 
   const checkAuth = () => {
@@ -77,6 +83,7 @@ const useAuth = () => {
 
   useEffect(() => {
     // Check auth on mount only
+    if (!isClient) return;
     checkAuth();
 
     // Listen for storage changes (e.g., login/logout in another tab)
@@ -87,12 +94,16 @@ const useAuth = () => {
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+    }
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorageChange);
+      }
     };
-  }, []); // Empty dependency array to run only once
+  }, [isClient]); // Run effect only on client
 
   return { currentUser, user: currentUser, checkAuth };
 };

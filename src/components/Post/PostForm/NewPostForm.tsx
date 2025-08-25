@@ -21,6 +21,7 @@ import { BsLink45Deg, BsMic } from "react-icons/bs";
 import { IoDocumentText, IoImageOutline } from "react-icons/io5";
 import { AiFillCloseCircle } from "react-icons/ai";
 import { useRecoilState, useSetRecoilState } from "recoil";
+import PostsService, { createPost as createPostApi } from "../../../services/posts.service";
 
 import TabItem from "./TabItem";
 import { postState } from "../../../atoms/postsAtom";
@@ -81,44 +82,27 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 	const [visibility, setVisibility] = useState<"public" | "community">("public");
 	const [targetCommunityId, setTargetCommunityId] = useState<string>(communityId || "");
 
-	const handleCreatePost = async () => {
-		setLoading(true);
-		const { title, body } = textInputs;
-		try {
-			// Frontend-only: tạo đối tượng post và cập nhật state cục bộ
-			const newPostId = Date.now().toString();
-			const newPost: any = {
-				id: newPostId,
-				communityId: visibility === "community" ? targetCommunityId : "",
-				userDisplayText: user.email || "user",
-				creatorId: user.uid,
-				title,
-				body,
-				numberOfComments: 0,
-				voteStatus: 0,
-				imageURL: selectedFile,
-				visibility,
-				createdAt: new Date() as any,
-			};
-
-			setPostItems((prev) => ({
-				...prev,
-				posts: [newPost, ...prev.posts],
-				postsCache: {
-					...prev.postsCache,
-					[(newPost.communityId || "home")]: [
-						newPost,
-						...((prev.postsCache[newPost.communityId || "home"] || [])),
-					],
-				},
-				postUpdateRequired: false,
-			}));
-			router.back();
-		} catch (error) {
-			setError("Error creating post");
-		}
-		setLoading(false);
-	};
+		const handleCreatePost = async () => {
+			setLoading(true);
+			const { title, body } = textInputs;
+			try {
+				const payload: any = {
+					title,
+					body,
+					postType: selectedFile ? "IMAGE" : "TEXT",
+					imageURL: selectedFile || null,
+					communityId: visibility === "community" ? targetCommunityId : null,
+					isPersonalPost: visibility !== "community",
+				};
+				await createPostApi(payload);
+				// Navigate home and let the Home page refresh after ~2s
+				try { await router.push('/?refreshDelay=2000'); } catch {}
+			} catch (error) {
+				setError("Error creating post");
+			} finally {
+				setLoading(false);
+			}
+		};
 
 	const onSelectImage = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const reader = new FileReader();

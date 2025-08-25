@@ -23,6 +23,7 @@ import {
 import { useState, useRef } from "react";
 import { BsCardImage, BsPerson, BsPeople } from "react-icons/bs";
 import { createPost } from "../../../services/posts.service";
+import { useRouter } from "next/router";
 
 type CreatePostModalProps = {
   isOpen: boolean;
@@ -35,6 +36,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   onClose,
   onPostCreated,
 }) => {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [postLocation, setPostLocation] = useState("personal"); // "personal" or "community"
@@ -109,7 +111,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setImagePreview("");
       
       onClose();
-      onPostCreated?.();
+  // Navigate to home with refresh delay so Home page fetches after ~2s
+  try { await router.push("/?refreshDelay=2000"); } catch {}
+  onPostCreated?.();
     } catch (error: any) {
       toast({
         title: "Error creating post",

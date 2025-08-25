@@ -20,6 +20,7 @@ import PostsService from "../services/posts.service";
 
 
 const Home: NextPage = () => {
+  const router = useRouter();
   const user = useRecoilValue(userState) as any;
   const loadingUser = false;
   const {
@@ -75,13 +76,10 @@ const Home: NextPage = () => {
   const getNoUserHomePosts = async () => {
     setLoading(true);
     try {
-      // Fetch public/general posts from backend via PostsService
-      const posts: Post[] = await PostsService.getPosts();
-  // posts loaded for no-user feed
-
+      // New logic: when logged out, do not fetch posts
       setPostStateValue((prev) => ({
         ...prev,
-        posts: posts || [],
+        posts: [],
       }));
     } catch (error: any) {
       console.error("getNoUserHomePosts error", error.message);
@@ -96,17 +94,42 @@ const Home: NextPage = () => {
   };
 
   useEffect(() => {
-    /**
-     * initSnippetsFetched ensures that user snippets have been retrieved;
-     * the value is set to true when snippets are first retrieved inside
-     * of getSnippets in useCommunityData
-     */
-    if (!communityStateValue.initSnippetsFetched) return;
+    // Fetch on login or when refresh flag is present
+    const run = async () => {
+      if (!user) return;
+      try {
+        const posts = await PostsService.getPosts({});
+        setPostStateValue((prev) => ({ ...prev, posts }));
+      } catch (e) {
+        console.error("home: fetch posts after login failed", (e as any)?.message || e);
+      }
+    };
+    // Read from router.query so client-side navigation with query triggers this effect
+    const refreshParam = router.query?.refresh;
+    const refreshDelayParam = router.query?.refreshDelay;
+    const refreshFlag = refreshParam === '1' || (Array.isArray(refreshParam) && refreshParam.includes('1'));
+    const parsedDelay = Array.isArray(refreshDelayParam) ? refreshDelayParam[0] : refreshDelayParam;
+    const refreshDelay = parsedDelay ? Math.max(0, Math.min(10000, Number(parsedDelay))) : 0;
 
+    let timer: any;
     if (user) {
-      getUserHomePosts();
+      if (refreshFlag) {
+        // Immediate refresh
+        run();
+        try { router.replace('/', undefined, { shallow: true }); } catch {}
+      } else if (refreshDelay && Number.isFinite(refreshDelay)) {
+        // Delayed refresh
+        timer = setTimeout(() => {
+          run();
+          try { router.replace('/', undefined, { shallow: true }); } catch {}
+        }, refreshDelay);
+      } else if (!postStateValue.posts.length) {
+        // Initial load when no posts yet
+        run();
+      }
     }
-  }, [user, communityStateValue.initSnippetsFetched]);
+    return () => { if (timer) clearTimeout(timer); };
+  }, [user, router.query]);
 
   useEffect(() => {
     if (!user && !loadingUser) {
@@ -155,7 +178,7 @@ const Home: NextPage = () => {
           </Stack>
         )}
       </>
-      <Stack spacing={5} position="sticky" top="14px">
+      <Stack gap={5} position="sticky" top="14px">
         <Recommendations />
       </Stack>
     </PageContentLayout>

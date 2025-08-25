@@ -23,7 +23,8 @@ const SidebarContext = createContext<{
 export const useSidebar = () => useContext(SidebarContext);
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  useAuth(); // Enable authentication hook to persist login state
+  // Always call hooks; useAuth internally guards side-effects
+  useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const user = null as any;
   const createCommunityModalStateValue = useRecoilValue(createCommunityModalState);

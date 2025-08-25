@@ -51,6 +51,7 @@ const Sidebar: React.FC = () => {
   const communityStateValue = useRecoilValue(communityState);
   const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
   const { isOpen: isCommunitiesOpen, onToggle: onCommunitiesToggle } = useDisclosure({ defaultIsOpen: true });
+  const { isOpen: isAnimeOpen, onToggle: onAnimeToggle } = useDisclosure({ defaultIsOpen: true });
   
   // Use local state for now, but this can be connected to global context later
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -230,6 +231,12 @@ const Sidebar: React.FC = () => {
               path="/popular"
               isActive={isActivePage("/popular")}
             />
+            <NavItem
+              icon={MdGroup}
+              label="Trợ lí ảo Anime"
+              path="/anime"
+              isActive={isActivePage("/anime")}
+            />
           </VStack>
         </Box>
 
@@ -329,6 +336,8 @@ const Sidebar: React.FC = () => {
             </VStack> 
           </Collapse>
         </Box>
+
+        
 
         {/* User Profile Section (if logged in) */}
         {user && (

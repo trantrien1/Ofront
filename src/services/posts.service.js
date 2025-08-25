@@ -15,10 +15,16 @@ export const getPosts = async (options = {}) => {
 		...options,
 	};
 	const query = new URLSearchParams(params).toString();
-	// request.baseURL already points to the local API root (e.g. http://localhost:3000/api/)
-	// use relative path so axios baseURL resolves to the proxy endpoint
+	// Use local API proxy so cookies/withCredentials are sent to our domain,
+	// and the proxy forwards Authorization/cookies to upstream.
+	// request.baseURL already points to /api, so a relative path is correct here.
+	// Use local Next.js API route so cookies & auth are included automatically
 	const url = `post/get${query ? "?" + query : ""}`;
-	const response = await request.get(url);
+	// For unauthenticated or general feed, callers may omit options.auth; if explicitly public, pass x-public header
+	const isPublic = options && (options.public === true || options.auth === false);
+	const response = await request.get(url, {
+		headers: isPublic ? { 'x-public': '1' } : undefined,
+	});
 
 	console.debug("PostsService.getPosts: raw response=", response.data);
 
@@ -26,23 +32,22 @@ export const getPosts = async (options = {}) => {
 	try {
 		const raw = response.data;
 		let postsArray = [];
-		
+
 		// Handle different response formats
 		if (Array.isArray(raw)) {
 			postsArray = raw;
 		} else if (raw && Array.isArray(raw.posts)) {
-			// Handle mock data format: {posts: [...]}
+			// Handle mock data format: {posts: [...]} 
 			postsArray = raw.posts;
 		} else if (raw && raw.data && Array.isArray(raw.data)) {
-			// Handle wrapped data format: {data: [...]}
+			// Handle wrapped data format: {data: [...]} 
 			postsArray = raw.data;
 		}
-		
+
 		if (postsArray.length > 0) {
 			const mapped = postsArray.map((p) => {
 				// Use username from userOfPost field in database
 				const correctUsername = extractUsername(p.userOfPost);
-
 				return {
 					id: String(p.id),
 					communityId: p.communityId || p.communityDisplayText || "general",
@@ -50,13 +55,14 @@ export const getPosts = async (options = {}) => {
 					userDisplayText: correctUsername,
 					userUID: p.userUID || p.userOfPost?.userUID || "",
 					title: p.title || "",
-					body: p.body || "",
-					numberOfComments: Number(p.numberOfComments) || 0,
-					voteStatus: Number(p.voteStatus) || Number(p.likes) || Number(p.numberOfLikes) || Number(p.upvotes) || Number(p.voteCount) || 0,
+					body: p.body || p.content || "",
+					numberOfComments: Number(p.numberOfComments ?? p.countComment ?? p.commentCount) || 0,
+					voteStatus: Number(p.voteStatus) || Number(p.likes) || Number(p.numberOfLikes) || Number(p.upvotes) || Number(p.voteCount) || Number(p.countLike) || 0,
+					currentUserVoteStatus: p.userIsLike ? { id: `self_${p.id}`, voteValue: 1 } : undefined,
 					imageURL: p.imageURL || null,
 					postType: p.postType || "",
-					createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
-					editedAt: p.editedAt ? new Date(p.editedAt) : null,
+					createdAt: p.createdAt || new Date().toISOString(),
+					editedAt: p.editedAt || null,
 					communityDisplayText: p.communityDisplayText || p.communityId || "",
 					isPinned: Boolean(p.isPinned),
 					communityRuleNumber: p.communityRuleNumber || null,
@@ -72,14 +78,17 @@ export const getPosts = async (options = {}) => {
 		// Fallback to empty array if mapping fails
 		response.data = [];
 	}
-	
+
 	console.debug("PostsService.getPosts: final response=", response.data);
 	return response.data;
-};
+	};
 
-export const likePost = async ({ postId, commentId } = {}) => {
-	// backend LikeDTO expects { postId, commentId }
-	const payload = { postId, commentId };
+export const likePost = async ({ postId } = {}) => {
+	// backend LikeDTO expects { postId }
+	const numericId = typeof postId === 'string' ? Number(postId) : postId;
+	const payload = { postId: Number.isFinite(numericId) ? numericId : postId };
+	try { console.debug("PostsService.likePost: sending payload=", payload); } catch (e) {}
+	// Use generic API route and preserve method (PUT per your upstream)
 	const response = await request.put("like", payload);
 	try { console.debug("PostsService.likePost: response=", response.data); } catch (e) {}
 	return response.data;

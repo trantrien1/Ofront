@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Check if it's a JWT token (starts with ey... or looks like a token)
       const isToken = text.trim().includes('.');
       
-      if (isToken) {
+  if (isToken) {
         console.log("/api/login proxy: DETECTED JWT TOKEN, letting frontend handle cookie");
         // Also forward upstream session cookie (e.g., JSESSIONID) if present,
         // storing it under our own cookie name so we can replay it in API proxies.
@@ -43,6 +43,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             res.setHeader("Set-Cookie", `UPSTREAM_JSESSIONID=${jsid}; Path=/; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}; HttpOnly`);
           }
         }
+        // Additionally, set our own token cookie for stability in dev/localhost
+        try {
+          const tokenStr = text.trim().replace(/^"|"$/g, "");
+          // HttpOnly=false to allow reading in client when needed; Secure only in prod
+          const secureFlag = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+          const existing = res.getHeader("Set-Cookie");
+          const existingArr = Array.isArray(existing)
+            ? existing
+            : existing
+            ? [String(existing)]
+            : [];
+          const newCookies = [
+            ...existingArr,
+            `token=${tokenStr}; Path=/; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}${secureFlag}`,
+          ];
+          res.setHeader("Set-Cookie", newCookies);
+        } catch {}
+
         // Return the token to frontend so it can set the cookie
         return res.status(200).json({
           token: text.trim(),

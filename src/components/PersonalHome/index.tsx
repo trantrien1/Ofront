@@ -32,6 +32,8 @@ import { Post } from "../../atoms/postsAtom";
 import PostItem from "../Post/PostItem";
 import usePosts from "../../hooks/usePosts";
 import { timestampToISO } from "../../helpers/timestampHelpers";
+import useAuth from "../../hooks/useAuth";
+import { getPosts as fetchAllPosts } from "../../services/posts.service";
 
 interface UserProfile {
   uid: string;
@@ -48,7 +50,9 @@ interface UserProfile {
 }
 
 const PersonalHome: React.FC = () => {
-  const user = null as any; const loadingUser = false;
+  const { user: currentUser } = useAuth();
+  const user = currentUser as any;
+  const loadingUser = false;
   const router = useRouter();
   const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -60,10 +64,25 @@ const PersonalHome: React.FC = () => {
 
   // Fetch user profile data from database
   const fetchUserProfile = async () => {
-    if (!user?.uid) return;
-    
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
     try {
-      // TODO: Load profile via API in future
+      // Derive basic profile from auth for now
+      setUserProfile({
+        uid: user.uid,
+        email: user.email ?? "",
+        displayName: user.displayName ?? user.uid,
+        photoURL: user.photoURL ?? undefined,
+        createdAt: user.createdAt ?? new Date(),
+        karma: 0,
+        postCount: 0,
+        commentCount: 0,
+        bio: user.bio ?? "",
+        location: user.location ?? "",
+        website: user.website ?? "",
+      });
     } finally {
       setLoading(false);
     }
@@ -71,31 +90,38 @@ const PersonalHome: React.FC = () => {
 
   // Fetch user's posts from database
   const fetchUserPosts = async () => {
-    if (!user?.uid) return;
-    
+    if (!user?.uid && !user?.displayName) return;
     setPostsLoading(true);
     try {
-      const resp = await fetch(`/api/posts?userId=${encodeURIComponent(user.uid)}`);
-      const posts = resp.ok ? await resp.json() : [];
-      setUserPosts(Array.isArray(posts) ? (posts as Post[]) : []);
+      // Load all posts then filter by author (best-effort)
+      const all = await fetchAllPosts({});
+      const username = (user.displayName || "").toString().toLowerCase();
+      const filtered = Array.isArray(all)
+        ? all.filter((p: any) => {
+            const byUid = p.userUID && user.uid && String(p.userUID) === String(user.uid);
+            const byName = p.userDisplayText && username && String(p.userDisplayText).toLowerCase() === username;
+            return byUid || byName;
+          })
+        : [];
+      setUserPosts(filtered as Post[]);
     } catch (error) {
       console.error("Error fetching user posts:", error);
+      setUserPosts([]);
     } finally {
       setPostsLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!user) {
-      router.push("/");
-    }
-  }, [user, router]);
+  // Stay on page; show login prompt instead of redirecting
 
   useEffect(() => {
     if (user && !loadingUser) {
       fetchUserProfile();
       fetchUserPosts();
+    } else if (!user) {
+      setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loadingUser]);
 
   const formatJoinDate = (date: Date) => {

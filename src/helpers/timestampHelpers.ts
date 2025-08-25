@@ -53,7 +53,19 @@ export const normalizeTimestamp = (timestamp: any): string => {
   
   // If it's already a string, assume it's ISO
   if (typeof timestamp === 'string') {
-    return timestamp;
+    const s = timestamp.trim();
+    // If string has no timezone info (no 'Z' and no +/- offset), treat as UTC by appending 'Z'
+    const hasTZ = /Z$/i.test(s) || /[\+\-]\d{2}:?\d{2}$/.test(s);
+    if (hasTZ) return s;
+    // If there's no timezone, interpret as LOCAL time (not UTC) to avoid offset drift
+    // Accept variable-length fractional seconds by trimming to milliseconds precision
+    if (/^\d{4}-\d{2}-\d{2}([T\s]\d{2}:\d{2}(:\d{2}(\.\d+)?)?)?$/.test(s)) {
+      try {
+        const trimmed = s.replace(/(\.\d{3})\d+$/, '$1');
+        return new Date(trimmed).toISOString();
+      } catch { return s; }
+    }
+    return s;
   }
   
   // If it's a Firestore timestamp

@@ -32,9 +32,8 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
   ];
   const isAdmin = user && user.email && ADMIN_EMAILS.includes(user.email);
 
-  const handlePostCreated = () => {
-    // Refresh posts or update state as needed
-    window.location.reload(); // Simple refresh for now
+  const handlePostCreated = async () => {
+    try { await router.push('/?refreshDelay=2000'); } catch {}
   };
 
   const goToAdminDashboard = () => {

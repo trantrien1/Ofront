@@ -1,6 +1,6 @@
 import { extendTheme } from "@chakra-ui/react";
-import { Button } from "./button";
-import { Input } from "./input";
+import { Button } from "./button"; // đây là theme override object, không phải component React
+import { Input } from "./input";   // theme override object
 
 export const theme = extendTheme({
   colors: {
@@ -20,6 +20,6 @@ export const theme = extendTheme({
   },
   components: {
     Button,
-    // Input, // not working for some reason - come back to this
+    Input,
   },
 });

@@ -6,15 +6,16 @@ export const getPosts = async (options = {}) => {
 	// so use a relative path without leading slash to avoid duplicate /api segments.
 	// Ensure upstream-required query params exist (match screenshot/example)
 	const params = {
-		// title may be empty string when searching all
-		title: typeof options.title !== "undefined" ? options.title : "",
-		// sort defaults to 'like' per upstream expectation
-		sort: typeof options.sort !== "undefined" ? options.sort : "like",
-		// typeSort may be present but empty
-		typeSort: typeof options.typeSort !== "undefined" ? options.typeSort : "",
-		...options,
+		// Upstream expects these keys to exist; title/typeSort can be empty strings
+		title: typeof options.title !== "undefined" ? String(options.title) : "",
+		sort: typeof options.sort !== "undefined" ? String(options.sort) : "like",
+		typeSort: typeof options.typeSort !== "undefined" ? String(options.typeSort) : "",
 	};
-	const query = new URLSearchParams(params).toString();
+	const usp = new URLSearchParams();
+	if (typeof params.title !== 'undefined') usp.set('title', params.title);
+	if (params.sort) usp.set('sort', params.sort);
+	if (typeof params.typeSort !== 'undefined') usp.set('typeSort', params.typeSort);
+	const query = usp.toString();
 	// Use local API proxy so cookies/withCredentials are sent to our domain,
 	// and the proxy forwards Authorization/cookies to upstream.
 	// request.baseURL already points to /api, so a relative path is correct here.
@@ -22,9 +23,44 @@ export const getPosts = async (options = {}) => {
 	const url = `post/get${query ? "?" + query : ""}`;
 	// For unauthenticated or general feed, callers may omit options.auth; if explicitly public, pass x-public header
 	const isPublic = options && (options.public === true || options.auth === false);
-	const response = await request.get(url, {
-		headers: isPublic ? { 'x-public': '1' } : undefined,
-	});
+			let response;
+			try {
+					// Prefer a simple public proxy when fetching public feed
+					if (isPublic) {
+							try {
+									response = await request.get("posts/community-feed", { headers: { 'x-public': '1' } });
+							} catch (e) {
+									// fall back to regular endpoint with explicit public header
+							}
+					}
+					if (!response) {
+							// Build per-request config; for public calls, also remove Authorization just for this request
+							const config = isPublic
+								? {
+										headers: { 'x-public': '1' },
+										transformRequest: [
+											(data, headers) => {
+												try { if (headers && 'Authorization' in headers) delete headers.Authorization; } catch {}
+												return data;
+											},
+										],
+									}
+								: { headers: {} };
+							response = await request.get(url, config);
+					}
+	} catch (err) {
+		const status = err?.response?.status;
+		// On unauthorized/forbidden, retry explicitly as public to avoid 403 when token is invalid/missing
+					if (!isPublic && (status === 401 || status === 403)) {
+							try {
+									response = await request.get("posts/community-feed", { headers: { 'x-public': '1' } });
+							} catch (_) {
+									response = await request.get(url, { headers: { 'x-public': '1' } });
+							}
+		} else {
+			throw err;
+		}
+	}
 
 	console.debug("PostsService.getPosts: raw response=", response.data);
 

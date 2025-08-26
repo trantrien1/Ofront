@@ -11,49 +11,54 @@ import {
   AlertDescription,
 } from '@chakra-ui/react';
 import AdminDashboard from './dashboard';
-import { useRecoilValue } from 'recoil';
-import { userState, UserData } from '../../atoms/userAtom';
-
-// List of admin emails - replace with your actual admin emails
-const ADMIN_EMAILS = [
-  'admin@example.com',
-  'administrator@example.com',
-  'admin@rehearten.com',
-  // Add your admin emails here
-];
+import nookies from 'nookies';
 
 const AdminIndex: React.FC = () => {
-  const user = useRecoilValue(userState);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    // Simulate loading check
     const checkAuth = () => {
-      if (!user) {
-        // Redirect to login if not authenticated
-        router.push('/');
+      // Client-side role check using token cookie (JWT)
+      try {
+        const decodeJwt = (token: string) => {
+          try {
+            const parts = token.split('.')
+            if (parts.length < 2) return null;
+            const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            const decoded = typeof window !== 'undefined' && typeof window.atob === 'function' ? window.atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+            return JSON.parse(decoded);
+          } catch { return null; }
+        };
+        const cookies = nookies.get(undefined);
+        const cookieRole = (cookies?.role as string | undefined) || (cookies?.ROLE as string | undefined);
+        if (cookieRole && String(cookieRole).toLowerCase() === 'admin') {
+          setIsAuthorized(true);
+          setLoading(false);
+          return;
+        }
+        const token = cookies?.token as string | undefined;
+        if (token) {
+          const payload: any = decodeJwt(token);
+          const role = payload?.role || (Array.isArray(payload?.roles) ? payload.roles[0] : undefined) || (payload?.isAdmin ? 'admin' : undefined);
+          if (String(role || '').toLowerCase() === 'admin') {
+            setIsAuthorized(true);
+            setLoading(false);
+            return;
+          }
+        }
+        // Block non-admins early
+        router.replace('/no-access');
         return;
+      } catch {
+        router.replace('/no-access');
       }
-
-      // Check if user is admin by email
-      const isAdmin = user.email && ADMIN_EMAILS.includes(user.email);
-
-      if (!isAdmin) {
-        // Redirect non-admin users
-        router.push('/');
-        return;
-      }
-
-      setIsAuthorized(true);
-      setLoading(false);
     };
 
-    // Add a small delay to prevent flash
-    const timer = setTimeout(checkAuth, 500);
+    const timer = setTimeout(checkAuth, 100);
     return () => clearTimeout(timer);
-  }, [user, router]);
+  }, [router]);
 
   if (loading) {
     return (
@@ -66,20 +71,6 @@ const AdminIndex: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return (
-      <Container maxW="7xl" py={8}>
-        <Alert status="warning">
-          <AlertIcon />
-          <AlertTitle>Access Denied!</AlertTitle>
-          <AlertDescription>
-            You need to be logged in to access the admin panel.
-          </AlertDescription>
-        </Alert>
-      </Container>
-    );
-  }
-
   if (!isAuthorized) {
     return (
       <Container maxW="7xl" py={8}>
@@ -87,9 +78,7 @@ const AdminIndex: React.FC = () => {
           <AlertIcon />
           <AlertTitle>Access Denied!</AlertTitle>
           <AlertDescription>
-            You don&apos;t have permission to access the admin panel. Only administrators can access this area.
-            <br />
-            Current user: {(user as UserData)?.email || (user as UserData)?.displayName || 'Unknown'}
+            You don&apos;t have permission to access this area.
           </AlertDescription>
         </Alert>
       </Container>

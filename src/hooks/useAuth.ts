@@ -43,6 +43,8 @@ const useAuth = () => {
       // No token anywhere -> clear user and auth header
       setCurrentUser(null);
       updateRequestToken("");
+      // Clear any persisted role on logout/missing token
+      try { if (typeof window !== "undefined") window.localStorage.removeItem("role"); } catch {}
       return;
     }
 
@@ -52,6 +54,7 @@ const useAuth = () => {
       // Clear invalid token
       try { nookies.destroy(undefined, "token"); } catch {}
       updateRequestToken("");
+      try { if (typeof window !== "undefined") window.localStorage.removeItem("role"); } catch {}
       return;
     }
 
@@ -62,6 +65,7 @@ const useAuth = () => {
       // Clear expired token
       try { nookies.destroy(undefined, "token"); } catch {}
       updateRequestToken("");
+      try { if (typeof window !== "undefined") window.localStorage.removeItem("role"); } catch {}
       return;
     }
 
@@ -69,6 +73,13 @@ const useAuth = () => {
     updateRequestToken(token);
 
     // Map payload to UserData shape where possible
+    // Extract a role-like field from JWT if available
+    const rawRole = (payload as any)?.role
+      || (Array.isArray((payload as any)?.roles) ? (payload as any).roles[0] : undefined)
+      || ((payload as any)?.isAdmin ? 'admin' : undefined);
+    // Normalize to lowercase for consistency across app
+    const role = rawRole ? String(rawRole).toLowerCase() : undefined;
+
     const user = {
       uid: payload.sub || payload.uid || payload.username || "",
       email: payload.email || null,
@@ -76,9 +87,19 @@ const useAuth = () => {
       photoURL: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      // Include role on the user object for convenience (avoid rendering it by default)
+      role,
     } as any;
 
     setCurrentUser(user);
+
+    // Persist role for client-side guards (e.g., admin dashboard)
+    try {
+      if (typeof window !== 'undefined') {
+  if (role) window.localStorage.setItem('role', role);
+        else window.localStorage.removeItem('role');
+      }
+    } catch {}
   };
 
   useEffect(() => {

@@ -14,6 +14,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         s = s.slice(1, -1);
       }
       if (!s) return undefined;
+      // Some backends set a JSON string in the cookie, like {"token":"<jwt>","role":"admin"}
+      // If so, parse and extract the token field.
+      if (s.startsWith("{") && s.endsWith("}")) {
+        try {
+          const obj: any = JSON.parse(s);
+          if (obj && typeof obj.token === "string" && obj.token) {
+            s = String(obj.token);
+          }
+        } catch {}
+      }
       const lower = s.toLowerCase();
       if (lower === "undefined" || lower === "null" || lower === "bearer") return undefined;
       return s;
@@ -46,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       tokenSource = "cookie.accessToken";
     }
 
-    // Build headers for upstream
+  // Build headers for upstream
   const headers: Record<string, string> = {
       Accept: "application/json",
       // Some providers return 403 on requests without a UA; send a generic one
@@ -71,13 +81,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (forcePublic) {
       delete headers["Authorization"];
       delete headers["Cookie"];
+      headers["x-public"] = "1";
     }
 
   // Dev logging: show what we will send upstream
   console.log("Proxy -> upstream URL:", upstream);
-  console.log("Incoming cookies:", req.cookies);
+  console.log("Incoming cookies token (preview):", typeof req.cookies?.token === 'string' ? String(req.cookies?.token).slice(0, 60) + '...' : 'none');
   console.log("Incoming auth header:", req.headers.authorization);
-  console.log("Resolved token source:", tokenSource, "len=", token?.length || 0);
+  console.log("Resolved token source:", tokenSource, "len=", token?.length || 0, "forcePublic=", forcePublic);
   console.log("Proxy headers to upstream:", headers);
 
   let r = await fetch(upstream, { headers });
@@ -110,6 +121,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       delete retryHeaders["Authorization"];
       retried = "no_auth";
       console.log("Retrying upstream without Authorization header (public)");
+      const r2 = await fetch(upstream, { headers: retryHeaders });
+      const t2 = await r2.text();
+      r = r2; text = t2;
+    } else if (!forcePublic) {
+      // Strategy 4: explicit public retry with x-public header and no auth/cookies
+      const retryHeaders: Record<string, string> = { ...headers };
+      delete retryHeaders["Authorization"];
+      delete retryHeaders["Cookie"];
+      retryHeaders["x-public"] = "1";
+      retried = "explicit_public";
+      console.log("Retrying upstream in explicit public mode (x-public)");
       const r2 = await fetch(upstream, { headers: retryHeaders });
       const t2 = await r2.text();
       r = r2; text = t2;

@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const upstream = `https://rehearten-production.up.railway.app/comment/create`;
 
-    // Helper to sanitize token values and ignore "undefined"/"null" strings
+    // Helper to sanitize token values and ignore "undefined"/"null" strings; unwrap JSON-shaped token cookies
     const cleanToken = (t?: string | null) => {
       if (!t) return undefined;
       let s = String(t).trim();
@@ -28,19 +28,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         s = s.slice(1, -1);
       }
       if (!s) return undefined;
+      // unwrap {"token":"<jwt>","role":"..."}
+      if (s.startsWith('{') && s.endsWith('}')) {
+        try { const obj: any = JSON.parse(s); if (obj && typeof obj.token === 'string') s = String(obj.token); } catch {}
+      }
       const lower = s.toLowerCase();
       if (lower === "undefined" || lower === "null" || lower === "bearer") return undefined;
       return s;
     };
 
-    // Extract token from various sources (cookie, Authorization, custom headers)
-    let token = cleanToken(req.cookies?.token as string | undefined);
-    if (!token) {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.toLowerCase().startsWith("bearer ")) {
-        token = cleanToken(authHeader.substring(7));
-      }
+    // Extract token preferring Authorization header first, then cookies
+    let token: string | undefined;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.toLowerCase().startsWith("bearer ")) {
+      token = cleanToken(authHeader.substring(7));
     }
+    if (!token) token = cleanToken(req.cookies?.token as string | undefined);
     if (!token && typeof req.headers["x-access-token"] === "string") {
       token = cleanToken(req.headers["x-access-token"] as string);
     }

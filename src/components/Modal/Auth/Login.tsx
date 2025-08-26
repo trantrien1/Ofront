@@ -40,7 +40,8 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
       try {
         // backend expects username/password
         const requestBody = { username: form.username, password: form.password };
-        const data: any = await UsersService.login(requestBody);
+  const data: any = await UsersService.login(requestBody);
+  try { console.log("[login] response typeof=", typeof data, "keys=", data && typeof data === 'object' ? Object.keys(data) : []); } catch {}
 
         // data could be a string or object. Try to extract token
         let token: string | undefined;
@@ -59,7 +60,7 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
         }
 
 
-        if (!token) {
+  if (!token) {
           setFormError("Login succeeded but no token returned");
           return;
         }
@@ -73,6 +74,24 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
           return s;
         };
         token = normalize(token);
+
+        // Some backends wrap token and role inside a JSON string: {"token":"<jwt>","role":"admin"}
+        // If detected, extract inner token and capture role hint from wrapper.
+        let roleFromTokenWrapper: string | null = null;
+        if (typeof token === 'string') {
+          const s = token.trim();
+          if (s.startsWith('{') && s.endsWith('}')) {
+            try {
+              const obj = JSON.parse(s);
+              if (obj && typeof obj.token === 'string' && obj.token) {
+                token = normalize(obj.token) as string;
+              }
+              if (obj && typeof obj.role === 'string' && obj.role) {
+                roleFromTokenWrapper = obj.role;
+              }
+            } catch {}
+          }
+        }
 
   // store cookie with long expiration (explicit SameSite/path to ensure browser sends it to local API)
   // Token is checked above; assert it's a string for TypeScript
@@ -117,6 +136,18 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
           }
         }
 
+  // IMPORTANT: Prefer backend-provided role or wrapper role; fallback to a single 'role' claim in JWT.
+  let wrapperRoleFromData: string | null = null;
+  if (typeof data === 'object' && data && typeof (data as any).token === 'string') {
+    const tStr = ((data as any).token as string).trim();
+    if (tStr.startsWith('{') && tStr.endsWith('}')) {
+      try { const obj = JSON.parse(tStr); if (obj && typeof obj.role === 'string') wrapperRoleFromData = obj.role; } catch {}
+    }
+  }
+  const backendRole: any = (typeof data === "object" && data) ? ((data as any).role || (data as any)?.user?.role || (data as any)?.data?.role || wrapperRoleFromData || roleFromTokenWrapper) : (roleFromTokenWrapper || null);
+  const tokenRole: any = jwtPayload && typeof jwtPayload.role === "string" ? jwtPayload.role : null;
+  const role: string | null = (backendRole ?? tokenRole) ? String(backendRole ?? tokenRole) : null;
+
         const user = {
           uid: jwtPayload?.sub || jwtPayload?.uid || jwtPayload?.username || "",
           email: jwtPayload?.email || null,
@@ -124,7 +155,38 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
           photoURL: null,
           createdAt: new Date(),
           updatedAt: new Date(),
+          role,
         } as any;
+
+    // Debug: print essential fields so you can verify values after login
+        try {
+          const cookies = nookies.get(undefined);
+          const cookieRole = cookies?.role || cookies?.ROLE || cookies?.userRole || cookies?.USER_ROLE || null;
+          const cookieUser = cookies?.username || cookies?.user || null;
+          if (typeof window !== "undefined") {
+            // Print in the requested format with the actual JWT string and resolved role
+            console.log("Định dạng response khi login\n" + JSON.stringify({ token, role: role ?? undefined }, null, 4));
+            console.log(
+              "Login result (core fields):",
+              JSON.stringify({ uid: user.uid, email: user.email, role: user.role ?? null }, null, 2)
+            );
+            console.log("[login] cookieRole=", cookieRole, "cookieUser=", cookieUser);
+          }
+        } catch {}
+
+        // Persist role cookie so client-side guards can read it
+        try {
+          if (role) {
+            const roleStr = String(role).toLowerCase();
+            nookies.set(undefined, "role", roleStr, {
+              path: "/",
+              sameSite: "lax",
+              maxAge: 30 * 24 * 60 * 60,
+              httpOnly: false,
+              secure: false,
+            });
+          }
+        } catch {}
 
         setUser(user);
         

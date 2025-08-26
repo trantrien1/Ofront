@@ -29,6 +29,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         s = s.slice(1, -1);
       }
       if (!s) return undefined;
+      // unwrap {"token":"<jwt>","role":"..."}
+      if (s.startsWith('{') && s.endsWith('}')) {
+        try { const obj: any = JSON.parse(s); if (obj && typeof obj.token === 'string') s = String(obj.token); } catch {}
+      }
       const lower = s.toLowerCase();
       if (lower === "undefined" || lower === "null" || lower === "bearer") return undefined;
       return s;

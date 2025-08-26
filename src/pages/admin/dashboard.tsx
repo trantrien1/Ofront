@@ -48,6 +48,7 @@ import {
   FiFlag,
 } from 'react-icons/fi';
 import { useRouter } from 'next/router';
+import nookies from 'nookies';
 
 // Mock data - replace with real API calls
 const mockStats = {
@@ -151,6 +152,43 @@ const AdminDashboard: React.FC = () => {
   const [reports, setReports] = useState(mockReports);
   const toast = useToast();
   const router = useRouter();
+  const [loadingGuard, setLoadingGuard] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // Client-side guard: allow only admin from token cookie (JWT)
+  useEffect(() => {
+    const decodeJwt = (token: string) => {
+      try {
+        const parts = token.split('.')
+        if (parts.length < 2) return null;
+        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = typeof window !== 'undefined' && typeof window.atob === 'function' ? window.atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+        return JSON.parse(decoded);
+      } catch { return null; }
+    };
+    try {
+      const cookies = nookies.get(undefined);
+      const cookieRole = (cookies?.role as string | undefined) || (cookies?.ROLE as string | undefined);
+      if (cookieRole && String(cookieRole).toLowerCase() === 'admin') {
+        setIsAuthorized(true);
+        setLoadingGuard(false);
+        return;
+      }
+      const token = cookies?.token as string | undefined;
+      if (token) {
+        const payload: any = decodeJwt(token);
+        const role = payload?.role || (Array.isArray(payload?.roles) ? payload.roles[0] : undefined) || (payload?.isAdmin ? 'admin' : undefined);
+        if (String(role || '').toLowerCase() === 'admin') {
+          setIsAuthorized(true);
+          setLoadingGuard(false);
+          return;
+        }
+      }
+      router.replace('/no-access');
+    } finally {
+      setLoadingGuard(false);
+    }
+  }, [router]);
 
   useEffect(() => {
     // TODO: Fetch real data from APIs
@@ -159,6 +197,17 @@ const AdminDashboard: React.FC = () => {
     // fetchRecentUsers();
     // fetchReports();
   }, []);
+
+  if (loadingGuard) {
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={4} justify="center" minH="50vh">
+          <Text>Checking access...</Text>
+        </VStack>
+      </Container>
+    );
+  }
+  if (!isAuthorized) return null;
 
   const handlePostAction = (action: string, postId: number) => {
     toast({

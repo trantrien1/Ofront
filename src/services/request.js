@@ -9,12 +9,37 @@ const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api/";
 let token = "";
 try {
 	const cookies = nookies.get(undefined);
-	token = cookies?.token || "";
+	let raw = cookies?.token || "";
+	// Some flows might store a JSON string in the token cookie (e.g., {"token":"<jwt>","role":"admin"})
+	// Normalize it to the actual JWT string.
+	if (raw) {
+		let s = String(raw).trim();
+		if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+			s = s.slice(1, -1);
+		}
+		if (s.startsWith("{") && s.endsWith("}")) {
+			try {
+				const obj = JSON.parse(s);
+				if (obj && typeof obj.token === "string" && obj.token) {
+					raw = obj.token;
+				}
+			} catch {}
+		}
+		token = raw;
+	}
 	
 	// Fallback: try localStorage if no cookie (VS Code Simple Browser compatibility)
 	if (!token && typeof window !== "undefined") {
 		try {
-			token = localStorage.getItem("authToken") || "";
+			let ls = localStorage.getItem("authToken") || "";
+			if (ls) {
+				let s = String(ls).trim();
+				if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
+				if (s.startsWith("{") && s.endsWith("}")) {
+					try { const obj = JSON.parse(s); if (obj && typeof obj.token === 'string') ls = obj.token; } catch {}
+				}
+				token = ls;
+			}
 		} catch (e) {
 			// localStorage not available
 		}
@@ -40,8 +65,24 @@ if (token) {
 export const updateRequestToken = (newToken) => {
 	try {
 		if (newToken) {
-			request.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
-			console.debug("request: token updated (length)", newToken.length);
+			let t = newToken;
+			// Normalize possible JSON-wrapped token
+			try {
+				if (typeof t === 'string') {
+					let s = t.trim();
+					if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+						s = s.slice(1, -1);
+					}
+					if (s.startsWith("{") && s.endsWith("}")) {
+						const obj = JSON.parse(s);
+						if (obj && typeof obj.token === 'string' && obj.token) {
+							t = obj.token;
+						}
+					}
+				}
+			} catch {}
+			request.defaults.headers.common["Authorization"] = `Bearer ${t}`;
+			console.debug("request: token updated (length)", String(t).length);
 		} else {
 			delete request.defaults.headers.common["Authorization"];
 			console.debug("request: token cleared");

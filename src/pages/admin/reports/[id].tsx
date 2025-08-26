@@ -20,25 +20,42 @@ import {
   FormControl,
   FormLabel,
 } from '@chakra-ui/react';
-import { useRecoilValue } from 'recoil';
-import { userState, UserData } from '../../../atoms/userAtom';
+import nookies from 'nookies';
 
 const ReportDetailPage: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
-  const user = useRecoilValue(userState) as UserData | null;
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState<any>(null);
   const [actionNote, setActionNote] = useState('');
 
-  // Check if user is admin
-  const ADMIN_EMAILS = ['admin@example.com', 'administrator@example.com', 'admin@rehearten.com'];
-  const isAdmin = user && user.email && ADMIN_EMAILS.includes(user.email);
+  // Check if user is admin via token cookie (JWT)
+  const isAdmin = (() => {
+    try {
+      const decodeJwt = (token: string) => {
+        try {
+          const parts = token.split('.')
+          if (parts.length < 2) return null;
+          const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          const decoded = typeof window !== 'undefined' && typeof window.atob === 'function' ? window.atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+          return JSON.parse(decoded);
+        } catch { return null; }
+      };
+      const cookies = nookies.get(undefined);
+      const cookieRole = (cookies?.role as string | undefined) || (cookies?.ROLE as string | undefined);
+      if (cookieRole && String(cookieRole).toLowerCase() === 'admin') return true;
+      const token = cookies?.token as string | undefined;
+      if (!token) return false;
+      const payload: any = decodeJwt(token);
+      const role = payload?.role || (Array.isArray(payload?.roles) ? payload.roles[0] : undefined) || (payload?.isAdmin ? 'admin' : undefined);
+      return String(role || '').toLowerCase() === 'admin';
+    } catch { return false; }
+  })();
 
   useEffect(() => {
     if (!isAdmin) {
-      router.push('/');
+      router.replace('/no-access');
       return;
     }
 

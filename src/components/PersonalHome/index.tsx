@@ -18,9 +18,9 @@ import {
   Icon,
   Spinner,
   Center,
+  Tag,
 } from "@chakra-ui/react";
-// Firebase removed
-// Firebase removed
+
 import { useRouter } from "next/router";
 import { BsCalendar3, BsGeoAlt, BsLink45Deg } from "react-icons/bs";
 import { MdEdit } from "react-icons/md";
@@ -34,6 +34,7 @@ import usePosts from "../../hooks/usePosts";
 import { timestampToISO } from "../../helpers/timestampHelpers";
 import useAuth from "../../hooks/useAuth";
 import { getPosts as fetchAllPosts } from "../../services/posts.service";
+import nookies from "nookies";
 
 interface UserProfile {
   uid: string;
@@ -61,18 +62,41 @@ const PersonalHome: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
   const { onVote, onDeletePost, onSelectPost } = usePosts();
-  // If role is undefined, display "undefined" instead of defaulting to "USER"
-  const roleLabel = (user as any)?.role ? String((user as any).role).toUpperCase() : "undefined";
-  const roleColor: any = roleLabel === "ADMIN" ? "purple" : roleLabel === "MODERATOR" ? "orange" : "gray";
+  // Role display in profile (fallback to localStorage)
+  const [roleLabel, setRoleLabel] = useState<string>('undefined');
+  const roleColor: any = roleLabel === 'admin' ? 'purple' : roleLabel === 'moderator' ? 'orange' : 'gray';
 
-  // Debug: log current user role to console whenever it changes
   useEffect(() => {
+    // Decode role from JWT cookie or use user.role if already set
+    const decodeJwt = (token: string) => {
+      try {
+        const parts = token.split(".");
+        if (parts.length < 2) return null;
+        const payload = parts[1];
+        const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+        const decoded = typeof window !== 'undefined' && typeof window.atob === 'function'
+          ? window.atob(b64)
+          : Buffer.from(b64, 'base64').toString('binary');
+        return JSON.parse(decoded);
+      } catch { return null; }
+    };
     try {
-      // Prefer showing both the normalized label and the raw value from user
-      // eslint-disable-next-line no-console
-      console.log("[Profile] User role:", roleLabel, { raw: (user as any)?.role });
-    } catch {}
-  }, [roleLabel, (user as any)?.role]);
+      let r = (user as any)?.role as string | undefined;
+      const cookies = nookies.get(undefined);
+      if (!r) {
+        // Try explicit role cookie first
+        r = (cookies?.role as string | undefined) || (cookies?.ROLE as string | undefined) || r;
+      }
+      if (!r) {
+        const token = cookies?.token as string | undefined;
+        if (token) {
+          const payload: any = decodeJwt(token);
+          r = payload?.role || (Array.isArray(payload?.roles) ? payload.roles[0] : undefined) || (payload?.isAdmin ? 'admin' : undefined);
+        }
+      }
+      setRoleLabel(r ? String(r).toLowerCase() : 'undefined');
+    } catch { setRoleLabel('undefined'); }
+  }, [user]);
   //console.log("user.role:", (user as any)?.role);
   // Fetch user profile data from database
   const fetchUserProfile = async () => {
@@ -106,7 +130,8 @@ const PersonalHome: React.FC = () => {
     setPostsLoading(true);
     try {
       // Load all posts then filter by author (best-effort)
-      const all = await fetchAllPosts({});
+  // Fetch with auth by default; service will fallback to public on 401/403 if needed
+  const all = await fetchAllPosts({});
       const username = (user.displayName || "").toString().toLowerCase();
       const filtered = Array.isArray(all)
         ? all.filter((p: any) => {
@@ -205,6 +230,9 @@ const PersonalHome: React.FC = () => {
               <Text color="gray.500" fontSize="sm">
                 u/{userProfile?.displayName?.toLowerCase().replace(/\s+/g, '') || 'undefined'}
               </Text>
+              <HStack mt={1}>
+                <Tag size="sm" colorScheme={roleColor}>{roleLabel}</Tag>
+              </HStack>
               {userProfile?.createdAt && (
                 <Flex align="center" mt={1} color="gray.500" fontSize="sm">
                   <Icon as={FaBirthdayCake} mr={1} />
@@ -215,14 +243,6 @@ const PersonalHome: React.FC = () => {
               )}
             </Flex>
             <HStack>
-              <Button
-                size="sm"
-                colorScheme={roleColor}
-                variant="solid"
-                onClick={() => toast({ title: "Your role", description: roleLabel, status: "info", duration: 2000 })}
-              >
-                {roleLabel}
-              </Button>
               <Button
                 leftIcon={<MdEdit />}
                 colorScheme="blue"

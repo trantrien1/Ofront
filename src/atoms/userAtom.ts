@@ -7,6 +7,8 @@ export interface UserData {
   photoURL: string | null;
   createdAt: Date;
   updatedAt: Date;
+  // Optional role decoded from JWT or fetched from backend (e.g., 'user' | 'moderator' | 'admin')
+  role?: string | null;
 }
 
 const defaultUserState: UserData | null = null;
@@ -36,6 +38,7 @@ export const userState: RecoilState<UserData | null> = (globalThis as any)
               // Best-effort: revive Date fields if present
               if (parsed && parsed.createdAt) parsed.createdAt = new Date(parsed.createdAt);
               if (parsed && parsed.updatedAt) parsed.updatedAt = new Date(parsed.updatedAt);
+              // role is a primitive; no transformation needed
               setSelf(parsed);
             }
           } catch {

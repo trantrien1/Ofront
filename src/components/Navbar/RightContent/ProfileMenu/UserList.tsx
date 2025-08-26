@@ -22,8 +22,14 @@ const UserList: React.FC<UserListProps> = () => {
     // Clear token cookie with proper options
     try {
       nookies.destroy(undefined, "token", { path: "/" });
+      nookies.destroy(undefined, "role", { path: "/" });
       // Also try to clear with different path options to be sure
       nookies.set(undefined, "token", "", { 
+        path: "/", 
+        maxAge: -1, // immediately expire
+        sameSite: "lax"
+      });
+      nookies.set(undefined, "role", "", { 
         path: "/", 
         maxAge: -1, // immediately expire
         sameSite: "lax"

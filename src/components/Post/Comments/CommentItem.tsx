@@ -48,6 +48,8 @@ export type Comment = {
   parentId?: string; // ID of parent comment (for replies)
   replies?: Comment[]; // Nested replies
   replyCount?: number; // Number of replies
+  likeCount?: number; // Number of likes
+  likedByMe?: boolean; // Whether current user liked this comment
 };
 
 type CommentItemProps = {
@@ -75,6 +77,9 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
+  const [liking, setLiking] = useState(false);
+  const [likedByMe, setLikedByMe] = useState<boolean>(!!comment.likedByMe);
+  const [likeCount, setLikeCount] = useState<number>(typeof comment.likeCount === 'number' ? comment.likeCount : 0);
 
   // Check if this comment should be highlighted based on URL hash
   useEffect(() => {
@@ -125,6 +130,42 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     setReplyText("");
   };
 
+  const handleToggleLike = async () => {
+    if (!comment.id || liking) return;
+    // Optimistic update
+    const nextLiked = !likedByMe;
+    const delta = nextLiked ? 1 : -1;
+    setLikedByMe(nextLiked);
+    setLikeCount((c) => Math.max(0, (c || 0) + delta));
+    // persist locally so reload keeps the state
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = window.localStorage.getItem('commentLikes');
+        const obj = raw ? JSON.parse(raw) : {};
+        obj[comment.id] = { liked: nextLiked, at: Date.now() };
+        window.localStorage.setItem('commentLikes', JSON.stringify(obj));
+      }
+    } catch {}
+    setLiking(true);
+    try {
+      await CommentsService.likeComment({ commentId: comment.id });
+    } catch (e) {
+      // rollback on error
+      setLikedByMe(likedByMe);
+      setLikeCount((c) => Math.max(0, (c || 0) - delta));
+      // rollback persisted state
+      try {
+        if (typeof window !== 'undefined') {
+          const raw = window.localStorage.getItem('commentLikes');
+          const obj = raw ? JSON.parse(raw) : {};
+          obj[comment.id] = { liked: !nextLiked, at: Date.now() };
+          window.localStorage.setItem('commentLikes', JSON.stringify(obj));
+        }
+      } catch {}
+    }
+    setLiking(false);
+  };
+
   return (
     <Box>
       <Flex
@@ -163,10 +204,13 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             fontWeight={600}
             color="gray.500"
           >
-            <Icon as={FaThumbsUp} onClick={async()=>{
-              try { await CommentsService.likeComment({ commentId: comment.id }); } catch(e) { /* ignore for now */ }
-            }} />
-            <Text fontSize="9pt">Like</Text>
+            <Flex align="center" onClick={handleToggleLike} opacity={liking ? 0.6 : 1}>
+              <Icon as={FaThumbsUp} color={likedByMe ? 'blue.500' : 'gray.400'} mr={1} />
+              <Text fontSize="9pt" mr={2} color={likedByMe ? 'blue.600' : 'inherit'}>
+                {likedByMe ? 'Liked' : 'Like'}
+              </Text>
+              <Text fontSize="9pt" color="gray.400">{likeCount || 0}</Text>
+            </Flex>
             <Text 
               fontSize="9pt" 
               _hover={{ color: "blue.500" }}

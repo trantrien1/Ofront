@@ -279,6 +279,8 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         parentId: node.parentId ? (node.parentId.toString?.() || node.parentId) : null,
         replies: Array.isArray(node.commentsChildren) ? node.commentsChildren.map(mapNode) : [],
         replyCount: Array.isArray(node.commentsChildren) ? node.commentsChildren.length : (node.replyCount || 0),
+        likeCount: typeof node.likeCount === 'number' ? node.likeCount : (Array.isArray(node.likes) ? node.likes.length : (typeof node.likesCount === 'number' ? node.likesCount : 0)),
+        likedByMe: !!(node.likedByMe || node.liked || (Array.isArray(node.likes) && user?.uid && node.likes.includes(user.uid))),
       });
 
       let topLevel: Comment[] = [];
@@ -305,9 +307,32 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         }
       }
 
-      console.log("Final organized comments:", topLevel);
+      // Merge local like state to preserve likedByMe/likeCount if backend omits them
+      const mergeLocalLikes = (list: Comment[]): Comment[] => {
+        let store: any = {};
+        try { if (typeof window !== 'undefined') { const raw = localStorage.getItem('commentLikes'); if (raw) store = JSON.parse(raw); } } catch {}
+        const apply = (c: Comment): Comment => {
+          const saved = c.id ? store[c.id] : undefined;
+          let likedByMe = c.likedByMe;
+          let likeCount = typeof c.likeCount === 'number' ? c.likeCount : 0;
+          if (saved && saved.liked) {
+            likedByMe = true;
+            // If backend didn't include our like yet, bump count visually
+            if (!c.likedByMe && (typeof c.likeCount !== 'number' || c.likeCount === 0)) {
+              likeCount = (likeCount || 0) + 1;
+            }
+          }
+          const replies = Array.isArray(c.replies) ? c.replies.map(apply) : [];
+          return { ...c, likedByMe: !!likedByMe, likeCount, replies };
+        };
+        return list.map(apply);
+      };
+
+      const merged = mergeLocalLikes(topLevel);
+
+      console.log("Final organized comments:", merged);
       console.log("=========================");
-      setComments(topLevel);
+      setComments(merged);
       
     } catch (error: any) {
       console.error("getPostComments error", error?.message || error);

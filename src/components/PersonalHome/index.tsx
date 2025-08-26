@@ -61,9 +61,19 @@ const PersonalHome: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
   const { onVote, onDeletePost, onSelectPost } = usePosts();
-  const roleLabel = (user as any)?.role ? String((user as any).role).toUpperCase() : "USER";
+  // If role is undefined, display "undefined" instead of defaulting to "USER"
+  const roleLabel = (user as any)?.role ? String((user as any).role).toUpperCase() : "undefined";
   const roleColor: any = roleLabel === "ADMIN" ? "purple" : roleLabel === "MODERATOR" ? "orange" : "gray";
 
+  // Debug: log current user role to console whenever it changes
+  useEffect(() => {
+    try {
+      // Prefer showing both the normalized label and the raw value from user
+      // eslint-disable-next-line no-console
+      console.log("[Profile] User role:", roleLabel, { raw: (user as any)?.role });
+    } catch {}
+  }, [roleLabel, (user as any)?.role]);
+  //console.log("user.role:", (user as any)?.role);
   // Fetch user profile data from database
   const fetchUserProfile = async () => {
     if (!user?.uid) {
@@ -193,7 +203,7 @@ const PersonalHome: React.FC = () => {
                 {userProfile?.displayName}
               </Text>
               <Text color="gray.500" fontSize="sm">
-                u/{userProfile?.displayName?.toLowerCase().replace(/\s+/g, '') || 'user'}
+                u/{userProfile?.displayName?.toLowerCase().replace(/\s+/g, '') || 'undefined'}
               </Text>
               {userProfile?.createdAt && (
                 <Flex align="center" mt={1} color="gray.500" fontSize="sm">

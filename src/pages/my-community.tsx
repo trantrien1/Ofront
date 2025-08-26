@@ -25,7 +25,7 @@ import {
   Tab,
   TabPanel,
 } from "@chakra-ui/react";
-import Link from "next/link";
+import NextLink from "next/link";
 import { getGroupsByUser, Group, renameGroup, addAdmin } from "../services/groups.service";
 import { useRecoilValue } from "recoil";
 import { userState } from "../atoms/userAtom";
@@ -101,9 +101,9 @@ const MyCommunityPage: React.FC = () => {
       <Avatar name={g.name} src={g.imageURL || undefined} size="md" />
       <Box flex={1} minW={0}>
         <HStack align="center" spacing={2} wrap="wrap">
-          <Link href={`/r/${encodeURIComponent(String(g.id))}`} passHref>
-            <CLink fontWeight="bold" noOfLines={1}>{g.name}</CLink>
-          </Link>
+          <CLink as={NextLink} href={`/r/${encodeURIComponent(String(g.id))}`} fontWeight="bold" noOfLines={1}>
+            {g.name}
+          </CLink>
           {managed ? (
             <Tag colorScheme="blue" size="sm">Managed</Tag>
           ) : (
@@ -117,9 +117,7 @@ const MyCommunityPage: React.FC = () => {
         )}
       </Box>
       <HStack>
-        <Link href={`/r/${encodeURIComponent(String(g.id))}`}>
-          <Button variant="solid" size="sm" colorScheme="blue">Open</Button>
-        </Link>
+        <Button as={NextLink} href={`/r/${encodeURIComponent(String(g.id))}`} variant="solid" size="sm" colorScheme="blue">Open</Button>
         {managed && (
           <>
             <Button size="sm" variant="outline" onClick={async()=>{
@@ -146,15 +144,11 @@ const MyCommunityPage: React.FC = () => {
           <Heading size="lg">My Communities</Heading>
         </HStack>
         <HStack>
-          <Link href="/profile" passHref>
-            <Button as={CLink} variant="ghost" size="sm">Profile</Button>
-          </Link>
-          <Link href="/settings" passHref>
-            <Button as={CLink} variant="ghost" size="sm">Settings</Button>
-          </Link>
-          <Link href="#" onClick={(e)=>{e.preventDefault(); try { (window as any).dispatchEvent(new CustomEvent('open-create-community')); } catch {} }}>
-            <Button colorScheme="blue" size="sm">Create Community</Button>
-          </Link>
+          <Button as={NextLink} href="/profile" variant="ghost" size="sm">Profile</Button>
+          <Button as={NextLink} href="/settings" variant="ghost" size="sm">Settings</Button>
+          <Button colorScheme="blue" size="sm" onClick={(e)=>{ try { (window as any).dispatchEvent(new CustomEvent('open-create-community')); } catch {} }}>
+            Create Community
+          </Button>
         </HStack>
       </Flex>
 

@@ -5,6 +5,7 @@ import { useRecoilValue } from "recoil";
 // Firebase removed
 import { createCommunityModalState } from "../../atoms/communitiesAtom";
 import useAuth from "../../hooks/useAuth";
+import { useSetRecoilState } from "recoil";
 import Navbar from "../Navbar";
 import Sidebar from "./Sidebar";
 import AuthModal from "../Modal/Auth";
@@ -23,11 +24,11 @@ const SidebarContext = createContext<{
 export const useSidebar = () => useContext(SidebarContext);
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Always call hooks; useAuth internally guards side-effects
-  useAuth();
+  // Always call hooks; useAuth internally guards side-effects and returns the current user
+  const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const user = null as any;
   const createCommunityModalStateValue = useRecoilValue(createCommunityModalState);
+  const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
@@ -64,7 +65,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           {user && (
             <CreateCommunityModal
               isOpen={createCommunityModalStateValue.open}
-              handleClose={() => {}}
+              handleClose={() => setCreateCommunityModal({ open: false })}
               userId={user.uid}
             />
           )}

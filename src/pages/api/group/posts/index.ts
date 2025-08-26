@@ -1,0 +1,22 @@
+import type { NextApiRequest, NextApiResponse } from "next";
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  res.setHeader("Cache-Control", "no-store");
+  const { communityId } = req.query as { communityId?: string };
+  if (!communityId) return res.status(400).json({ error: "communityId required" });
+  try {
+    const upstream = process.env.UPSTREAM_URL || "https://rehearten-production.up.railway.app";
+    const url = `${upstream}/post/get?communityId=${encodeURIComponent(communityId)}`;
+
+    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    const text = await r.text();
+    try {
+      const json = JSON.parse(text);
+      return res.status(r.status).json(Array.isArray(json) ? { posts: json } : json);
+    } catch {
+      return res.status(r.status).send(text);
+    }
+  } catch (e: any) {
+    return res.status(500).json({ error: e?.message || "proxy error" });
+  }
+}

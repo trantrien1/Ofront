@@ -182,12 +182,16 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         <Text>Posted by</Text>
         <Text fontWeight="semibold">{post.userDisplayText}</Text>
         <Text>• {formatTimeAgo(normalizeTimestamp(post.createdAt))}</Text>
+        {typeof post.status === 'number' && post.status === 0 && (
+          <Badge colorScheme="yellow" variant="subtle">Pending approval</Badge>
+        )}
+        {post.approved === true && (
+          <Badge colorScheme="green" variant="subtle">Approved</Badge>
+        )}
         {post.imageURL && (
           <Badge colorScheme="black" variant="subtle">SPOILER</Badge>
         )}
-        <Button size="xs" colorScheme="blue" ml="auto" variant="solid">
-          Join
-        </Button>
+        {/* Hide Join button here; dedicated Join UI exists on community page */}
       </HStack>
 
       {/* Title */}
@@ -398,6 +402,32 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             <Text color="gray.350" fontSize="sm" fontWeight="medium">
               {loadingPin ? "Processing..." : (isPinned ? "Unpin" : "Pin")}
             </Text>
+          </HStack>
+        )}
+
+        {/* Approve action for moderators when post is pending */}
+        {canModerate && typeof post.status === 'number' && post.status === 0 && (
+          <HStack
+            px={3}
+            py={2}
+            rounded="full"
+            borderColor="gray.800"
+            bg="gray.300"
+            _hover={{ bg: "gray.350", borderColor: "gray.600", transform: "scale(1.05)" }}
+            transition="all 0.2s ease"
+            cursor="pointer"
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                const svc = await import("../../../services/posts.service");
+                await (svc as any).approvePost({ postId: post.id, approve: true });
+                toast({ status: 'success', title: 'Post approved' });
+              } catch (err) {
+                toast({ status: 'error', title: 'Approve failed' });
+              }
+            }}
+          >
+            <Text color="gray.350" fontSize="sm" fontWeight="medium">Approve</Text>
           </HStack>
         )}
 

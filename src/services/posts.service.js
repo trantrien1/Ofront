@@ -57,7 +57,9 @@ export const getPosts = async (options = {}) => {
 					title: p.title || "",
 					body: p.body || p.content || "",
 					numberOfComments: Number(p.numberOfComments ?? p.countComment ?? p.commentCount) || 0,
-					voteStatus: Number(p.voteStatus) || Number(p.likes) || Number(p.numberOfLikes) || Number(p.upvotes) || Number(p.voteCount) || Number(p.countLike) || 0,
+					voteStatus: Number(p.voteStatus) || Number(p.likes) ||  Number(p.countLike) || 0,
+					status: typeof p.status === 'number' ? p.status : (p.approved === true ? 1 : (p.approved === false ? 0 : undefined)),
+					approved: typeof p.approved === 'boolean' ? p.approved : (typeof p.status === 'number' ? Number(p.status) === 1 : undefined),
 					currentUserVoteStatus: p.userIsLike ? { id: `self_${p.id}`, voteValue: 1 } : undefined,
 					imageURL: p.imageURL || null,
 					postType: p.postType || "",
@@ -94,6 +96,22 @@ export const likePost = async ({ postId } = {}) => {
 	return response.data;
 };
 
+export const approvePost = async ({ postId, approve = true } = {}) => {
+	const payload = { postId, approve: !!approve };
+	const response = await request.post("posts/approve", payload);
+	return response.data;
+};
+
+export const updatePost = async ({ postId, title, content } = {}) => {
+	const response = await request.put("post/update", { postId, title, content });
+	return response.data;
+};
+
+export const deletePost = async ({ postId } = {}) => {
+	const response = await request.post("post/delete", { postId });
+	return response.data;
+};
+
 export const createPost = async (postData) => {
 	// Create new post via API proxy
 	const response = await request.post("post/create", postData);
@@ -104,6 +122,9 @@ export const createPost = async (postData) => {
 export default {
 	getPosts,
 	likePost,
+	approvePost,
+	updatePost,
+	deletePost,
 	createPost
 };
 function extractUsername(userOfPost) {

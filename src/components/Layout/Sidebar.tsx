@@ -73,8 +73,7 @@ const Sidebar: React.FC = () => {
   };
 
   const handleManageCommunities = () => {
-    // TODO: Navigate to manage communities page
-  // Navigation not implemented yet
+    router.push("/my-community");
   };
 
   const toggleSidebar = () => {
@@ -203,7 +202,7 @@ const Sidebar: React.FC = () => {
         </Flex>
 
         {/* Main Navigation */}
-        <Box p={2}>
+  <Box p={2}>
           {!isCollapsed && (
             <Text
               fontSize="xs"
@@ -230,6 +229,12 @@ const Sidebar: React.FC = () => {
               label="Popular"
               path="/popular"
               isActive={isActivePage("/popular")}
+            />
+            <NavItem
+              icon={MdGroup}
+              label="My Communities"
+              onClick={handleManageCommunities}
+              isActive={isActivePage("/my-community")}
             />
             <NavItem
               icon={MdGroup}
@@ -279,6 +284,7 @@ const Sidebar: React.FC = () => {
                     label="Create Community"
                     onClick={handleCreateCommunity}
                   />
+                  
                   <NavItem
                     icon={FaCog}
                     label="Manage Communities"

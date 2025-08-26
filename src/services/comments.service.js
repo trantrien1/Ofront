@@ -18,8 +18,14 @@ export const createComment = async (payload) => {
 	return response.data;
 };
 
+export const likeComment = async ({ commentId }) => {
+	const response = await request.put("comment/like", { commentId });
+	return response.data;
+};
+
 export default {
 	getCommentsByPost,
 	getCommentsByPostId,
 	createComment,
+	likeComment,
 };

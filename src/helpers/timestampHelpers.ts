@@ -5,11 +5,12 @@ type Timestamp = any;
  * Convert Firestore timestamp to ISO string for consistent server-client rendering
  */
 export const timestampToISO = (timestamp: Timestamp | null | undefined): string => {
-  if (!timestamp) return new Date().toISOString();
-  
-  // Convert Firestore timestamp to ISO string
-  const date = timestamp.toDate();
-  return date.toISOString();
+  // Reuse the robust normalizer so we support Date, Firestore Timestamp, number, and string
+  try {
+    return normalizeTimestamp(timestamp);
+  } catch {
+    return new Date().toISOString();
+  }
 };
 
 /**

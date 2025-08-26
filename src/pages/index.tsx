@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { Stack } from "@chakra-ui/react";
-// Firebase removed
+
 import type { NextPage } from "next";
 import { useRouter } from "next/router";
-// import { useAuthState } from "react-firebase-hooks/auth";
+
 import { useRecoilValue } from "recoil";
 import { communityState } from "../atoms/communitiesAtom";
 import { Post, PostVote } from "../atoms/postsAtom";
@@ -12,7 +12,7 @@ import Recommendations from "../components/Community/Recommendations";
 import PageContentLayout from "../components/Layout/PageContent";
 import PostLoader from "../components/Post/Loader";
 import PostItem from "../components/Post/PostItem";
-// Firebase removed
+
 import usePosts from "../hooks/usePosts";
 import { userState } from "../atoms/userAtom";
 import PostsService from "../services/posts.service";
@@ -101,7 +101,7 @@ const Home: NextPage = () => {
         const posts = await PostsService.getPosts({});
         setPostStateValue((prev) => ({ ...prev, posts }));
       } catch (e) {
-        console.error("home: fetch posts after login failed", (e as any)?.message || e);
+  console.error("home: fetch posts after login failed", (e as any)?.message || e);
       }
     };
     // Read from router.query so client-side navigation with query triggers this effect

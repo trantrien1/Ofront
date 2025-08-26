@@ -22,6 +22,7 @@ import { useSetRecoilState, useRecoilValue } from "recoil";
 import { communityState, createCommunityModalState } from "../../../atoms/communitiesAtom";
 // Firebase removed
 import ModalWrapper from "../ModalWrapper";
+import { createGroup } from "../../../services/groups.service";
 
 type CreateCommunityModalProps = {
   isOpen: boolean;
@@ -70,17 +71,19 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
 
     setLoading(true);
     try {
-      // TODO: Create via API (communities table + user snippet equivalent)
+      // Create via API
+      const created = await createGroup({ name });
+      // Best-effort snippet refresh (backend not wired here yet)
+      setSnippetState((prev) => ({ ...prev }));
+      handleCloseModal();
+      const dest = created && (created as any).id ? String((created as any).id) : name;
+      router.push(`r/${encodeURIComponent(dest)}`);
     } catch (error: any) {
-      setNameError(error.message);
+      const msg = error?.response?.data?.error || error?.message || "Failed to create community";
+      setNameError(msg);
+    } finally {
+      setLoading(false);
     }
-    setSnippetState((prev) => ({
-      ...prev,
-      mySnippets: [],
-    }));
-    handleCloseModal();
-    router.push(`r/${name}`);
-    setLoading(false);
   };
 
   const onCommunityTypeChange = (

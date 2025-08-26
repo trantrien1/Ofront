@@ -25,6 +25,9 @@ import PostsService, { createPost as createPostApi } from "../../../services/pos
 
 import TabItem from "./TabItem";
 import { postState } from "../../../atoms/postsAtom";
+import { useRecoilValue } from "recoil";
+import { userState } from "../../../atoms/userAtom";
+import { useCommunityPermissions } from "../../../hooks/useCommunityPermissions";
 
 import TextInputs from "./TextInputs";
 import ImageUpload from "./ImageUpload";
@@ -81,11 +84,22 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 	const setPostItems = useSetRecoilState(postState);
 	const [visibility, setVisibility] = useState<"public" | "community">("public");
 	const [targetCommunityId, setTargetCommunityId] = useState<string>(communityId || "");
+	const globalUser = useRecoilValue(userState) as any;
+	const { canModerate } = useCommunityPermissions();
 
 		const handleCreatePost = async () => {
 			setLoading(true);
 			const { title, body } = textInputs;
 			try {
+				// Determine initial moderation status
+				const isCommunityPost = visibility === "community";
+				const userIsGlobalAdmin = (globalUser?.role && String(globalUser.role).toLowerCase() === 'admin');
+				const userCanModerateCommunity = isCommunityPost && targetCommunityId ? canModerate(String(targetCommunityId)) : false;
+				// Rules:
+				// - Community posts: require approval unless the user can moderate that community
+				// - Personal/public posts: require global admin approval unless user is global admin
+				const status = isCommunityPost ? (userCanModerateCommunity ? 1 : 0) : (userIsGlobalAdmin ? 1 : 0);
+
 				const payload: any = {
 					title,
 					body,
@@ -93,6 +107,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					imageURL: selectedFile || null,
 					communityId: visibility === "community" ? targetCommunityId : null,
 					isPersonalPost: visibility !== "community",
+					status,
 				};
 				await createPostApi(payload);
 				// Navigate home and let the Home page refresh after ~2s

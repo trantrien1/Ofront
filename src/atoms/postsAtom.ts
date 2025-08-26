@@ -11,6 +11,10 @@ export type Post = {
   body: string;
   numberOfComments: number;
   voteStatus: number;
+  // 0 = pending approval, 1 = approved
+  status?: number;
+  // convenience flag derived from status when present
+  approved?: boolean;
   currentUserVoteStatus?: {
     id: string;
     voteValue: number;

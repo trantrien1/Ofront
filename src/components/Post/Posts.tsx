@@ -266,7 +266,13 @@ const Posts: React.FC<PostsProps> = ({
         <PostLoader />
       ) : (
         <Stack>
-          {postStateValue.posts.map((post: Post, index) => (
+          {(postStateValue.posts || []).filter((p) => {
+            // Show all if user can moderate; otherwise only approved or no-status posts
+            if (canModerate(communityData?.id || "")) return true;
+            if (typeof p.status === 'number') return p.status === 1;
+            if (typeof p.approved === 'boolean') return p.approved === true;
+            return true;
+          }).map((post: Post, index) => (
             <PostItem
               key={post.id}
               post={post}

@@ -16,6 +16,7 @@ import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHel
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import ReplyInput from "./ReplyInput";
+import CommentsService from "../../../services/comments.service";
 
 // Disable SSR for this component to prevent hydration issues
 const DynamicCommentItem = dynamic(() => Promise.resolve(CommentItemComponent), {
@@ -162,7 +163,9 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             fontWeight={600}
             color="gray.500"
           >
-            <Icon as={FaThumbsUp} />
+            <Icon as={FaThumbsUp} onClick={async()=>{
+              try { await CommentsService.likeComment({ commentId: comment.id }); } catch(e) { /* ignore for now */ }
+            }} />
             <Text fontSize="9pt">Like</Text>
             <Text 
               fontSize="9pt" 

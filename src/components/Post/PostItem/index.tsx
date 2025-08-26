@@ -87,6 +87,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const [loadingImage, setLoadingImage] = useState(true);
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [loadingPin, setLoadingPin] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [hidden, setHidden] = useState(false); // For spoiler functionality
   const [isPortrait, setIsPortrait] = useState(false);
   const singlePostView = !onSelectPost; // function not passed to [pid]
@@ -415,19 +416,22 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             bg="gray.300"
             _hover={{ bg: "gray.350", borderColor: "gray.600", transform: "scale(1.05)" }}
             transition="all 0.2s ease"
-            cursor="pointer"
+            cursor={approving ? "not-allowed" : "pointer"}
             onClick={async (e) => {
               e.stopPropagation();
               try {
+                setApproving(true);
                 const svc = await import("../../../services/posts.service");
                 await (svc as any).approvePost({ postId: post.id, approve: true });
                 toast({ status: 'success', title: 'Post approved' });
               } catch (err) {
                 toast({ status: 'error', title: 'Approve failed' });
+              } finally {
+                setApproving(false);
               }
             }}
           >
-            <Text color="gray.350" fontSize="sm" fontWeight="medium">Approve</Text>
+            <Text color="gray.350" fontSize="sm" fontWeight="medium">{approving ? 'Approving...' : 'Approve'}</Text>
           </HStack>
         )}
 

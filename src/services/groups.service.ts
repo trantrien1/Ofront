@@ -7,6 +7,7 @@ export type Group = {
   imageURL?: string | null;
   createdAt?: string;
   ownerId?: string | number;
+  privacyType?: string;
 };
 
 function normalizeGroup(item: any): Group | null {
@@ -21,6 +22,7 @@ function normalizeGroup(item: any): Group | null {
     imageURL: item.imageURL ?? item.imageUrl ?? item.avatar ?? null,
     createdAt: item.createdAt ?? item.createAt ?? item.created_date ?? undefined,
     ownerId: item.ownerId ?? item.owner ?? item.userId ?? undefined,
+  privacyType: (item.privacyType || item.communityType || item.visibility || '').toLowerCase() || undefined,
   };
 }
 
@@ -52,7 +54,14 @@ export const getGroupsByUser = async () => {
   return mapped;
 };
 
-export const createGroup = async (payload: { name: string; description?: string }) => {
+export const getGroupById = async (id: string | number): Promise<Group | null> => {
+  const res = await request.get(`group/get/${encodeURIComponent(String(id))}`);
+  const raw = res.data;
+  const normalized = normalizeGroup(raw);
+  return normalized;
+};
+
+export const createGroup = async (payload: { name: string; description?: string } & Record<string, any>) => {
   const res = await request.post("group/create", payload);
   const raw = res.data;
   // Some backends return the created entity directly, others wrap under data
@@ -76,4 +85,4 @@ export const addAdmin = async (communityId: string | number, userId: string | nu
   return res.data;
 };
 
-export default { getGroupsByUser, createGroup, joinGroup, renameGroup, addAdmin };
+export default { getGroupsByUser, getGroupById, createGroup, joinGroup, renameGroup, addAdmin };

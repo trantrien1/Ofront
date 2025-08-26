@@ -1,0 +1,31 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "npm install stomp deps",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"install",
+				"@stomp/stompjs",
+				"sockjs-client"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "npm install stomp deps (fallback versions)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"install",
+				"@stomp/stompjs@7.0.0",
+				"sockjs-client@1.6.1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

@@ -22,12 +22,14 @@ import { IoDocumentText, IoImageOutline } from "react-icons/io5";
 import { AiFillCloseCircle } from "react-icons/ai";
 import { useRecoilState, useSetRecoilState } from "recoil";
 import PostsService, { createPost as createPostApi } from "../../../services/posts.service";
+import * as Notifications from "../../../services/notifications.service";
 
 import TabItem from "./TabItem";
 import { postState } from "../../../atoms/postsAtom";
 import { useRecoilValue } from "recoil";
 import { userState } from "../../../atoms/userAtom";
 import { useCommunityPermissions } from "../../../hooks/useCommunityPermissions";
+import request from "../../../services/request";
 
 import TextInputs from "./TextInputs";
 import ImageUpload from "./ImageUpload";
@@ -92,13 +94,28 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 			const { title, body } = textInputs;
 			try {
 				// Determine initial moderation status
-				const isCommunityPost = visibility === "community";
+								const isCommunityPost = visibility === "community";
 				const userIsGlobalAdmin = (globalUser?.role && String(globalUser.role).toLowerCase() === 'admin');
 				const userCanModerateCommunity = isCommunityPost && targetCommunityId ? canModerate(String(targetCommunityId)) : false;
-				// Rules:
-				// - Community posts: require approval unless the user can moderate that community
-				// - Personal/public posts: require global admin approval unless user is global admin
-				const status = isCommunityPost ? (userCanModerateCommunity ? 1 : 0) : (userIsGlobalAdmin ? 1 : 0);
+								// Optionally read community privacy to refine rule
+								let communityPrivacy: string | undefined;
+								if (isCommunityPost && targetCommunityId) {
+									try {
+										const r = await request.get(`group/get/${encodeURIComponent(String(targetCommunityId))}`);
+										communityPrivacy = (r?.data?.privacyType || r?.data?.communityType || r?.data?.visibility || "").toLowerCase();
+									} catch {}
+								}
+								// Rules:
+								// - Community posts: if privacy is 'public' and user is member, auto-approve unless backend requires otherwise; if 'private' or 'restricted', require approval unless user moderates.
+								// - Personal/public posts: require global admin approval unless user is global admin
+								let status = 0;
+								if (isCommunityPost) {
+									if (userCanModerateCommunity) status = 1;
+									else if (communityPrivacy === 'public') status = 1; // auto approve on public communities
+									else status = 0;
+								} else {
+									status = userIsGlobalAdmin ? 1 : 0;
+								}
 
 				const payload: any = {
 					title,
@@ -109,7 +126,19 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					isPersonalPost: visibility !== "community",
 					status,
 				};
-				await createPostApi(payload);
+				const created = await createPostApi(payload);
+				// Best-effort notifications
+				try {
+					const notifPayload: any = {
+						type: isCommunityPost ? 'community_post' : 'personal_post',
+						title: `New ${isCommunityPost ? 'community' : 'personal'} post: ${title}`,
+						postId: created?.id || created?.postId || undefined,
+						communityId: payload.communityId || undefined,
+						audience: isCommunityPost ? 'community_admins' : 'global_admins',
+						createdAt: new Date().toISOString(),
+					};
+					await Notifications.createNotification(notifPayload);
+				} catch {}
 				// Navigate home and let the Home page refresh after ~2s
 				try { await router.push('/?refreshDelay=2000'); } catch {}
 			} catch (error) {

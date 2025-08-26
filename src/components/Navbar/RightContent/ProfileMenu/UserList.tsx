@@ -55,6 +55,9 @@ const UserList: React.FC<UserListProps> = () => {
   const handleProfileClick = () => {
     router.push("/profile");
   };
+  const handleSettingsClick = () => {
+    router.push("/settings");
+  };
 
   return (
     <>
@@ -67,6 +70,18 @@ const UserList: React.FC<UserListProps> = () => {
         <Flex alignItems="center">
           <Icon fontSize={20} mr={2} as={CgProfile} />
           Profile
+        </Flex>
+      </MenuItem>
+      <MenuDivider />
+      <MenuItem
+        fontSize="10pt"
+        fontWeight={700}
+        _hover={{ bg: "blue.500", color: "white" }}
+        onClick={handleSettingsClick}
+      >
+        <Flex alignItems="center">
+          <Icon fontSize={20} mr={2} as={CgProfile} />
+          Settings
         </Flex>
       </MenuItem>
       <MenuDivider />

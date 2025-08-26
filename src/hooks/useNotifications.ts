@@ -7,8 +7,9 @@ export const useNotifications = () => {
   const [notificationsStateValue, setNotificationsStateValue] = useRecoilState(notificationsState);
   const { currentUser } = useAuth() as any;
   const [loading, setLoading] = useState(false);
+  const restEnabled = (process.env.NEXT_PUBLIC_NOTIFICATIONS_REST || '').toLowerCase() === 'true';
 
-  // Fetch notifications for current user
+  // Fetch notifications for current user (optional, default disabled)
   useEffect(() => {
   if (!currentUser) {
       setNotificationsStateValue(prev => ({
@@ -18,16 +19,11 @@ export const useNotifications = () => {
       }));
       return;
     }
-
-    // Disable notifications fetching for now to avoid 500 errors
-    console.log("Notifications disabled - skipping fetch for user:", (currentUser as any).uid);
-    setNotificationsStateValue(prev => ({
-      ...prev,
-      notifications: [],
-      unreadCount: 0,
-      loading: false,
-    }));
-    return;
+    // Skip REST fetch by default; rely on WebSocket STOMP updates
+    if (!restEnabled) {
+      setNotificationsStateValue(prev => ({ ...prev, loading: false }));
+      return;
+    }
 
     setLoading(true);
     const abort = new AbortController();
@@ -39,9 +35,9 @@ export const useNotifications = () => {
         const mapped = sorted.map((n: any) => ({
           id: n.id?.toString?.() || n.id,
           type: n.type || "comment",
-          message: n.content,
-          userId: n.userId || "",
-          targetUserId: n.userId,
+          message: n.content || n.message || n.title || "",
+          userId: n.userId || n.actorId || "",
+          targetUserId: n.targetUserId || n.userId,
           postId: n.postId,
           commentId: n.commentId,
           postTitle: n.postTitle,
@@ -73,13 +69,21 @@ export const useNotifications = () => {
   const markAsRead = async (notificationId: string) => {
     if (!currentUser) return;
 
-    // Disabled for now
-    console.log("markAsRead disabled for notificationId:", notificationId);
-    return;
-
     try {
+      if (!restEnabled) {
+        // Local-only update
+        setNotificationsStateValue(prev => {
+          const updated = prev.notifications.map(n => n.id === notificationId ? { ...n, read: true } : n);
+          return { ...prev, notifications: updated, unreadCount: updated.filter(n => !n.read).length };
+        });
+        return;
+      }
       const { NotificationsService } = await import("../services");
       await NotificationsService.markNotificationAsRead(notificationId);
+      setNotificationsStateValue(prev => {
+        const updated = prev.notifications.map(n => n.id === notificationId ? { ...n, read: true } : n);
+        return { ...prev, notifications: updated, unreadCount: updated.filter(n => !n.read).length };
+      });
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -89,14 +93,23 @@ export const useNotifications = () => {
   const markAllAsRead = async () => {
     if (!currentUser) return;
 
-    // Disabled for now
-    console.log("markAllAsRead disabled");
-    return;
-
     try {
+      if (!restEnabled) {
+        setNotificationsStateValue(prev => ({
+          ...prev,
+          notifications: prev.notifications.map(n => ({ ...n, read: true })),
+          unreadCount: 0,
+        }));
+        return;
+      }
       const { NotificationsService } = await import("../services");
       const unreadNotifications = notificationsStateValue.notifications.filter(n => !n.read);
       await NotificationsService.markManyNotificationsAsRead(unreadNotifications.map(n => n.id));
+      setNotificationsStateValue(prev => ({
+        ...prev,
+        notifications: prev.notifications.map(n => ({ ...n, read: true })),
+        unreadCount: 0,
+      }));
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     }
@@ -104,10 +117,6 @@ export const useNotifications = () => {
 
   // Create notification (called when someone comments, likes, etc.)
   const createNotification = async (notificationData: Omit<Notification, "id" | "timestamp" | "read">) => {
-    // Disabled for now
-    console.log("createNotification disabled for:", notificationData);
-    return;
-
     try {
       const { NotificationsService } = await import("../services");
       await NotificationsService.createNotification({

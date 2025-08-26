@@ -71,12 +71,20 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
 
     setLoading(true);
     try {
-      // Create via API
-      const created = await createGroup({ name });
+      // Create via API, include privacy/communityType when available
+      const created = await createGroup({ name, privacyType: communityType, communityType });
+      // Ensure creator is admin (best-effort)
+      try {
+        const id = (created && (created as any).id) ? (created as any).id : undefined;
+        if (id && userId) {
+          const mod = await import("../../../services/groups.service");
+          await (mod as any).addAdmin(id, userId, 'admin');
+        }
+      } catch {}
       // Best-effort snippet refresh (backend not wired here yet)
       setSnippetState((prev) => ({ ...prev }));
       handleCloseModal();
-      const dest = created && (created as any).id ? String((created as any).id) : name;
+  const dest = created && (created as any).id ? String((created as any).id) : name;
       router.push(`r/${encodeURIComponent(dest)}`);
     } catch (error: any) {
       const msg = error?.response?.data?.error || error?.message || "Failed to create community";

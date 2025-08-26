@@ -11,13 +11,14 @@
     "db:setup": "mysql -u root -p < database/schema.sql"
   },
   "dependencies": {
-  "@chakra-ui/icons": "^2.1.1",
-  "@chakra-ui/react": "^2.8.2",
+    "@chakra-ui/icons": "^2.1.1",
+    "@chakra-ui/react": "^2.8.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@stomp/stompjs": "^7.0.0",
     "axios": "^1.7.7",
     "cloudinary": "^2.7.0",
-  "framer-motion": "^10.18.0",
+    "framer-motion": "^10.18.0",
     "moment": "^2.29.4",
     "mysql2": "^3.14.3",
     "next": "^15.4.6",
@@ -27,7 +28,8 @@
     "react-dom": "18.2.0",
     "react-icons": "^4.7.1",
     "recoil": "^0.7.6",
-    "safe-json-stringify": "^1.2.0"
+    "safe-json-stringify": "^1.2.0",
+  "sockjs-client": "1.6.1"
   },
   "devDependencies": {
     "@types/node": "18.11.18",

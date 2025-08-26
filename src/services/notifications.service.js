@@ -1,8 +1,13 @@
 import request from "./request";
 
 export const getUserNotifications = async (userId) => {
-	const response = await request.get("notifications", { params: { userId } });
-	return response.data;
+	try {
+		const response = await request.get("notifications", { params: { userId } });
+		return response.data;
+	} catch (e) {
+		try { console.warn("getUserNotifications failed:", e?.response?.status, e?.message); } catch {}
+		return [];
+	}
 };
 
 export const markNotificationAsRead = async (id) => {

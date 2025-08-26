@@ -3,7 +3,7 @@ type Timestamp = any;
 
 export interface Notification {
   id: string;
-  type: "comment" | "like" | "follow" | "mention";
+  type: "comment" | "like" | "follow" | "mention" | "post" | "moderation";
   message: string;
   userId: string; // ID of the user who triggered the notification
   targetUserId: string; // ID of the user who receives the notification
@@ -13,6 +13,7 @@ export interface Notification {
   communityName?: string;
   timestamp: Timestamp;
   read: boolean;
+  pending?: boolean; // whether the related item needs approval
 }
 
 export interface NotificationsState {

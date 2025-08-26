@@ -4,6 +4,8 @@ import {
 	Box,
 	Flex,
 	Text,
+	Button,
+	useToast,
 } from "@chakra-ui/react";
 import { Notification } from "../../atoms/notificationsAtom";
 import { normalizeTimestamp, formatTimeAgo } from "../../helpers/timestampHelpers";
@@ -44,6 +46,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 	const [userData, setUserData] = useState<UserData | null>(null);
 	const [loading, setLoading] = useState(true);
 	const router = useRouter();
+		const toast = useToast();
 
 	// Fetch user data - For now, derive from notification (no Firebase)
 	useEffect(() => {
@@ -93,6 +96,19 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 		// Add other notification types navigation here if needed
 	};
 
+		const handleApprove = async (e: React.MouseEvent) => {
+			e.stopPropagation();
+			if (!notification.postId) return;
+			try {
+				const svc = await import("../../services/posts.service");
+				await (svc as any).approvePost({ postId: notification.postId, approve: true });
+				toast({ status: 'success', title: 'Post approved' });
+				onMarkAsRead(notification.id);
+			} catch (err) {
+				toast({ status: 'error', title: 'Approve failed' });
+			}
+		};
+
 	if (loading) {
 		return (
 			<Box p={3} borderBottom="1px solid" borderColor="gray.100">
@@ -127,6 +143,9 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 					<Text fontSize="sm" color="gray.600" mb={1}>
 						{notification.message}
 					</Text>
+							{notification.pending && notification.postId && (
+								<Button size="xs" colorScheme="green" onClick={handleApprove}>Approve</Button>
+							)}
 					{notification.postTitle && (
 						<Text fontSize="xs" color="gray.500" fontStyle="italic">
 							&ldquo;{notification.postTitle}&rdquo;

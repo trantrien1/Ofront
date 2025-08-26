@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -55,17 +55,24 @@ const PostModeration: React.FC<PostModerationProps> = ({
   
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const { isOpen: isBanOpen, onOpen: onBanOpen, onClose: onBanClose } = useDisclosure();
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   
   const [banReason, setBanReason] = useState("");
+  const [editTitle, setEditTitle] = useState<string>("");
+  const [editBody, setEditBody] = useState<string>("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
-  // Check if user has moderation permissions
-  const canModerate = canDeletePosts(communityId) || canPinPosts(communityId) || canBanUsers(communityId);
+  const canModerate = useMemo(() => (
+    canDeletePosts(communityId) || canPinPosts(communityId) || canBanUsers(communityId)
+  ), [communityId, canBanUsers, canDeletePosts, canPinPosts]);
+
   
   if (!canModerate) return null;
 
   const handleDeletePost = async () => {
     try {
-      // TODO: DELETE /api/posts?id=...
+      const svc = await import("../../services/posts.service");
+      await (svc as any).deletePost({ postId });
       toast({
         title: "Post deleted",
         status: "success",
@@ -98,6 +105,21 @@ const PostModeration: React.FC<PostModerationProps> = ({
         status: "error",
         duration: 3000,
       });
+    }
+  };
+
+  const handleEditPost = async () => {
+    if (!editTitle.trim() && !editBody.trim()) return;
+    setSavingEdit(true);
+    try {
+      const svc = await import("../../services/posts.service");
+      await (svc as any).updatePost({ postId, title: editTitle, content: editBody });
+      toast({ title: "Post updated", status: "success", duration: 3000 });
+      onEditClose();
+    } catch (e) {
+      toast({ title: "Error updating post", status: "error", duration: 3000 });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -147,6 +169,20 @@ const PostModeration: React.FC<PostModerationProps> = ({
             onClick={onDeleteOpen}
           >
             Delete
+          </Button>
+        )}
+        {canDeletePosts(communityId) && (
+          <Button
+            size="xs"
+            variant="outline"
+            colorScheme="blue"
+            onClick={() => {
+              setEditTitle("");
+              setEditBody("");
+              onEditOpen();
+            }}
+          >
+            Edit
           </Button>
         )}
         
@@ -232,6 +268,46 @@ const PostModeration: React.FC<PostModerationProps> = ({
               isDisabled={!banReason.trim()}
             >
               Ban User
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Post Modal */}
+      <Modal isOpen={isEditOpen} onClose={onEditClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit Post</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={3}>
+              <Box>
+                <Text fontSize="sm" fontWeight={600} mb={1}>Title</Text>
+                <Textarea
+                  placeholder="Update title..."
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  size="sm"
+                />
+              </Box>
+              <Box>
+                <Text fontSize="sm" fontWeight={600} mb={1}>Body</Text>
+                <Textarea
+                  placeholder="Update content..."
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  size="sm"
+                  minH="120px"
+                />
+              </Box>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onEditClose}>
+              Cancel
+            </Button>
+            <Button colorScheme="blue" onClick={handleEditPost} isLoading={savingEdit}>
+              Save
             </Button>
           </ModalFooter>
         </ModalContent>

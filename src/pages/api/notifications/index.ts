@@ -2,68 +2,89 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 const DEV_DEMO_TOKEN = process.env.DEV_DEMO_TOKEN || "";
 
+function cleanToken(t?: string | null) {
+  if (!t) return undefined;
+  let s = String(t).trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
+  if (!s) return undefined;
+  const lower = s.toLowerCase();
+  if (lower === "undefined" || lower === "null" || lower === "bearer") return undefined;
+  try {
+    // unwrap JSON-shaped token
+    const parsed = JSON.parse(s);
+    if (parsed && typeof parsed === 'object' && parsed.token) return String(parsed.token);
+  } catch {}
+  return s;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const method = req.method || "GET";
-  const token = (req.cookies && (req.cookies as any).token) || DEV_DEMO_TOKEN;
+  let token = cleanToken((req.cookies as any)?.token) || cleanToken(DEV_DEMO_TOKEN);
+  if (!token) {
+    const auth = req.headers.authorization || "";
+    if (auth.toLowerCase().startsWith("bearer ")) token = cleanToken(auth.slice(7));
+  }
 
-  // Build upstream url
   const upstreamBase = `https://rehearten-production.up.railway.app/notifications`;
+
+  const buildAttempts = () => {
+    const cookieHeader = token ? `token=${token}` : undefined;
+    const common = { Accept: "application/json", "User-Agent": req.headers["user-agent"] || "Mozilla/5.0 (proxy)" } as Record<string, string>;
+    return [
+      { name: 'auth_and_cookie', headers: { ...common, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(cookieHeader ? { Cookie: cookieHeader } : {}) } },
+      { name: 'cookie_only', headers: { ...common, ...(cookieHeader ? { Cookie: cookieHeader } : {}) } },
+      { name: 'auth_only', headers: { ...common, ...(token ? { Authorization: `Bearer ${token}` } : {}) } },
+    ];
+  };
 
   try {
     if (method === "GET") {
-      // Forward query params (e.g., userId)
-      const queryString = Object.keys(req.query || {})
+      const qs = Object.keys(req.query || {})
         .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(String((req.query as any)[k]))}`)
         .join("&");
-      const upstream = `${upstreamBase}${queryString ? "?" + queryString : ""}`;
-      const r = await fetch(upstream, {
-        method: "GET",
-        headers: {
-          Cookie: `token=${token}`,
-          Accept: "application/json",
-        },
-      });
-      const text = await r.text();
-      try {
-        const json = JSON.parse(text);
-        res.status(r.status).json(json);
-      } catch (e) {
-        res.status(r.status).send(text);
+      const upstream = `${upstreamBase}${qs ? "?" + qs : ""}`;
+      const attempts = buildAttempts();
+      for (let i = 0; i < attempts.length; i++) {
+        const a = attempts[i];
+        try {
+          const r = await fetch(upstream, { method: 'GET', headers: a.headers });
+          const text = await r.text();
+          let data: any = text;
+          try { data = JSON.parse(text); } catch {}
+          if (!r.ok) {
+            if (i < attempts.length - 1 && (r.status === 401 || r.status === 403 || r.status === 500)) continue;
+            return res.status(r.status).json({ upstreamStatus: r.status, attempt: a.name, body: data });
+          }
+          return res.status(r.status).json(data);
+        } catch (e) {
+          if (i === attempts.length - 1) throw e;
+        }
       }
       return;
     }
 
-    if (method === "POST") {
-      // create notification
-      const upstream = upstreamBase;
-      const r = await fetch(upstream, {
-        method: "POST",
-        headers: {
-          Cookie: `token=${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(req.body || {}),
-      });
-      const json = await r.json();
-      res.status(r.status).json(json);
-      return;
-    }
-
-    if (method === "PATCH") {
-      // mark read (backend expects patch to /notifications with body { id, read: true })
-      const upstream = upstreamBase;
-      const r = await fetch(upstream, {
-        method: "PATCH",
-        headers: {
-          Cookie: `token=${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(req.body || {}),
-      });
-      const json = await r.json();
-      res.status(r.status).json(json);
+    if (method === "POST" || method === "PATCH") {
+      const attempts = buildAttempts();
+      for (let i = 0; i < attempts.length; i++) {
+        const a = attempts[i];
+        try {
+          const r = await fetch(upstreamBase, {
+            method,
+            headers: { ...a.headers, "Content-Type": "application/json" },
+            body: JSON.stringify(req.body || {}),
+          });
+          const text = await r.text();
+          let data: any = text;
+          try { data = JSON.parse(text); } catch {}
+          if (!r.ok) {
+            if (i < attempts.length - 1 && (r.status === 401 || r.status === 403 || r.status === 500)) continue;
+            return res.status(r.status).json({ upstreamStatus: r.status, attempt: a.name, body: data });
+          }
+          return res.status(r.status).json(data);
+        } catch (e) {
+          if (i === attempts.length - 1) throw e;
+        }
+      }
       return;
     }
 

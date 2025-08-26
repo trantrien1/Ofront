@@ -52,6 +52,7 @@ const Sidebar: React.FC = () => {
   const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
   const { isOpen: isCommunitiesOpen, onToggle: onCommunitiesToggle } = useDisclosure({ defaultIsOpen: true });
   const { isOpen: isAnimeOpen, onToggle: onAnimeToggle } = useDisclosure({ defaultIsOpen: true });
+  const { isOpen: isCoursesOpen, onToggle: onCoursesToggle } = useDisclosure({ defaultIsOpen: true });
   
   // Use local state for now, but this can be connected to global context later
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -246,6 +247,62 @@ const Sidebar: React.FC = () => {
         </Box>
 
         <Divider />
+
+        {/* Courses Section */}
+        <Box p={2}>
+          {!isCollapsed && (
+            <Flex
+              align="center"
+              justify="space-between"
+              mx={3}
+              mb={2}
+              mt={4}
+              cursor="pointer"
+              onClick={onCoursesToggle}
+            >
+              <Text
+                fontSize="xs"
+                fontWeight="bold"
+                color="gray.500"
+                textTransform="uppercase"
+              >
+                Courses
+              </Text>
+              <Icon
+                as={isCoursesOpen ? FaChevronDown : FaChevronRight}
+                fontSize="12px"
+                color="gray.500"
+              />
+            </Flex>
+          )}
+
+          <Collapse in={isCollapsed || isCoursesOpen}>
+            <VStack spacing={1} align="stretch">
+              <NavItem
+                icon={FaHome}
+                label="My Courses"
+                path="/courses"
+                isActive={isActivePage("/courses")}
+              />
+              {user && (typeof window === 'undefined' || ['admin','teacher'].includes(String(localStorage.getItem('role')||'').toLowerCase())) && (
+                <>
+                  <NavItem
+                    icon={FaPlus}
+                    label="Create Course"
+                    path="/courses/create"
+                    isActive={isActivePage("/courses/create")}
+                  />
+                  <NavItem
+                    icon={FaCog}
+                    label="Manage Course Videos"
+                    path="/courses/videos"
+                    isActive={isActivePage("/courses/videos")}
+                  />
+                </>
+              )}
+            </VStack>
+          </Collapse>
+        </Box>
 
         {/* Communities Section */}
         <Box p={2} flex={1}>

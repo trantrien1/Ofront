@@ -11,12 +11,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.debug("/api/comment/create proxy: incoming headers:", req.headers);
     console.debug("/api/comment/create proxy: incoming body:", req.body);
 
-    // Build payload: only include content and postId per backend DTO
+    // Build payload: include content, postId, and optional parentId for replies
     const incoming = req.body || {};
+    const toNum = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : v; };
     const payload: Record<string, any> = {
       content: incoming.content,
-      postId: incoming.postId ?? incoming.id,
+      postId: toNum(incoming.postId ?? incoming.id),
     };
+    if (incoming.parentId != null || incoming.parent_id != null || incoming.parentID != null) {
+      payload.parentId = toNum(incoming.parentId ?? incoming.parent_id ?? incoming.parentID);
+    }
 
     const upstream = `https://rehearten-production.up.railway.app/comment/create`;
 
@@ -107,6 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const form = new URLSearchParams();
         if (payload.content != null) form.set("content", String(payload.content));
         if (payload.postId != null) form.set("postId", String(payload.postId));
+      if (payload.parentId != null) form.set("parentId", String(payload.parentId));
         const h2 = { ...headers, "Content-Type": "application/x-www-form-urlencoded" } as Record<string, string>;
         delete h2["Cookie"];
         retried = "auth_only_form";

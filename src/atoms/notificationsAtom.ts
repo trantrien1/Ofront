@@ -20,12 +20,14 @@ export interface NotificationsState {
   notifications: Notification[];
   unreadCount: number;
   loading: boolean;
+  hasFetched?: boolean; // fetched from DB at least once in this session
 }
 
 const defaultNotificationsState: NotificationsState = {
   notifications: [],
   unreadCount: 0,
   loading: false,
+  hasFetched: false,
 };
 
 export const notificationsState = atom<NotificationsState>({

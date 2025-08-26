@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Box, Button, Flex, Icon, Stack, Text, SkeletonCircle, SkeletonText } from "@chakra-ui/react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Box, Button, Flex, Icon, Stack, Text, SkeletonCircle, SkeletonText, useToast } from "@chakra-ui/react";
 import { Post, postState } from "../../../atoms/postsAtom";
 import { useNotifications } from "../../../hooks/useNotifications";
 import CommentItem, { Comment } from "./CommentItem";
@@ -48,6 +48,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   const setAuthModalState = useSetRecoilState(authModalState);
   const setPostState = useSetRecoilState(postState);
   const { createNotification } = useNotifications();
+  const toast = useToast();
 
   const onCreateComment = async (comment: string) => {
     if (!user) {
@@ -105,6 +106,12 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         const { CommentsService } = await import("../../../services/index");
         const result = await CommentsService.createComment({ content: comment, postId });
         console.log("Backend comment create result:", result);
+        // Replace optimistic ID if backend returns a real one
+        const realId = result?.id?.toString?.() || result?.data?.id?.toString?.();
+        if (realId) {
+          setComments((prev) => prev.map(c => c.id === newId ? { ...c, id: realId } : c));
+        }
+        toast({ status: 'success', title: 'Comment posted' });
         console.log("✅ Comment created successfully!");
         console.log("=========================");
       } catch (err: any) {
@@ -119,6 +126,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
             numberOfComments: Math.max(0, prev.selectedPost?.numberOfComments! - 1),
           } as Post,
         }));
+        toast({ status: 'error', title: 'Failed to post comment' });
       }
 
     } catch (error: any) {
@@ -179,8 +187,44 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         postUpdateRequired: true,
       }));
 
-      // Create notification for parent comment creator
-      // no-op notification in frontend-only mode
+      // Persist reply to backend
+      try {
+        const { CommentsService } = await import("../../../services/index");
+        const result = await CommentsService.replyToComment({ content: replyText, postId: selectedPost?.id!, parentId: parentComment.id });
+        const realId = result?.id?.toString?.() || result?.data?.id?.toString?.();
+        if (realId) {
+          setComments((prev) => prev.map((c) => {
+            if (c.id === parentComment.id) {
+              return {
+                ...c,
+                replies: (c.replies || []).map(r => r.id === newId ? { ...r, id: realId } : r),
+              };
+            }
+            return c;
+          }));
+        }
+        toast({ status: 'success', title: 'Reply posted' });
+      } catch (e) {
+        // Rollback optimistic UI
+        setComments((prev) => prev.map((c) => {
+          if (c.id === parentComment.id) {
+            return {
+              ...c,
+              replies: (c.replies || []).filter(r => r.id !== newId),
+              replyCount: Math.max(0, (c.replyCount || 0) - 1),
+            };
+          }
+          return c;
+        }));
+        setPostState((prev) => ({
+          ...prev,
+          selectedPost: {
+            ...prev.selectedPost,
+            numberOfComments: Math.max(0, prev.selectedPost?.numberOfComments! - 1),
+          } as Post,
+        }));
+        toast({ status: 'error', title: 'Failed to post reply' });
+      }
 
     } catch (error: any) {
   console.error("onReply error", error?.message || error);
@@ -221,50 +265,49 @@ const CommentsComponent: React.FC<CommentsProps> = ({
 
       console.log("Raw API comments received:", apiComments);
 
-      const allComments: Comment[] = (apiComments || []).map((c: any) => ({
-        id: c.id?.toString?.() || c.id,
-        creatorId: c.userId,
-        creatorDisplayText: c.user?.username || c.creatorDisplayText || (user?.email?.split("@")[0] || "user"),
-        creatorPhotoURL: c.creatorPhotoURL || user?.photoURL,
+      // Mapper that supports both flat responses and nested commentsChildren
+      const mapNode = (node: any): Comment => ({
+        id: node.id?.toString?.() || node.id,
+        creatorId: node.userId || node.user?.id || node.user?.userId || "",
+        creatorDisplayText: node.user?.username || node.creatorDisplayText || (user?.email?.split("@")[0] || "user"),
+        creatorPhotoURL: node.creatorPhotoURL || user?.photoURL,
         communityId: community,
-        postId: c.postId?.toString?.() || c.postId,
+        postId: node.postId?.toString?.() || selectedPost?.id || "",
         postTitle: selectedPost?.title || "",
-        text: c.content,
-        createdAt: c.createdAt ? { seconds: Math.floor(new Date(c.createdAt).getTime() / 1000) } as any : { seconds: Date.now() / 1000 } as any,
-        parentId: c.parentId ? (c.parentId.toString?.() || c.parentId) : null,
-        replyCount: 0,
-      }));
-      
-      console.log("Mapped comments:", allComments);
-      
-      // Organize comments into a tree structure
-      const commentMap = new Map<string, Comment>();
-      const topLevelComments: Comment[] = [];
-      
-      // First pass: create a map of all comments
-      allComments.forEach((comment) => {
-        commentMap.set(comment.id!, comment);
-        comment.replies = [];
+        text: node.content,
+        createdAt: node.createdAt ? { seconds: Math.floor(new Date(node.createdAt).getTime() / 1000) } as any : { seconds: Date.now() / 1000 } as any,
+        parentId: node.parentId ? (node.parentId.toString?.() || node.parentId) : null,
+        replies: Array.isArray(node.commentsChildren) ? node.commentsChildren.map(mapNode) : [],
+        replyCount: Array.isArray(node.commentsChildren) ? node.commentsChildren.length : (node.replyCount || 0),
       });
-      
-      // Second pass: organize into parent-child relationships
-      allComments.forEach((comment) => {
-        if (comment.parentId) {
-          // This is a reply
-          const parentComment = commentMap.get(comment.parentId);
-          if (parentComment) {
-            parentComment.replies = parentComment.replies || [];
-            parentComment.replies.push(comment);
-          }
+
+      let topLevel: Comment[] = [];
+      if (Array.isArray(apiComments)) {
+        const first = apiComments[0];
+        // If data seems nested (has commentsChildren), map directly
+        if (first && (Array.isArray(first.commentsChildren) || first.parentId == null)) {
+          topLevel = apiComments.map(mapNode);
         } else {
-          // This is a top-level comment
-          topLevelComments.push(comment);
+          // Flat list with parentId: build tree
+          const allComments: Comment[] = apiComments.map((c: any) => mapNode(c));
+          const commentMap = new Map<string, Comment>();
+          const roots: Comment[] = [];
+          allComments.forEach((c) => { commentMap.set(c.id!, { ...c, replies: [] }); });
+          allComments.forEach((c) => {
+            if (c.parentId) {
+              const parent = commentMap.get(c.parentId);
+              if (parent) parent.replies!.push(commentMap.get(c.id!)!);
+            } else {
+              roots.push(commentMap.get(c.id!)!);
+            }
+          });
+          topLevel = roots;
         }
-      });
-      
-      console.log("Final organized comments:", topLevelComments);
+      }
+
+      console.log("Final organized comments:", topLevel);
       console.log("=========================");
-      setComments(topLevelComments);
+      setComments(topLevel);
       
     } catch (error: any) {
       console.error("getPostComments error", error?.message || error);

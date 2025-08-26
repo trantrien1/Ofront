@@ -6,11 +6,15 @@ import {
 	Text,
 	Button,
 	useToast,
+	Tag,
+	HStack,
 } from "@chakra-ui/react";
 import { Notification } from "../../atoms/notificationsAtom";
 import { normalizeTimestamp, formatTimeAgo } from "../../helpers/timestampHelpers";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
+import { useSetRecoilState } from "recoil";
+import { postState } from "../../atoms/postsAtom";
 
 // Disable SSR for this component to prevent hydration issues
 const NotificationItem = dynamic(() => Promise.resolve(NotificationItemComponent), {
@@ -47,6 +51,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 	const [loading, setLoading] = useState(true);
 	const router = useRouter();
 		const toast = useToast();
+	const setPostState = useSetRecoilState(postState);
 
 	// Fetch user data - For now, derive from notification (no Firebase)
 	useEffect(() => {
@@ -102,6 +107,26 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 			try {
 				const svc = await import("../../services/posts.service");
 				await (svc as any).approvePost({ postId: notification.postId, approve: true });
+				// Optimistically update posts in Recoil so the post appears on the home feed
+				setPostState((prev) => ({
+					...prev,
+					posts: (prev.posts || []).map((p) =>
+						String(p.id) === String(notification.postId)
+							? { ...p, status: 1, approved: true }
+							: p
+					),
+					postsCache: Object.fromEntries(
+						Object.entries(prev.postsCache || {}).map(([k, arr]) => [
+							k,
+							(arr || []).map((p) =>
+								String(p.id) === String(notification.postId)
+									? { ...p, status: 1, approved: true }
+									: p
+							),
+						])
+					),
+					postUpdateRequired: false,
+				}));
 				toast({ status: 'success', title: 'Post approved' });
 				onMarkAsRead(notification.id);
 			} catch (err) {
@@ -143,9 +168,14 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 					<Text fontSize="sm" color="gray.600" mb={1}>
 						{notification.message}
 					</Text>
-							{notification.pending && notification.postId && (
-								<Button size="xs" colorScheme="green" onClick={handleApprove}>Approve</Button>
+					{notification.pending && (
+						<HStack spacing={2} mb={1}>
+							<Tag size="sm" colorScheme="orange">Chưa duyệt</Tag>
+							{notification.postId && (
+								<Button size="xs" colorScheme="green" onClick={handleApprove}>Duyệt</Button>
 							)}
+						</HStack>
+					)}
 					{notification.postTitle && (
 						<Text fontSize="xs" color="gray.500" fontStyle="italic">
 							&ldquo;{notification.postTitle}&rdquo;

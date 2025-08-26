@@ -35,6 +35,11 @@ export const useAuthRestore = () => {
             const part = token.split(".")[1];
             const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
             const jwtPayload = JSON.parse(json);
+            // derive role similarly to useAuth
+            const rawRole = jwtPayload?.role
+              || (Array.isArray(jwtPayload?.roles) ? jwtPayload.roles[0] : undefined)
+              || (jwtPayload?.isAdmin ? 'admin' : undefined);
+            const role = rawRole ? String(rawRole).toLowerCase() : undefined;
             
             const user = {
               uid: jwtPayload?.sub || jwtPayload?.uid || jwtPayload?.username || "",
@@ -43,8 +48,17 @@ export const useAuthRestore = () => {
               photoURL: null,
               createdAt: new Date(),
               updatedAt: new Date(),
+              role,
             } as any;
             setUser(user);
+
+            // Persist role for client-side guards and WS hook
+            try {
+              if (typeof window !== 'undefined') {
+                if (role) window.localStorage.setItem('role', role);
+                else window.localStorage.removeItem('role');
+              }
+            } catch {}
           } catch (e) {
             console.error("AUTH RESTORE: Error decoding token:", e);
           }

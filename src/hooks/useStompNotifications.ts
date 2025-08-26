@@ -16,7 +16,12 @@ export function useStompNotifications(enabled: boolean = true) {
   useEffect(() => {
     if (!enabled) return;
     if (typeof window === 'undefined') return;
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/ws';
+    if ((window as any).__wsActive && clientRef.current) {
+      try { console.log('[WS] already active, skipping re-init'); } catch {}
+      return;
+    }
+  const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'https://rehearten-production.up.railway.app/ws';
+  const transportPref = (process.env.NEXT_PUBLIC_WS_TRANSPORT || '').toLowerCase(); // 'sockjs' | 'native'
     // Resolve token and role client-side
     const getToken = () => {
       try {
@@ -32,24 +37,66 @@ export function useStompNotifications(enabled: boolean = true) {
       return undefined;
     };
     const token = getToken();
-    const role = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || '') : '').toLowerCase();
+    // Resolve role: prefer persisted, else try to decode from JWT
+    const persistedRole = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || '') : '').toLowerCase();
+    const decodeRoleFromJwt = (t?: string): string | '' => {
+      if (!t) return '';
+      try {
+        const part = t.split('.')[1];
+        const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'));
+        const payload = JSON.parse(json);
+        const r = payload?.role || (Array.isArray(payload?.roles) ? payload.roles[0] : undefined) || (payload?.isAdmin ? 'admin' : undefined);
+        return r ? String(r).toLowerCase() : '';
+      } catch { return ''; }
+    };
+    const role = persistedRole || decodeRoleFromJwt(token) || '';
     try {
       console.log('[WS] init', { wsUrl, hasToken: !!token, tokenLen: token ? token.length : 0, role });
+      console.log('[WS] Đang chuẩn bị kết nối tới WebSocket...', wsUrl);
     } catch {}
 
-  const wsUrlWithToken = token ? `${wsUrl}${wsUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : wsUrl;
-  try { console.log('[WS] connecting', { wsUrlWithToken }); } catch {}
-  const socket = new SockJS(wsUrlWithToken);
+  let wsUrlWithToken = wsUrl;
+  if (token) {
+    const sep = wsUrl.includes('?') ? '&' : '?';
+    // Send both param names for compatibility with various backends, plus role if available
+    const roleParam = role ? `&role=${encodeURIComponent(role)}` : '';
+    wsUrlWithToken = `${wsUrl}${sep}token=${encodeURIComponent(token)}&access_token=${encodeURIComponent(token)}${roleParam}`;
+  }
+  try { console.log('[WS] connecting', { wsUrlWithToken, transportPref: transportPref || 'sockjs' }); } catch {}
+  // Prefer native WebSocket when requested, otherwise SockJS with sensible fallbacks
+  const socketLike: any = (() => {
+    if (transportPref === 'native') {
+      try {
+        const nativeUrl = wsUrlWithToken.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+        try { console.log('[WS] using native WebSocket', { nativeUrl }); } catch {}
+        return new (window as any).WebSocket(nativeUrl);
+      } catch (e) {
+        try { console.warn('[WS] native WebSocket failed, falling back to SockJS', e); } catch {}
+      }
+    }
+    const options: any = {
+      transports: ['websocket', 'xhr-streaming', 'xhr-polling'],
+      transportOptions: {
+        'xhr-streaming': { withCredentials: true },
+        'xhr-polling': { withCredentials: true },
+      },
+      timeout: 10000,
+    };
+    return new SockJS(wsUrlWithToken, undefined as any, options);
+  })();
     const client = new Client({
-      webSocketFactory: () => socket as any,
+      webSocketFactory: () => socketLike as any,
       debug: (str: string) => { if (process.env.NODE_ENV !== 'production') console.log('[STOMP]', str); },
       reconnectDelay: 3000,
-      connectHeaders: token ? { Authorization: `Bearer ${token}` } as any : undefined,
+  connectHeaders: token ? ({ Authorization: `Bearer ${token}`, ...(role ? { 'X-User-Role': role } : {}) } as any) : (role ? ({ 'X-User-Role': role } as any) : undefined),
     });
     clientRef.current = client;
 
     client.onConnect = () => {
-      try { console.log('[WS] connected'); } catch {}
+      try {
+        console.log('[WS] connected');
+        console.log('ĐÃ KẾT NỐI TỚI WEBSOCKET ✅', { at: new Date().toISOString(), url: wsUrlWithToken });
+      } catch {}
   // Subscribe to user notifications queue
       client.subscribe('/user/queue/notifications', (message: IMessage) => {
         try { console.log('[WS] /user/queue/notifications message', { body: message?.body?.slice?.(0, 200) }); } catch {}
@@ -110,18 +157,23 @@ export function useStompNotifications(enabled: boolean = true) {
     };
 
   client.onStompError = (frame: any) => {
-      try { console.error('[WS] stomp error', frame?.headers?.message, frame?.body); } catch {}
+      try { console.error('[WS] stomp error', { message: frame?.headers?.message, body: frame?.body }); } catch {}
+    };
+    (client as any).onWebSocketError = (evt: any) => {
+      try { console.error('[WS] socket error', evt); } catch {}
     };
     (client as any).onWebSocketClose = (evt: any) => {
       try { console.warn('[WS] socket closed', { code: evt?.code, reason: evt?.reason }); } catch {}
     };
 
     client.activate();
+    (window as any).__wsActive = true;
     return () => {
       try { console.log('[WS] deactivate'); } catch {}
       client.deactivate();
       clientRef.current = null;
+      (window as any).__wsActive = false;
     };
-  }, [enabled, setNotifState]);
+  }, [enabled]);
 }
 export default useStompNotifications;

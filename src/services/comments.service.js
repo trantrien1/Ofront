@@ -13,7 +13,7 @@ export const getCommentsByPostId = async (postId, params = {}) => {
 };
 
 export const createComment = async (payload) => {
-	// payload: { content, postId }
+	// payload: { content, postId, parentId? }
 	const response = await request.post("comment/create", payload);
 	return response.data;
 };
@@ -23,9 +23,16 @@ export const likeComment = async ({ commentId }) => {
 	return response.data;
 };
 
+export const replyToComment = async ({ content, postId, parentId }) => {
+	if (!parentId) throw new Error('parentId is required for reply');
+	const response = await request.post("comment/create", { content, postId, parentId });
+	return response.data;
+};
+
 export default {
 	getCommentsByPost,
 	getCommentsByPostId,
 	createComment,
 	likeComment,
+	replyToComment,
 };

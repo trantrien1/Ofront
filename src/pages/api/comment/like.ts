@@ -8,11 +8,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const upstream = `https://rehearten-production.up.railway.app/comment/like`;
+    const upstream = `https://rehearten-production.up.railway.app/like`;
 
     // Normalize payload: accept { commentId } or { id } and strip extras
     const incoming: any = req.body || {};
-    const commentId = incoming.commentId ?? incoming.id ?? incoming.comment_id ?? incoming.commentID;
+    const rawId = incoming.commentId ?? incoming.id ?? incoming.comment_id ?? incoming.commentID;
+    const toNum = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : v; };
+    const commentId = toNum(rawId);
     if (!commentId) {
       return res.status(400).json({ error: "commentId is required" });
     }
@@ -25,6 +27,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!s) return undefined;
       const lower = s.toLowerCase();
       if (lower === "undefined" || lower === "null" || lower === "bearer") return undefined;
+      // Unwrap JSON-shaped token {"token":"..."}
+      if ((s.startsWith("{") && s.endsWith("}"))) {
+        try { const obj = JSON.parse(s); if (obj && obj.token) return String(obj.token); } catch {}
+      }
       return s;
     };
 
@@ -47,18 +53,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "User-Agent": req.headers["user-agent"]?.toString() || "Mozilla/5.0 (proxy)",
     };
 
+    // Build Cookie header: start with original cookies (if any) then ensure token/JSESSIONID are present
+    let cookieHeader: string | undefined = undefined;
+    const incomingCookie = req.headers.cookie as string | undefined;
     const cookieParts: string[] = [];
+    if (incomingCookie) cookieParts.push(incomingCookie);
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
-      cookieParts.push(`token=${token}`);
+      if (!incomingCookie || !incomingCookie.includes("token=")) cookieParts.push(`token=${token}`);
     }
     const upstreamSession = req.cookies?.UPSTREAM_JSESSIONID || req.cookies?.JSESSIONID || (req.cookies as any)?.jsessionid;
-    if (upstreamSession) cookieParts.push(`JSESSIONID=${upstreamSession}`);
-    if (cookieParts.length > 0) headers["Cookie"] = cookieParts.join("; ");
+    if (upstreamSession && (!incomingCookie || !incomingCookie.includes("JSESSIONID="))) cookieParts.push(`JSESSIONID=${upstreamSession}`);
+    if (cookieParts.length > 0) cookieHeader = cookieParts.join("; ");
+    if (cookieHeader) headers["Cookie"] = cookieHeader;
 
     const method = req.method || "POST";
     let r = await fetch(upstream, { method, headers, body: JSON.stringify(payload) });
     let text = await r.text();
+
+    // Fallback to POST if upstream rejects method
+    if (r.status === 405 && method !== "POST") {
+      const rPost = await fetch(upstream, { method: "POST", headers, body: JSON.stringify(payload) });
+      if (rPost.status < r.status) { r = rPost; text = await rPost.text(); }
+    }
 
     if (r.status >= 400) {
       const headersForm = { ...headers, "Content-Type": "application/x-www-form-urlencoded" } as Record<string, string>;

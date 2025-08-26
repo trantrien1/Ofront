@@ -44,7 +44,8 @@ const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
   isOpen,
   onToggle,
 }) => {
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
+  // Trigger initial DB fetch only the first time the menu opens
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications(isOpen && !false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick({

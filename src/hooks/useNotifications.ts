@@ -3,11 +3,12 @@ import { useRecoilState } from "recoil";
 import { notificationsState, Notification } from "../atoms/notificationsAtom";
 import useAuth from "./useAuth";
 
-export const useNotifications = () => {
+// Optional param: requestInitialFetch indicates the UI has opened the dropdown for the first time
+export const useNotifications = (requestInitialFetch?: boolean) => {
   const [notificationsStateValue, setNotificationsStateValue] = useRecoilState(notificationsState);
   const { currentUser } = useAuth() as any;
   const [loading, setLoading] = useState(false);
-  const restEnabled = (process.env.NEXT_PUBLIC_NOTIFICATIONS_REST || '').toLowerCase() === 'true';
+  // We fetch from DB only once on first open, then rely on realtime updates
 
   // Fetch notifications for current user (optional, default disabled)
   useEffect(() => {
@@ -16,11 +17,12 @@ export const useNotifications = () => {
         ...prev,
         notifications: [],
         unreadCount: 0,
+        hasFetched: false,
       }));
       return;
     }
-    // Skip REST fetch by default; rely on WebSocket STOMP updates
-    if (!restEnabled) {
+  // Only fetch from DB once when the dropdown is first requested, then rely on realtime
+  if (notificationsStateValue.hasFetched || !requestInitialFetch) {
       setNotificationsStateValue(prev => ({ ...prev, loading: false }));
       return;
     }
@@ -47,11 +49,12 @@ export const useNotifications = () => {
         })) as Notification[];
 
         const unreadCount = mapped.filter(n => !n.read).length;
-        setNotificationsStateValue(prev => ({
+         setNotificationsStateValue(prev => ({
           ...prev,
           notifications: mapped,
           unreadCount,
           loading: false,
+          hasFetched: true,
         }));
       } catch (e) {
         if (!(e as any).name?.includes("Abort")) {
@@ -63,21 +66,13 @@ export const useNotifications = () => {
     load();
 
     return () => abort.abort();
-  }, [currentUser, setNotificationsStateValue]);
+  }, [currentUser, setNotificationsStateValue, notificationsStateValue.hasFetched, requestInitialFetch]);
 
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
     if (!currentUser) return;
 
-    try {
-      if (!restEnabled) {
-        // Local-only update
-        setNotificationsStateValue(prev => {
-          const updated = prev.notifications.map(n => n.id === notificationId ? { ...n, read: true } : n);
-          return { ...prev, notifications: updated, unreadCount: updated.filter(n => !n.read).length };
-        });
-        return;
-      }
+  try {
       const { NotificationsService } = await import("../services");
       await NotificationsService.markNotificationAsRead(notificationId);
       setNotificationsStateValue(prev => {
@@ -93,15 +88,7 @@ export const useNotifications = () => {
   const markAllAsRead = async () => {
     if (!currentUser) return;
 
-    try {
-      if (!restEnabled) {
-        setNotificationsStateValue(prev => ({
-          ...prev,
-          notifications: prev.notifications.map(n => ({ ...n, read: true })),
-          unreadCount: 0,
-        }));
-        return;
-      }
+  try {
       const { NotificationsService } = await import("../services");
       const unreadNotifications = notificationsStateValue.notifications.filter(n => !n.read);
       await NotificationsService.markManyNotificationsAsRead(unreadNotifications.map(n => n.id));

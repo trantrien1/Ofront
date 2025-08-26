@@ -61,6 +61,8 @@ const PersonalHome: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
   const { onVote, onDeletePost, onSelectPost } = usePosts();
+  const roleLabel = (user as any)?.role ? String((user as any).role).toUpperCase() : "USER";
+  const roleColor: any = roleLabel === "ADMIN" ? "purple" : roleLabel === "MODERATOR" ? "orange" : "gray";
 
   // Fetch user profile data from database
   const fetchUserProfile = async () => {
@@ -202,15 +204,25 @@ const PersonalHome: React.FC = () => {
                 </Flex>
               )}
             </Flex>
-            <Button
-              leftIcon={<MdEdit />}
-              colorScheme="blue"
-              variant="outline"
-              size="sm"
-              onClick={handleEditProfile}
-            >
-              Edit Profile
-            </Button>
+            <HStack>
+              <Button
+                size="sm"
+                colorScheme={roleColor}
+                variant="solid"
+                onClick={() => toast({ title: "Your role", description: roleLabel, status: "info", duration: 2000 })}
+              >
+                {roleLabel}
+              </Button>
+              <Button
+                leftIcon={<MdEdit />}
+                colorScheme="blue"
+                variant="outline"
+                size="sm"
+                onClick={handleEditProfile}
+              >
+                Edit Profile
+              </Button>
+            </HStack>
           </Flex>
 
           {/* Enhanced User Stats */}

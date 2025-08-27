@@ -73,12 +73,19 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
     try {
       // Create via API, include privacy/communityType when available
       const created = await createGroup({ name, privacyType: communityType, communityType });
-      // Ensure creator is admin (best-effort)
+      // Mark as managed locally so it appears immediately in My Communities
       try {
-        const id = (created && (created as any).id) ? (created as any).id : undefined;
-        if (id && userId) {
-          const mod = await import("../../../services/groups.service");
-          await (mod as any).addAdmin(id, userId, 'admin');
+        const createdId = (created && (created as any).id) ? String((created as any).id) : undefined;
+        if (createdId && typeof window !== 'undefined') {
+          const raw = window.localStorage.getItem('managedGroups');
+          let arr: string[] = [];
+          try {
+            const parsed = raw ? JSON.parse(raw) : [];
+            if (Array.isArray(parsed)) arr = parsed.map((x) => String(x));
+          } catch {}
+          const set = new Set<string>(arr);
+          set.add(createdId);
+          window.localStorage.setItem('managedGroups', JSON.stringify(Array.from(set)));
         }
       } catch {}
       // Best-effort snippet refresh (backend not wired here yet)

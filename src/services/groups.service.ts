@@ -75,14 +75,6 @@ export const joinGroup = async (communityId: string | number) => {
   return res.data;
 };
 
-export const renameGroup = async (communityId: string | number, name: string) => {
-  const res = await request.post("group/rename", { communityId, name });
-  return res.data;
-};
 
-export const addAdmin = async (communityId: string | number, userId: string | number, role: 'admin' | 'moderator' = 'admin') => {
-  const res = await request.post("group/add-admin", { communityId, userId, role });
-  return res.data;
-};
 
-export default { getGroupsByUser, getGroupById, createGroup, joinGroup, renameGroup, addAdmin };
+export default { getGroupsByUser, getGroupById, createGroup, joinGroup };

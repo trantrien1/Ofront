@@ -14,7 +14,7 @@ import PageContentLayout from "../../../components/Layout/PageContent";
 import Posts from "../../../components/Post/Posts";
 import { usePinnedPosts } from "../../../hooks/usePinnedPosts";
 import { Box, Button, HStack, useToast, Input, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@chakra-ui/react";
-import { joinGroup, renameGroup } from "../../../services/groups.service";
+import { joinGroup } from "../../../services/groups.service";
 // Firebase removed
 
 interface CommunityPageProps {
@@ -103,7 +103,7 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
           </ModalBody>
           <ModalFooter>
             <Button mr={3} onClick={onClose}>Cancel</Button>
-            <Button colorScheme="blue" onClick={async()=>{ try { await renameGroup(communityData.id, newName.trim()); toast({status:'success', title:'Renamed'}); onClose(); } catch(e:any){ toast({status:'error', title:'Rename failed', description:e?.message}); } }}>Save</Button>
+            {/* <Button colorScheme="blue" onClick={async()=>{ try { await renameGroup(communityData.id, newName.trim()); toast({status:'success', title:'Renamed'}); onClose(); } catch(e:any){ toast({status:'error', title:'Rename failed', description:e?.message}); } }}>Save</Button> */}
           </ModalFooter>
         </ModalContent>
       </Modal>

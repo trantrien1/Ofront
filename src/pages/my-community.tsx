@@ -26,7 +26,7 @@ import {
   TabPanel,
 } from "@chakra-ui/react";
 import NextLink from "next/link";
-import { getGroupsByUser, Group, renameGroup, addAdmin } from "../services/groups.service";
+import { getGroupsByUser, Group } from "../services/groups.service";
 import { useRecoilValue } from "recoil";
 import { userState } from "../atoms/userAtom";
 import { communityState } from "../atoms/communitiesAtom";
@@ -63,12 +63,22 @@ const MyCommunityPage: React.FC = () => {
       const role = s?.role || (s?.isModerator ? "moderator" : "member");
       if (role === "owner" || role === "admin") elevated.add(String(s.communityId));
     });
+    // Also include groups the user just created (stored locally)
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = window.localStorage.getItem('managedGroups');
+        if (raw) {
+          const ids = JSON.parse(raw);
+          if (Array.isArray(ids)) ids.forEach((id: any) => elevated.add(String(id)));
+        }
+      }
+    } catch {}
 
     const managed: Group[] = [];
     const joined: Group[] = [];
     groups.forEach((g) => {
       const idStr = String(g.id);
-      const isOwnerMatch = g.ownerId != null && String(g.ownerId) === uid;
+  const isOwnerMatch = g.ownerId != null && String(g.ownerId) === uid;
       if (isOwnerMatch || elevated.has(idStr)) managed.push(g);
       else joined.push(g);
     });
@@ -119,18 +129,10 @@ const MyCommunityPage: React.FC = () => {
       <HStack>
         <Button as={NextLink} href={`/r/${encodeURIComponent(String(g.id))}`} variant="solid" size="sm" colorScheme="blue">Open</Button>
         {managed && (
-          <>
-            <Button size="sm" variant="outline" onClick={async()=>{
-              const name = prompt("New group name", g.name);
-              if (!name) return;
-              try { await renameGroup(g.id, name); toast({ status:'success', title:'Renamed' }); load(); } catch(e:any){ toast({status:'error', title:'Rename failed', description:e?.message}); }
-            }}>Rename</Button>
-            <Button size="sm" variant="outline" onClick={async()=>{
-              const uid = prompt("User ID to grant admin");
-              if (!uid) return;
-              try { await addAdmin(g.id, uid, 'admin'); toast({ status:'success', title:'Admin added' }); } catch(e:any){ toast({status:'error', title:'Add admin failed', description:e?.message}); }
-            }}>Add Admin</Button>
-          </>
+          <Button size="sm" variant="outline" onClick={async()=>{
+            const name = prompt("New group name", g.name);
+            
+          }}>Rename</Button>
         )}
       </HStack>
     </Flex>

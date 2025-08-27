@@ -8,6 +8,7 @@ import {
   Divider,
   useOutsideClick,
 } from "@chakra-ui/react";
+import { useColorModeValue } from "@chakra-ui/react";
 import { IoNotificationsOutline } from "react-icons/io5";
 import { useNotifications } from "../../hooks/useNotifications";
 import NotificationItem from "./NotificationItem";
@@ -63,11 +64,11 @@ const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
         padding={1}
         cursor="pointer"
         borderRadius={4}
-        _hover={{ bg: "gray.200" }}
+        _hover={{ bg: useColorModeValue("gray.200", "whiteAlpha.200") }}
         onClick={onToggle}
         position="relative"
       >
-        <IoNotificationsOutline fontSize={20} />
+        <IoNotificationsOutline fontSize={20} color={useColorModeValue("gray.600", "gray.300")} />
         {unreadCount > 0 && (
           <Badge
             position="absolute"

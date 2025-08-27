@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, Flex, useColorModeValue } from "@chakra-ui/react";
 // import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue } from "recoil";
 // Firebase removed
@@ -12,7 +12,6 @@ import AuthModal from "../Modal/Auth";
 import CreateCommunityModal from "../Modal/CreateCommunity";
 import ClientOnlyWrapper from "./ClientOnlyWrapper";
 
-// Create context for sidebar state
 const SidebarContext = createContext<{
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
@@ -41,9 +40,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             left={0}
             right={0}
             zIndex={1001}
-            bg="white"
+            bg={{ base: "white", _dark: "gray.800" }}
             borderBottom="1px solid"
-            borderColor="gray.200"
+            borderColor={useColorModeValue("gray.300", "whiteAlpha.400")} // thanh duoi header
           >
             <Navbar />
           </Box>
@@ -54,7 +53,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <Box 
               flex={1} 
               ml={isCollapsed ? "80px" : "280px"} 
-              bg="gray.50"
+              bg={{ base: "gray.50", _dark: "gray.900" }}
               transition="margin-left 0.3s ease"
             >
               {children}

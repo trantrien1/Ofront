@@ -25,6 +25,7 @@ import {
   FaFire,
   FaPlus,
   FaCog,
+  FaCode,
   FaChevronDown,
   FaChevronRight,
   FaBars,
@@ -205,10 +206,10 @@ const Sidebar: React.FC = () => {
         {/* Main Navigation */}
   <Box p={2}>
           {!isCollapsed && (
-            <Text
+              <Text
               fontSize="xs"
               fontWeight="bold"
-              color="gray.500"
+                color={useColorModeValue("gray.500", "gray.400")}
               textTransform="uppercase"
               mx={3}
               mb={2}
@@ -237,6 +238,7 @@ const Sidebar: React.FC = () => {
               onClick={handleManageCommunities}
               isActive={isActivePage("/my-community")}
             />
+            {/* Code manager is now part of My Courses (/courses) */}
             <NavItem
               icon={MdGroup}
               label="Trợ lí ảo Anime"
@@ -263,7 +265,7 @@ const Sidebar: React.FC = () => {
               <Text
                 fontSize="xs"
                 fontWeight="bold"
-                color="gray.500"
+                color={useColorModeValue("gray.500", "gray.400")}
                 textTransform="uppercase"
               >
                 Courses
@@ -319,7 +321,7 @@ const Sidebar: React.FC = () => {
               <Text
                 fontSize="xs"
                 fontWeight="bold"
-                color="gray.500"
+                color={useColorModeValue("gray.500", "gray.400")}
                 textTransform="uppercase"
               >
                 Communities
@@ -358,7 +360,7 @@ const Sidebar: React.FC = () => {
                   <Text
                     fontSize="xs"
                     fontWeight="semibold"
-                    color="gray.600"
+                    color={useColorModeValue("gray.600", "gray.300")}
                     mx={3}
                     mb={2}
                   >
@@ -383,7 +385,7 @@ const Sidebar: React.FC = () => {
                 <Text
                   fontSize="xs"
                   fontWeight="semibold"
-                  color="gray.600"
+                  color={useColorModeValue("gray.600", "gray.300")}
                   mx={3}
                   mb={2}
                 >

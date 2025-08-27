@@ -14,13 +14,13 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-// Firebase removed
+
 import { useRouter } from "next/router";
 import { BsFillEyeFill, BsFillPersonFill } from "react-icons/bs";
 import { HiLockClosed } from "react-icons/hi";
 import { useSetRecoilState, useRecoilValue } from "recoil";
 import { communityState, createCommunityModalState } from "../../../atoms/communitiesAtom";
-// Firebase removed
+
 import ModalWrapper from "../ModalWrapper";
 import { createGroup } from "../../../services/groups.service";
 

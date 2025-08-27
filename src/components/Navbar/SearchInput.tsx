@@ -1,5 +1,5 @@
 import React from "react";
-import { Flex, InputGroup, InputLeftElement, Input } from "@chakra-ui/react";
+import { Flex, InputGroup, InputLeftElement, Input, useColorModeValue } from "@chakra-ui/react";
 import { SearchIcon } from "@chakra-ui/icons";
 type User = { uid: string; email?: string | null };
 
@@ -8,6 +8,12 @@ type SearchInputProps = {
 };
 
 const SearchInput: React.FC<SearchInputProps> = ({ user }) => {
+  const bg = useColorModeValue("gray.50", "gray.700");
+  const hoverBg = useColorModeValue("white", "gray.600");
+  const focusBorder = useColorModeValue("blue.500", "blue.300");
+  const placeholderCol = useColorModeValue("gray.500", "gray.300");
+  const iconCol = useColorModeValue("gray.400", "gray.300");
+
   return (
     <Flex
       flexGrow={1}
@@ -18,24 +24,24 @@ const SearchInput: React.FC<SearchInputProps> = ({ user }) => {
       align="center"
     >
       <InputGroup>
-        <InputLeftElement pointerEvents="none" color="gray.400">
+        <InputLeftElement pointerEvents="none" color={iconCol}>
           <SearchIcon mb="2px" />
         </InputLeftElement>
 
         <Input
           placeholder="Search"
           fontSize={{ base: "10pt", md: "11pt" }}
-          _placeholder={{ color: "gray.500" }}
-          _hover={{ bg: "white", border: "1px solid", borderColor: "blue.400" }}
+          _placeholder={{ color: placeholderCol }}
+          _hover={{ bg: hoverBg, border: "1px solid", borderColor: focusBorder }}
           _focus={{
             outline: "none",
             border: "1px solid",
-            borderColor: "blue.500",
-            boxShadow: "0 0 0 1px blue.500",
+            borderColor: focusBorder,
+            boxShadow: `0 0 0 1px ${focusBorder}`,
           }}
           height={{ base: "32px", md: "36px" }}
           borderRadius="full"
-          bg="gray.50"
+          bg={bg}
         />
       </InputGroup>
     </Flex>

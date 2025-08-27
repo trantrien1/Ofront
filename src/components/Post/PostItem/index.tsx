@@ -41,17 +41,15 @@ const PostItem = dynamic(() => Promise.resolve(PostItemComponent), {
   loading: () => <PostItemSkeleton />
 });
 
-const PostItemSkeleton = () => (
-  <Flex
-    border="1px solid"
-    bg="white"
-    borderColor="gray.300"
-    borderRadius={4}
-    p={4}
-  >
-    <Box height="200px" width="100%" />
-  </Flex>
-);
+const PostItemSkeleton = () => {
+  const bg = useColorModeValue("white", "gray.800");
+  const borderCol = useColorModeValue("gray.200", "gray.700");
+  return (
+    <Flex border="1px solid" bg={bg} borderColor={borderCol} borderRadius={4} p={4}>
+      <Box height="200px" width="100%" />
+    </Flex>
+  );
+};
 
 export type PostItemContentProps = {
   post: Post;
@@ -97,10 +95,16 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const toast = useToast();
   const communityData = communityStateValue.currentCommunity;
 
-  // Color mode values for dark theme
-  const cardBg = useColorModeValue("white.800", "white.800");
-  const metaColor = useColorModeValue("gray.500", "gray.500");
-  const borderCol = useColorModeValue("whiteAlpha.300", "whiteAlpha.300");
+  // Color mode values
+  const cardBg = useColorModeValue("white", "gray.800");
+  const metaColor = useColorModeValue("gray.600", "gray.400");
+  const borderCol = useColorModeValue("gray.200", "gray.700");
+  const hoverBg = useColorModeValue("gray.50", "gray.700");
+  const titleColor = useColorModeValue("gray.800", "gray.100");
+  const bodyColor = useColorModeValue("gray.700", "gray.200");
+  const chipBg = useColorModeValue("gray.100", "gray.700");
+  const chipHoverBg = useColorModeValue("gray.200", "gray.600");
+  const chipText = useColorModeValue("gray.800", "gray.100");
 
   const handleDelete = async (
     event: React.MouseEvent<HTMLButtonElement | HTMLDivElement, MouseEvent>
@@ -172,7 +176,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       shadow="md"
       cursor={singlePostView ? "unset" : "pointer"}
       _hover={{
-        bg: "gray.100",
+        bg: hoverBg,
         
       }}
       onClick={() => onSelectPost && post && onSelectPost(post, postIdx!)}
@@ -196,13 +200,13 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       </HStack>
 
       {/* Title */}
-      <Text fontSize="xl" fontWeight="bold" mb={3} color="gray.350">
+  <Text fontSize="xl" fontWeight="bold" mb={3} color={titleColor}>
         {post.title}
       </Text>
 
       {/* Content */}
       {post.body && (
-        <Text fontSize="md" color="black.300" mb={3}>
+        <Text fontSize="md" color={bodyColor} mb={3}>
           {post.body}
         </Text>
       )}
@@ -269,7 +273,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
                 rounded="full"
                 px={5}
                 size="sm"
-                bg="black.700"
+                bg="blackAlpha.700"
                 _hover={{ bg: "blackAlpha.600" }}
               >
                 View spoiler
@@ -286,8 +290,8 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         py={1}
         rounded="full"
         border="1px solid"
-        borderColor="whiteAlpha.300"
-        bg="gray.300"
+        borderColor={borderCol}
+        bg={chipBg}
         transition="all 0.2s ease"
         cursor="pointer"
         onClick={(e) => e.stopPropagation()}
@@ -298,18 +302,18 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           icon={<FaThumbsUp />}
           size="sm"
           variant="ghost"
-          bg={userVoteValue === 1 ? "blue.400" : "gray.300"}
-          color={userVoteValue === 1 ? "white" : "gray.800"}
+          bg={userVoteValue === 1 ? useColorModeValue("blue.500", "blue.400") : chipBg}
+          color={userVoteValue === 1 ? "white" : chipText}
           borderRadius="full"
-          borderColor={userVoteValue === 1 ? "blue.400" : "transparent"}
+          borderColor={userVoteValue === 1 ? useColorModeValue("blue.500", "blue.400") : "transparent"}
           _hover={{
-            bg: "gray.200",
+            bg: userVoteValue === 1 ? useColorModeValue("blue.600", "blue.500") : chipHoverBg,
             transform: "scale(1.1)"
           }}
           transition="all 0.2s ease"
           onClick={(event) => onVote(event, post, 1, post.communityId)}
         />
-        <Text fontWeight="semibold" color="black">
+        <Text fontWeight="semibold" color={chipText}>
           {post.voteStatus.toLocaleString()}
         </Text>
       </HStack>
@@ -319,11 +323,11 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           px={3}
           py={2}
           rounded="full"
-          borderColor="gray.800"
-          bg="gray.300"
+          borderColor={borderCol}
+          bg={chipBg}
           _hover={{ 
-            bg: "gray.350", 
-            borderColor: "gray.600",
+            bg: chipHoverBg, 
+            borderColor: borderCol,
             transform: "scale(1.05)"
           }}
           cursor="pointer"
@@ -347,27 +351,27 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             }
           }}
         >
-          <ChatIcon color="gray.350" />
-          <Text color="gray.350">{post.numberOfComments}</Text>
+          <ChatIcon color={useColorModeValue("gray.600", "gray.300")} />
+          <Text color={chipText}>{post.numberOfComments}</Text>
         </HStack>
 
         <HStack
           px={3}
           py={2}
           rounded="full"
-          borderColor="gray.800"
-          bg="gray.300"
+          borderColor={borderCol}
+          bg={chipBg}
           _hover={{ 
-            bg: "gray.350", 
-            borderColor: "gray.600",
+            bg: chipHoverBg, 
+            borderColor: borderCol,
             transform: "scale(1.05)"
           }}
           transition="all 0.2s ease"
           cursor="pointer"
           onClick={(e) => e.stopPropagation()}
         >
-          <FiShare2 color="gray.350" />
-          <Text color="gray.350" fontSize="sm" fontWeight="medium">
+          <FiShare2 color={useColorModeValue("gray.600", "gray.300")} />
+          <Text color={chipText} fontSize="sm" fontWeight="medium">
             Share
           </Text>
         </HStack>
@@ -378,11 +382,11 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             px={3}
             py={2}
             rounded="full"
-            borderColor="gray.800"
-            bg="gray.300"
+            borderColor={borderCol}
+            bg={chipBg}
             _hover={{ 
-              bg: "gray.350", 
-              borderColor: "gray.600",
+              bg: chipHoverBg, 
+              borderColor: borderCol,
               transform: "scale(1.05)"
             }}
             transition="all 0.2s ease"
@@ -396,7 +400,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             }}
           >
             {loadingPin ? (
-              <Spinner size="sm" color="gray.350" />
+              <Spinner size="sm" color={useColorModeValue("gray.600", "gray.300")} />
             ) : (
               <Icon as={MdPushPin} color="gray.350" />
             )}

@@ -36,32 +36,29 @@ const useDirectory = () => {
   };
 
   useEffect(() => {
-    const { community } = router.query;
-
-    // const existingCommunity =
-    //   communityStateValue.visitedCommunities[community as string];
-
     const existingCommunity = communityStateValue.currentCommunity;
 
-    if (existingCommunity.id) {
+    // Nếu chưa có community thì chọn default menu
+    if (!existingCommunity || !existingCommunity.id) {
       setDirectoryState((prev) => ({
         ...prev,
-        selectedMenuItem: {
-          displayText: `r/${existingCommunity.id}`,
-          link: `r/${existingCommunity.id}`,
-          icon: FaReddit,
-          iconColor: "blue.500",
-          imageURL: existingCommunity.imageURL,
-        },
+        selectedMenuItem: defaultMenuItem,
       }));
       return;
     }
+
+    // Nếu có community thì chọn nó
     setDirectoryState((prev) => ({
       ...prev,
-      selectedMenuItem: defaultMenuItem,
+      selectedMenuItem: {
+        displayText: `r/${existingCommunity.displayName || existingCommunity.id}`,
+        link: `/r/${existingCommunity.id}`, // thêm dấu "/" để router push đúng
+        icon: FaReddit,
+        iconColor: "blue.500",
+        imageURL: existingCommunity.imageURL,
+      },
     }));
-  }, [communityStateValue.currentCommunity]);
-  //                              ^ used to be communityStateValue.vistedCommunities
+  }, [communityStateValue.currentCommunity, setDirectoryState]);
 
   return { directoryState, onSelectMenuItem, toggleMenuOpen };
 };

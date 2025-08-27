@@ -1,24 +1,17 @@
 import React, { useState } from "react";
-import { AddIcon } from "@chakra-ui/icons";
-import { Box, Flex, Icon } from "@chakra-ui/react";
-import { BsArrowUpRightCircle, BsChatDots } from "react-icons/bs";
+import { Flex, Icon, useColorModeValue } from "@chakra-ui/react";
+import { BsChatDots } from "react-icons/bs";
 import { GrAdd } from "react-icons/gr";
 import { MdAdminPanelSettings } from "react-icons/md";
-import {
-  IoFilterCircleOutline,
-  IoVideocamOutline,
-} from "react-icons/io5";
 import { useRouter } from "next/router";
 import { useRecoilValue } from "recoil";
 import { userState, UserData } from "../../../atoms/userAtom";
-import useDirectory from "../../../hooks/useDirectory";
 import NotificationDropdown from "../../Notifications/NotificationDropdown";
 import CreatePostModal from "../../Modal/CreatePost";
 
 type ActionIconsProps = { onOpenChat?: () => void };
 
 const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
-  const { toggleMenuOpen } = useDirectory();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const router = useRouter();
@@ -42,43 +35,9 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
 
   return (
     <Flex alignItems="center" flexGrow={1}>
-      <Box
-        display={{ base: "none", md: "flex" }}
-        alignItems="center"
-        borderRight="1px solid"
-        borderColor="gray.200"
-      >
-        <Flex
-          mr={1.5}
-          ml={1.5}
-          padding={1}
-          cursor="pointer"
-          borderRadius={4}
-          _hover={{ bg: "gray.200" }}
-        >
-          <Icon as={BsArrowUpRightCircle} fontSize={20} />
-        </Flex>
-        <Flex
-          mr={1.5}
-          ml={1.5}
-          padding={1}
-          cursor="pointer"
-          borderRadius={4}
-          _hover={{ bg: "gray.200" }}
-        >
-          <Icon as={IoFilterCircleOutline} fontSize={22} />
-        </Flex>
-        <Flex
-          mr={1.5}
-          ml={1.5}
-          padding={1}
-          cursor="pointer"
-          borderRadius={4}
-          _hover={{ bg: "gray.200" }}
-        >
-          <Icon as={IoVideocamOutline} fontSize={22} />
-        </Flex>
-      </Box>
+      {/** Use softer icon colors to make outlines lighter in dark mode */}
+      {/** Shared colors */}
+      {(() => null)()}
       <>
         <Flex
           mr={1.5}
@@ -86,10 +45,10 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
           padding={1}
           cursor="pointer"
           borderRadius={4}
-          _hover={{ bg: "gray.200" }}
+          _hover={{ bg: useColorModeValue("gray.200", "whiteAlpha.200") }}
           onClick={onOpenChat}
         >
-          <Icon as={BsChatDots} fontSize={20} />
+          <Icon as={BsChatDots} fontSize={20} color={useColorModeValue("gray.600", "gray.300")} />
         </Flex>
         <NotificationDropdown
           isOpen={isNotificationOpen}
@@ -103,11 +62,11 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
             padding={1}
             cursor="pointer"
             borderRadius={4}
-            _hover={{ bg: "gray.200" }}
+            _hover={{ bg: useColorModeValue("gray.200", "whiteAlpha.200") }}
             onClick={goToAdminDashboard}
             title="Admin Dashboard"
           >
-            <Icon as={MdAdminPanelSettings} fontSize={20} color="red.500" />
+            <Icon as={MdAdminPanelSettings} fontSize={20} color={useColorModeValue("red.500", "red.300")} />
           </Flex>
         )}
         <Flex
@@ -117,10 +76,10 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
           padding={1}
           cursor="pointer"
           borderRadius={4}
-          _hover={{ bg: "gray.200" }}
+          _hover={{ bg: useColorModeValue("gray.200", "whiteAlpha.200") }}
           onClick={() => setIsCreatePostOpen(true)}
         >
-          <Icon as={GrAdd} fontSize={20} />
+          <Icon as={GrAdd} fontSize={20} color={useColorModeValue("gray.600", "gray.300")} />
         </Flex>
       </>
       

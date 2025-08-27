@@ -14,12 +14,10 @@ import { HiOutlineDotsHorizontal } from "react-icons/hi";
 import { RiCakeLine } from "react-icons/ri";
 import Link from "next/link";
 import { useRouter } from "next/router";
-// Firebase removed
 import { Community, communityState } from "../../atoms/communitiesAtom";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { normalizeTimestamp } from "../../helpers/timestampHelpers";
 import { FaReddit } from "react-icons/fa";
-// Firebase removed
 import dynamic from "next/dynamic";
 
 // Disable SSR for this component to prevent hydration issues

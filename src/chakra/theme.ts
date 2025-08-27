@@ -1,8 +1,14 @@
-import { extendTheme } from "@chakra-ui/react";
+import { extendTheme, ThemeConfig } from "@chakra-ui/react";
 import { Button } from "./button"; // đây là theme override object, không phải component React
 import { Input } from "./input";   // theme override object
 
+const config: ThemeConfig = {
+  initialColorMode: "light",
+  useSystemColorMode: true,
+};
+
 export const theme = extendTheme({
+  config,
   colors: {
     brand: {
       100: "#FF3C00",
@@ -12,9 +18,10 @@ export const theme = extendTheme({
     body: "Open Sans, sans-serif",
   },
   styles: {
-    global: () => ({
+    global: (props: any) => ({
       body: {
-        bg: "gray.200",
+        bg: props.colorMode === "dark" ? "gray.900" : "gray.100",
+        color: props.colorMode === "dark" ? "gray.100" : "gray.800",
       },
     }),
   },

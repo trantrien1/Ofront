@@ -39,9 +39,9 @@ export default function WatchVideoPage() {
           borderColor={borderCol}
           borderRadius="md"
           overflow="hidden"
-          h="calc(100vh - 44px)"
+          h="calc(100vh - 70px)"
           position="sticky"
-          top="44px"
+          top="70px"
           display="flex"
           flexDir="column"
         >

@@ -8,17 +8,17 @@ export type CourseVideo = {
 
 export const courseVideos: Record<string, CourseVideo[]> = {
   "ls-dang-cs": [
-    { id: "v1", title: "[Lịch sử Đảng] 1.1", date: "07-09-2025",  link: "https://www.youtube.com/watch?v=YsNb6PM9vPE" },
-    { id: "v2", title: "[Lịch sử Đảng] 1.2", date: "08-09-2025", link :"https://www.youtube.com/watch?v=YsNb6PM9vPE" },
-    { id: "v3", title: "[Lịch sử Đảng] 1.3", date: "14-09-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k" },
-    { id: "v4", title: "[Lịch sử Đảng] 1.4", date: "15-09-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k" },
-    { id: "v5", title: "[Lịch sử Đảng] 2.1", date: "28-09-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
-    { id: "v6", title: "[Lịch sử Đảng] 2.2", date: "29-09-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
-    { id: "v7", title: "[Lịch sử Đảng] 2.3", date: "05-10-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
-    { id: "v8", title: "[Lịch sử Đảng] 3.1", date: "06-10-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
-    { id: "v9", title: "[Lịch sử Đảng] 3.2", date: "12-10-2025", link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
-    { id: "v10", title: "[Lịch sử Đảng] 3.3", date: "13-10-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
-    { id: "v11", title: "[Lịch sử Đảng] 3.4", date: "13-10-2025" },
+    { id: "v1", title: "Tâm lý học 1.1", date: "07-09-2025",  link: "https://youtu.be/4huT1hfzRkg?si=ASpvwQLWGx1ftOv4" },
+    { id: "v2", title: "Tâm lý học 1.2", date: "08-09-2025", link :"https://youtu.be/gBgnSC-6PNc?si=PXde79Whtsbe9Lgg" },
+    { id: "v3", title: "Tâm lý học 1.3", date: "14-09-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k" },
+    { id: "v4", title: "Tâm lý học 1.4", date: "15-09-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k" },
+    { id: "v5", title: "Tâm lý học 2.1", date: "28-09-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
+    { id: "v6", title: "Tâm lý học 2.2", date: "29-09-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
+    { id: "v7", title: "Tâm lý học 2.3", date: "05-10-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
+    { id: "v8", title: "Tâm lý học 3.1", date: "06-10-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
+    { id: "v9", title: "Tâm lý học 3.2", date: "12-10-2025", link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
+    { id: "v10", title: "Tâm lý học 3.3", date: "13-10-2025",  link :"https://youtu.be/Te8jKVLoD9M?si=kLwEiGLmMzSqls6k"},
+    { id: "v11", title: "Tâm lý học 3.4", date: "13-10-2025" },
   ],
   "tu-tuong-hcm": [
     { id: "v1", title: "[Tư tưởng HCM] 1", date: "26-02-2025", link: "https://www.youtube.com/watch?v=151s" },
@@ -34,7 +34,7 @@ export const courseVideos: Record<string, CourseVideo[]> = {
 };
 
 export const courseTitles: Record<string, string> = {
-  "ls-dang-cs": "Lịch sử Đảng Cộng sản Việt Nam",
+  "ls-dang-cs": "Tâm lý học",
   "tu-tuong-hcm": "Tư tưởng Hồ Chí Minh",
   "lap-trinh-web": "Quản lí mã nguồn dự án Web",
 };

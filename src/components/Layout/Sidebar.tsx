@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { MdQuiz } from "react-icons/md";//quizz
 import {
   Box,
   Flex,
@@ -266,7 +267,7 @@ const Sidebar: React.FC = () => {
                 color={useColorModeValue("gray.500", "gray.400")}
                 textTransform="uppercase"
               >
-                Courses
+                Khóa học
               </Text>
               <Icon
                 as={isCoursesOpen ? FaChevronDown : FaChevronRight}
@@ -284,22 +285,12 @@ const Sidebar: React.FC = () => {
                 path="/courses"
                 isActive={isActivePage("/courses")}
               />
-              {user && (typeof window === 'undefined' || ['admin','teacher'].includes(String(localStorage.getItem('role')||'').toLowerCase())) && (
-                <>
-                  <NavItem
-                    icon={FaPlus}
-                    label="Create Course"
-                    path="/courses/create"
-                    isActive={isActivePage("/courses/create")}
-                  />
-                  <NavItem
-                    icon={FaCog}
-                    label="Manage Course Videos"
-                    path="/courses/videos"
-                    isActive={isActivePage("/courses/videos")}
-                  />
-                </>
-              )}
+              <NavItem
+                icon={MdQuiz}
+                label="Trắc nghiệm kiểm tra tâm lí"
+                path="/courses/quizz"
+                isActive={isActivePage("/courses/quizz")}
+              />
             </VStack>
           </Collapse>
         </Box>

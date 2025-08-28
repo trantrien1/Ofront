@@ -34,7 +34,7 @@ type CourseItem = {
 const initialCourses: CourseItem[] = [
   {
     id: "ls-dang-cs",
-    title: "Lịch sử Đảng Cộng sản Việt Nam",
+    title: "Tâm lý học",
     thumbnail: "/images/redditPersonalHome.png",
     durationMinutes: 208,
     progressPercent: 45,
@@ -173,7 +173,7 @@ const CoursesPage: React.FC = () => {
     <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} py={6}>
       <Text fontSize="2xl" fontWeight="bold" mb={2}>Courses</Text>
       <Text fontSize="sm" color={useColorModeValue("gray.600", "gray.400")} mb={4}>
-        Frontend-only demo để quản lí khóa học của bạn.
+        Khóa học giúp bạn giảm strees
       </Text>
 
       <Flex justify="space-between" align="center" mb={4} gap={4} wrap="wrap">

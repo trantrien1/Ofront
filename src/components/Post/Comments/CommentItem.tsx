@@ -8,6 +8,7 @@ import {
   Stack,
   Text,
   Button,
+  useColorModeValue,
 } from "@chakra-ui/react";
 type Timestamp = any;
 import { FaReddit, FaThumbsUp } from "react-icons/fa";
@@ -80,6 +81,16 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   const [liking, setLiking] = useState(false);
   const [likedByMe, setLikedByMe] = useState<boolean>(!!comment.likedByMe);
   const [likeCount, setLikeCount] = useState<number>(typeof comment.likeCount === 'number' ? comment.likeCount : 0);
+
+  // Theming colors
+  const highlightBg = useColorModeValue("gray.100", "whiteAlpha.100");
+  const highlightBorder = useColorModeValue("gray.300", "whiteAlpha.300");
+  const timestampColor = useColorModeValue("gray.600", "gray.400");
+  const actionsColor = useColorModeValue("gray.600", "gray.400");
+  const likeNeutralIcon = useColorModeValue("gray.500", "gray.400");
+  const likeCountColor = useColorModeValue("gray.500", "gray.400");
+  const hoverLinkColor = useColorModeValue("blue.600", "blue.300");
+  const likedLabelColor = useColorModeValue("blue.600", "blue.300");
 
   // Check if this comment should be highlighted based on URL hash
   useEffect(() => {
@@ -171,11 +182,11 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
       <Flex
         ref={commentRef}
         id={`comment-${comment.id}`}
-        bg={isHighlighted ? "gray.100" : "transparent"}
+        bg={isHighlighted ? highlightBg : "transparent"}
         p={isHighlighted ? 2 : 0}
         borderRadius={isHighlighted ? "md" : "none"}
         transition="all 0.2s ease"
-        borderColor={isHighlighted ? "gray.400" : "transparent"}
+        borderColor={isHighlighted ? highlightBorder : "transparent"}
         ml={level * 4} // Indent based on nesting level
       >
         <Box mr={2}>
@@ -190,7 +201,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
               {comment.creatorDisplayText}
             </Text>
             {comment.createdAt && (
-              <Text color="gray.600">
+              <Text color={timestampColor}>
                 {formatTimeAgo(normalizeTimestamp(comment.createdAt))}
               </Text>
             )}
@@ -202,35 +213,35 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             align="center"
             cursor="pointer"
             fontWeight={600}
-            color="gray.500"
+            color={actionsColor}
           >
             <Flex align="center" onClick={handleToggleLike} opacity={liking ? 0.6 : 1}>
-              <Icon as={FaThumbsUp} color={likedByMe ? 'blue.500' : 'gray.400'} mr={1} />
-              <Text fontSize="9pt" mr={2} color={likedByMe ? 'blue.600' : 'inherit'}>
+              <Icon as={FaThumbsUp} color={likedByMe ? 'blue.500' : likeNeutralIcon} mr={1} />
+              <Text fontSize="9pt" mr={2} color={likedByMe ? likedLabelColor : 'inherit'}>
                 {likedByMe ? 'Liked' : 'Like'}
               </Text>
-              <Text fontSize="9pt" color="gray.400">{likeCount || 0}</Text>
+              <Text fontSize="9pt" color={likeCountColor}>{likeCount || 0}</Text>
             </Flex>
             <Text 
               fontSize="9pt" 
-              _hover={{ color: "blue.500" }}
+              _hover={{ color: hoverLinkColor }}
               onClick={() => setShowReplyInput(!showReplyInput)}
             >
               Reply
             </Text>
             {comment.replyCount && comment.replyCount > 0 && (
-              <Text fontSize="9pt" color="gray.400">
+              <Text fontSize="9pt" color={likeCountColor}>
                 {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
               </Text>
             )}
             {userId === comment.creatorId && (
               <>
-                <Text fontSize="9pt" _hover={{ color: "blue.500" }}>
+                <Text fontSize="9pt" _hover={{ color: hoverLinkColor }}>
                   Edit
                 </Text>
                 <Text
                   fontSize="9pt"
-                  _hover={{ color: "blue.500" }}
+                  _hover={{ color: hoverLinkColor }}
                   onClick={() => onDeleteComment(comment)}
                 >
                   Delete

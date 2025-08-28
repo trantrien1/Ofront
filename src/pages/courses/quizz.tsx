@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Button, Flex, Heading, HStack, Radio, RadioGroup, Stack, Text, useColorModeValue, Badge, Divider } from "@chakra-ui/react";
 import { likertOptions, quizQuestions, scoreQuiz } from "../../data/quizz";
-import { useSidebar } from "../../components/Layout";
 
 type Answers = Record<string, number>;
 

@@ -1,5 +1,7 @@
 import React, { useEffect } from "react";
 import { MdQuiz } from "react-icons/md";//quizz
+import { GiFox } from "react-icons/gi";//icon anime
+
 import {
   Box,
   Flex,
@@ -18,6 +20,8 @@ import {
   Tooltip,
 } from "@chakra-ui/react";
 import { useRouter } from "next/router";
+import NextLink from "next/link";
+import { Link as ChakraLink } from "@chakra-ui/react";
 // import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { userState } from "../../atoms/userAtom";
@@ -35,7 +39,7 @@ import {
 import { MdGroup } from "react-icons/md";
 // Firebase removed
 import { communityState, createCommunityModalState } from "../../atoms/communitiesAtom";
-import { useSidebar } from "./index";
+import { useSidebar } from "./SidebarContext";
 
 const Sidebar: React.FC = () => {
   const router = useRouter();
@@ -79,6 +83,8 @@ const Sidebar: React.FC = () => {
     if (p.startsWith("/courses/") && p.includes("/watch/")) {
       setIsCollapsed(true);
     }
+    // Prefetch quiz page to avoid first-click blank
+    router.prefetch && router.prefetch("/courses/quizz");
   }, [router.asPath, setIsCollapsed]);
 
   const NavItem = ({ 
@@ -95,8 +101,8 @@ const Sidebar: React.FC = () => {
     onClick?: () => void;
     badge?: string;
     isActive?: boolean;
-  }) => (
-    <Tooltip label={isCollapsed ? label : ""} placement="right" hasArrow>
+  }) => {
+    const content = (
       <Flex
         align="center"
         p={3}
@@ -106,7 +112,6 @@ const Sidebar: React.FC = () => {
         bg={isActive ? activeBg : "transparent"}
         color={isActive ? activeColor : "inherit"}
         _hover={{ bg: isActive ? activeBg : hoverBg }}
-        onClick={onClick || (() => path && handleNavigation(path))}
         transition="all 0.2s"
         justify={isCollapsed ? "center" : "flex-start"}
       >
@@ -124,8 +129,22 @@ const Sidebar: React.FC = () => {
           </>
         )}
       </Flex>
-    </Tooltip>
-  );
+    );
+
+    return (
+      <Tooltip label={isCollapsed ? label : ""} placement="right" hasArrow>
+        {path ? (
+          <NextLink href={path} passHref prefetch>
+            <ChakraLink _hover={{ textDecoration: "none" }}>
+              {content}
+            </ChakraLink>
+          </NextLink>
+        ) : (
+          <Box onClick={onClick}>{content}</Box>
+        )}
+      </Tooltip>
+    );
+  };
 
   const CommunityItem = ({ 
     name, 
@@ -239,7 +258,7 @@ const Sidebar: React.FC = () => {
             />
             {/* Code manager is now part of My Courses (/courses) */}
             <NavItem
-              icon={MdGroup}
+              icon={GiFox}
               label="Trợ lí ảo Anime"
               path="/anime"
               isActive={isActivePage("/anime")}

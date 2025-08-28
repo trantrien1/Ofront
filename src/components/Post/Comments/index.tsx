@@ -142,10 +142,42 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       return;
     }
 
+    const insertReply = (nodes: Comment[], parentId: string, reply: Comment): Comment[] =>
+      nodes.map((n) => {
+        if (n.id === parentId) {
+          const replies = [...(n.replies || []), reply];
+          return { ...n, replies, replyCount: (n.replyCount || 0) + 1 };
+        }
+        if (n.replies && n.replies.length) {
+          return { ...n, replies: insertReply(n.replies, parentId, reply) };
+        }
+        return n;
+      });
+
+    const removeReply = (nodes: Comment[], parentId: string, replyId: string): Comment[] =>
+      nodes.map((n) => {
+        if (n.id === parentId) {
+          const filtered = (n.replies || []).filter((r) => r.id !== replyId);
+          return { ...n, replies: filtered, replyCount: Math.max(0, (n.replyCount || 0) - 1) };
+        }
+        if (n.replies && n.replies.length) {
+          return { ...n, replies: removeReply(n.replies, parentId, replyId) };
+        }
+        return n;
+      });
+
+    const replaceReplyId = (nodes: Comment[], tempId: string, realId: string): Comment[] =>
+      nodes.map((n) => {
+        if (n.replies && n.replies.length) {
+          const replaced = n.replies.map((r) => (r.id === tempId ? { ...r, id: realId } : r));
+          return { ...n, replies: replaceReplyId(replaced, tempId, realId) } as Comment;
+        }
+        return n;
+      });
+
     try {
       const newId = `${Date.now()}`;
 
-      // Update local state
       const newReply: Comment = {
         id: newId,
         creatorId: user.uid,
@@ -155,29 +187,15 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         postId: selectedPost?.id!,
         postTitle: selectedPost?.title!,
         text: replyText,
-        createdAt: {
-          seconds: Date.now() / 1000,
-          nanoseconds: 0,
-        } as any,
+        createdAt: { seconds: Date.now() / 1000, nanoseconds: 0 } as any,
         parentId: parentComment.id,
         replyCount: 0,
       };
 
-      // Add reply to parent comment's replies array
-      setComments((prev) =>
-        prev.map((c) => {
-          if (c.id === parentComment.id) {
-            return {
-              ...c,
-              replies: [...(c.replies || []), newReply],
-              replyCount: (c.replyCount || 0) + 1,
-            };
-          }
-          return c;
-        })
-      );
+      // Insert reply under the correct parent at any depth
+      setComments((prev) => insertReply(prev, parentComment.id!, newReply));
 
-      // Update post state
+      // Update post number of comments optimistically
       setPostState((prev) => ({
         ...prev,
         selectedPost: {
@@ -193,29 +211,12 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         const result = await CommentsService.replyToComment({ content: replyText, postId: selectedPost?.id!, parentId: parentComment.id });
         const realId = result?.id?.toString?.() || result?.data?.id?.toString?.();
         if (realId) {
-          setComments((prev) => prev.map((c) => {
-            if (c.id === parentComment.id) {
-              return {
-                ...c,
-                replies: (c.replies || []).map(r => r.id === newId ? { ...r, id: realId } : r),
-              };
-            }
-            return c;
-          }));
+          setComments((prev) => replaceReplyId(prev, newId, realId));
         }
         toast({ status: 'success', title: 'Reply posted' });
       } catch (e) {
-        // Rollback optimistic UI
-        setComments((prev) => prev.map((c) => {
-          if (c.id === parentComment.id) {
-            return {
-              ...c,
-              replies: (c.replies || []).filter(r => r.id !== newId),
-              replyCount: Math.max(0, (c.replyCount || 0) - 1),
-            };
-          }
-          return c;
-        }));
+        // Rollback optimistic UI if backend fails
+        setComments((prev) => removeReply(prev, parentComment.id!, newId));
         setPostState((prev) => ({
           ...prev,
           selectedPost: {
@@ -227,7 +228,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       }
 
     } catch (error: any) {
-  console.error("onReply error", error?.message || error);
+      console.error("onReply error", error?.message || error);
     }
   };
 
@@ -285,10 +286,12 @@ const CommentsComponent: React.FC<CommentsProps> = ({
 
       let topLevel: Comment[] = [];
       if (Array.isArray(apiComments)) {
-        const first = apiComments[0];
-        // If data seems nested (has commentsChildren), map directly
-        if (first && (Array.isArray(first.commentsChildren) || first.parentId == null)) {
-          topLevel = apiComments.map(mapNode);
+        const hasNestedChildren = apiComments.some((n: any) => Array.isArray(n?.commentsChildren));
+        if (hasNestedChildren) {
+          // API already returns nested structure; keep only top-level nodes
+          topLevel = apiComments
+            .filter((n: any) => n?.parentId == null)
+            .map(mapNode);
         } else {
           // Flat list with parentId: build tree
           const allComments: Comment[] = apiComments.map((c: any) => mapNode(c));
@@ -296,9 +299,11 @@ const CommentsComponent: React.FC<CommentsProps> = ({
           const roots: Comment[] = [];
           allComments.forEach((c) => { commentMap.set(c.id!, { ...c, replies: [] }); });
           allComments.forEach((c) => {
-            if (c.parentId) {
-              const parent = commentMap.get(c.parentId);
+            const pid = c.parentId ? c.parentId.toString() : "";
+            if (pid) {
+              const parent = commentMap.get(pid);
               if (parent) parent.replies!.push(commentMap.get(c.id!)!);
+              else roots.push(commentMap.get(c.id!)!); // fallback if missing parent
             } else {
               roots.push(commentMap.get(c.id!)!);
             }

@@ -1,3 +1,4 @@
+//dữ liệu trắc nghiệm tâm lí
 export type QuizOption = {
   key: string;
   label: string;

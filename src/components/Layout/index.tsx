@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { useState } from "react";
 import { Box, Flex, useColorModeValue } from "@chakra-ui/react";
-// import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue } from "recoil";
 // Firebase removed
 import { createCommunityModalState } from "../../atoms/communitiesAtom";
@@ -11,16 +10,7 @@ import Sidebar from "./Sidebar";
 import AuthModal from "../Modal/Auth";
 import CreateCommunityModal from "../Modal/CreateCommunity";
 import ClientOnlyWrapper from "./ClientOnlyWrapper";
-
-const SidebarContext = createContext<{
-  isCollapsed: boolean;
-  setIsCollapsed: (collapsed: boolean) => void;
-}>({
-  isCollapsed: false,
-  setIsCollapsed: () => {},
-});
-
-export const useSidebar = () => useContext(SidebarContext);
+import { SidebarContext } from "./SidebarContext";
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Always call hooks; useAuth internally guards side-effects and returns the current user

@@ -19,6 +19,7 @@ import {
   TabPanel,
   Button,
 } from "@chakra-ui/react";
+import { useRouter } from "next/router";
 import { SearchIcon, CheckIcon } from "@chakra-ui/icons";
 
 type CourseItem = {
@@ -90,19 +91,23 @@ const useLocalStatus = (items: CourseItem[]) => {
   return { items: state, updateItem };
 };
 
-const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => void }>
-  = ({ item, onToggleDone }) => {
+const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => void; onClick: () => void }>
+  = ({ item, onToggleDone, onClick }) => {
   const cardBg = useColorModeValue("white", "gray.800");
   const cardBorder = useColorModeValue("gray.200", "gray.700");
   const subtitle = useColorModeValue("gray.600", "gray.300");
   return (
-    <Box
+  <Box
       bg={cardBg}
       border="1px solid"
       borderColor={cardBorder}
       borderRadius="xl"
       boxShadow="sm"
       overflow="hidden"
+  cursor="pointer"
+  onClick={onClick}
+      _hover={{ boxShadow: "md", transform: "translateY(-2px)" }}
+      transition="all 0.2s"
     >
       <Image src={item.thumbnail} alt={item.title} w="100%" h="170px" objectFit="cover" borderTopRadius="xl" />
       <Box p={4}>
@@ -126,7 +131,7 @@ const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => voi
           )}
         </Flex>
         <Flex mt={3} justify="flex-end">
-          <Button size="xs" variant="ghost" onClick={() => onToggleDone(item.id)}>
+          <Button size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); onToggleDone(item.id); }}>
             {item.completed ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
           </Button>
         </Flex>
@@ -136,6 +141,7 @@ const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => voi
 };
 
 const CoursesPage: React.FC = () => {
+  const router = useRouter();
   const { items, updateItem } = useLocalStatus(initialCourses);
   const [q, setQ] = useState("");
   const [tab, setTab] = useState(0);
@@ -148,6 +154,13 @@ const CoursesPage: React.FC = () => {
     return list;
   }, [items, q, tab]);
 
+  // All course video metadata now lives in src/data/courses.ts
+
+  const handleCourseClick = (course: CourseItem) => {
+    // SPA navigation to the course list page
+    router.push(`/courses/${course.id}`);
+  };
+
   const onToggleDone = (id: string) => {
     const it = items.find((x) => x.id === id);
     if (!it) return;
@@ -158,7 +171,7 @@ const CoursesPage: React.FC = () => {
 
   return (
     <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} py={6}>
-      <Text fontSize="2xl" fontWeight="bold" mb={2}>My Courses</Text>
+      <Text fontSize="2xl" fontWeight="bold" mb={2}>Courses</Text>
       <Text fontSize="sm" color={useColorModeValue("gray.600", "gray.400")} mb={4}>
         Frontend-only demo để quản lí khóa học của bạn.
       </Text>
@@ -193,9 +206,16 @@ const CoursesPage: React.FC = () => {
 
       <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
         {filtered.map((item) => (
-          <CourseCard key={item.id} item={item} onToggleDone={onToggleDone} />
+          <CourseCard
+            key={item.id}
+            item={item}
+            onToggleDone={onToggleDone}
+            onClick={() => handleCourseClick(item)}
+          />
         ))}
       </SimpleGrid>
+
+  {/* Modal removed. We navigate to /courses/[courseId] with a full list */}
     </Box>
   );
 };

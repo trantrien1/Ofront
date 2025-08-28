@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import {
   Box,
   Flex,
@@ -34,17 +34,7 @@ import {
 import { MdGroup } from "react-icons/md";
 // Firebase removed
 import { communityState, createCommunityModalState } from "../../atoms/communitiesAtom";
-
-// Import the context
-const SidebarContext = React.createContext<{
-  isCollapsed: boolean;
-  setIsCollapsed: (collapsed: boolean) => void;
-}>({
-  isCollapsed: false,
-  setIsCollapsed: () => {},
-});
-
-const useSidebar = () => React.useContext(SidebarContext);
+import { useSidebar } from "./index";
 
 const Sidebar: React.FC = () => {
   const router = useRouter();
@@ -55,8 +45,8 @@ const Sidebar: React.FC = () => {
   const { isOpen: isAnimeOpen, onToggle: onAnimeToggle } = useDisclosure({ defaultIsOpen: true });
   const { isOpen: isCoursesOpen, onToggle: onCoursesToggle } = useDisclosure({ defaultIsOpen: true });
   
-  // Use local state for now, but this can be connected to global context later
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Use shared Sidebar context from Layout to keep state in sync with content margin
+  const { isCollapsed, setIsCollapsed } = useSidebar();
 
   const bgColor = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
@@ -81,6 +71,14 @@ const Sidebar: React.FC = () => {
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
+
+  // Auto-collapse on course watch pages to provide more space
+  useEffect(() => {
+    const p = router.asPath || "";
+    if (p.startsWith("/courses/") && p.includes("/watch/")) {
+      setIsCollapsed(true);
+    }
+  }, [router.asPath, setIsCollapsed]);
 
   const NavItem = ({ 
     icon, 

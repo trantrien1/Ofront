@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, Button, Flex, Icon, Stack, Text, SkeletonCircle, SkeletonText, useToast } from "@chakra-ui/react";
+import { Box, Button, Flex, Icon, Stack, Text, SkeletonCircle, SkeletonText, useToast, useColorModeValue } from "@chakra-ui/react";
 import { Post, postState } from "../../../atoms/postsAtom";
 import { useNotifications } from "../../../hooks/useNotifications";
 import CommentItem, { Comment } from "./CommentItem";
@@ -15,13 +15,17 @@ const Comments = dynamic(() => Promise.resolve(CommentsComponent), {
   loading: () => <CommentsSkeleton />
 });
 
-const CommentsSkeleton = () => (
-  <Box bg="white" borderRadius="0px 0px 4px 4px" p={2}>
-    <Text fontSize="10pt" fontWeight={700}>
-      Loading comments...
-    </Text>
-  </Box>
-);
+const CommentsSkeleton = () => {
+  const bg = useColorModeValue("white", "gray.800");
+  const color = useColorModeValue("gray.800", "gray.100");
+  return (
+    <Box bg={bg} borderRadius="0px 0px 4px 4px" p={2} color={color}>
+      <Text fontSize="10pt" fontWeight={700}>
+        Loading comments...
+      </Text>
+    </Box>
+  );
+};
 
 type CommentsProps = {
   user: any;
@@ -355,7 +359,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   }
 
   return (
-    <Box bg="white" p={2} borderRadius="0px 0px 4px 4px">
+    <Box bg={useColorModeValue("white", "gray.800")} p={2} borderRadius="0px 0px 4px 4px">
       <Flex
         direction="column"
         pl={10}
@@ -376,7 +380,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         {commentFetchLoading ? (
           <>
             {[0, 1, 2].map((item) => (
-              <Box key={item} padding="6" bg="white">
+              <Box key={item} padding="6" bg={useColorModeValue("white", "gray.800")}>
                 <SkeletonCircle size="10" />
                 <SkeletonText mt="4" noOfLines={2} spacing="4" />
               </Box>
@@ -404,7 +408,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
                 justify="center"
                 align="center"
                 borderTop="1px solid"
-                borderColor="gray.100"
+                borderColor={useColorModeValue("gray.100", "gray.700")}
                 p={20}
               >
                 <Text fontWeight={700} opacity={0.3}>

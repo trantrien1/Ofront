@@ -1,7 +1,7 @@
-import React, { MouseEventHandler, useState } from "react";
-import { Flex, Textarea, Button, Text } from "@chakra-ui/react";
+import React from "react";
+import { Flex, Textarea, Button, Text, useColorModeValue } from "@chakra-ui/react";
 type User = { uid: string; email?: string; photoURL?: string; displayName?: string };
-import AuthButtons from "../../Navbar/RightContent/AuthButtons";
+// ...
 
 type CommentInputProps = {
   comment: string;
@@ -24,9 +24,9 @@ const CommentInput: React.FC<CommentInputProps> = ({
         <>
           <Text mb={1}>
             Comment as{" "}
-            <span style={{ color: "#3182CE" }}>
+            <Text as="span" color={useColorModeValue("blue.600", "blue.300")}>
               {user?.displayName || user?.email?.split("@")[0] || user?.uid || "user"}
-            </span>
+            </Text>
           </Text>
           <Textarea
             value={comment}
@@ -36,11 +36,15 @@ const CommentInput: React.FC<CommentInputProps> = ({
             borderRadius={4}
             minHeight="160px"
             pb={10}
-            _placeholder={{ color: "gray.500" }}
+            bg={useColorModeValue("white", "gray.800")}
+            border="1px solid"
+            borderColor={useColorModeValue("gray.200", "gray.600")}
+            _placeholder={{ color: useColorModeValue("gray.500", "gray.400") }}
             _focus={{
               outline: "none",
-              bg: "white",
-              border: "1px solid black",
+              bg: useColorModeValue("white", "gray.800"),
+              border: "1px solid",
+              borderColor: useColorModeValue("blue.500", "blue.300"),
             }}
           />
           <Flex
@@ -49,7 +53,9 @@ const CommentInput: React.FC<CommentInputProps> = ({
             right={0.1}
             bottom="1px"
             justify="flex-end"
-            bg="gray.100"
+            bg={useColorModeValue("gray.100", "gray.700")}
+            borderTop="1px solid"
+            borderColor={useColorModeValue("gray.200", "gray.600")}
             p="6px 8px"
             borderRadius="0px 0px 4px 4px"
           >
@@ -57,6 +63,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
               height="26px"
               disabled={!comment.length}
               isLoading={loading}
+              colorScheme="blue"
               onClick={() => {
                 console.log("=== COMMENT BUTTON CLICKED ===");
                 console.log("Comment text:", comment);

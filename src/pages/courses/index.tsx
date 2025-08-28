@@ -31,28 +31,30 @@ type CourseItem = {
   completed?: boolean;
 };
 
+import { courseVideos } from "../../data/courses";
+
 const initialCourses: CourseItem[] = [
   {
     id: "ls-dang-cs",
     title: "Tâm lý học",
     thumbnail: "/images/redditPersonalHome.png",
     durationMinutes: 208,
-    progressPercent: 45,
+    progressPercent: 0,
   },
   {
     id: "tu-tuong-hcm",
     title: "Tư tưởng Hồ Chí Minh",
     thumbnail: "/images/recCommsArt.png",
     durationMinutes: 274,
-    progressPercent: 100,
-    completed: true,
+    progressPercent: 0,
+    completed: false,
   },
   {
     id: "lap-trinh-web",
     title: "Quản lí mã nguồn dự án Web",
     thumbnail: "/images/ptit_logo.png",
     durationMinutes: 125,
-    progressPercent: 70,
+    progressPercent: 0,
   },
 ];
 
@@ -63,28 +65,31 @@ const fmtDuration = (mins: number) => {
   return `${h} giờ ${m} phút`;
 };
 
+// Helpers for localStorage
+function getCompleted(courseId: string) {
+  const data = typeof window !== "undefined" ? localStorage.getItem(`completed_${courseId}`) : null;
+  return data ? JSON.parse(data) : [];
+}
+
 const useLocalStatus = (items: CourseItem[]) => {
   const [state, setState] = useState<CourseItem[]>(items);
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("coursesStatus");
-      if (raw) {
-        const map: Record<string, { progressPercent: number; completed?: boolean }> = JSON.parse(raw);
-        setState((prev) => prev.map((it) => ({ ...it, ...(map[it.id] || {}) })));
-      }
-    } catch {}
+    // Lấy tiến độ thực tế từ localStorage cho từng khoá học
+    setState((prev) => prev.map((it) => {
+      const videos = courseVideos[it.id] || [];
+      const completed = getCompleted(it.id);
+      const percent = videos.length ? Math.round((completed.length / videos.length) * 100) : 0;
+      return {
+        ...it,
+        progressPercent: percent,
+        completed: percent === 100,
+      };
+    }));
   }, []);
-  const save = (list: CourseItem[]) => {
-    try {
-      const out: Record<string, { progressPercent: number; completed?: boolean }> = {};
-      list.forEach((it) => (out[it.id] = { progressPercent: it.progressPercent, completed: it.completed }));
-      localStorage.setItem("coursesStatus", JSON.stringify(out));
-    } catch {}
-  };
+  // Giữ lại logic updateItem nếu cần đánh dấu thủ công
   const updateItem = (id: string, patch: Partial<CourseItem>) => {
     setState((prev) => {
       const next = prev.map((it) => (it.id === id ? { ...it, ...patch } : it));
-      save(next);
       return next;
     });
   };

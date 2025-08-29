@@ -28,10 +28,10 @@ const NotificationDropdownSkeleton = () => (
       padding={1}
       cursor="pointer"
       borderRadius={4}
-      _hover={{ bg: "gray.200" }}
+      _hover={{ bg: useColorModeValue("gray.200", "whiteAlpha.200") }}
       position="relative"
     >
-      <IoNotificationsOutline fontSize={20} />
+      <IoNotificationsOutline fontSize={20} color={useColorModeValue("gray.600", "gray.300")} />
     </Flex>
   </Box>
 );
@@ -96,9 +96,9 @@ const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
           mt={2}
           w="400px"
           maxH="500px"
-          bg="white"
+          bg={useColorModeValue("white", "gray.800")}
           border="1px solid"
-          borderColor="gray.200"
+          borderColor={useColorModeValue("gray.200", "gray.700")}
           borderRadius="md"
           boxShadow="lg"
           zIndex={1000}
@@ -107,12 +107,12 @@ const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
           <Flex
             p={3}
             borderBottom="1px solid"
-            borderColor="gray.200"
+            borderColor={useColorModeValue("gray.200", "gray.700")}
             justify="space-between"
             align="center"
           >
-            <Text fontWeight="bold" fontSize="sm">
-              Notifications
+            <Text fontWeight="bold" fontSize="sm" color={useColorModeValue("gray.800", "gray.100")}>
+              Thông báo
             </Text>
             {unreadCount > 0 && (
               <Button
@@ -121,7 +121,7 @@ const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
                 colorScheme="blue"
                 onClick={markAllAsRead}
               >
-                Mark all as read
+                Đánh dấu tất cả là đã đọc
               </Button>
             )}
           </Flex>
@@ -133,9 +133,9 @@ const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
                 justify="center"
                 align="center"
                 direction="column"
-                color="gray.500"
+                color={useColorModeValue("gray.500", "gray.400")}
               >
-                <Text fontSize="sm">Loading notifications...</Text>
+                <Text fontSize="sm">Đang tải thông báo...</Text>
               </Flex>
             ) : notifications.length === 0 ? (
               <Flex
@@ -143,11 +143,11 @@ const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
                 justify="center"
                 align="center"
                 direction="column"
-                color="gray.500"
+                color={useColorModeValue("gray.500", "gray.400")}
               >
-                <IoNotificationsOutline fontSize={40} />
+                <IoNotificationsOutline fontSize={40} color={useColorModeValue("gray.500", "gray.400")} />
                 <Text mt={2} fontSize="sm">
-                  No notifications yet
+                  Chưa có thông báo nào
                 </Text>
               </Flex>
             ) : (
@@ -163,10 +163,10 @@ const NotificationDropdownComponent: React.FC<NotificationDropdownProps> = ({
 
           {notifications.length > 0 && (
             <>
-              <Divider />
+              <Divider borderColor={useColorModeValue("gray.200", "gray.700")} />
               <Flex p={3} justify="center">
                 <Button size="sm" variant="ghost" colorScheme="blue">
-                  View all notifications
+                  Xem tất cả thông báo
                 </Button>
               </Flex>
             </>

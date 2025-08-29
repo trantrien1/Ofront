@@ -240,19 +240,14 @@ const Sidebar: React.FC = () => {
           <VStack spacing={1} align="stretch">
             <NavItem
               icon={FaHome}
-              label="Home"
+              label="Trang chủ"
               path="/"
               isActive={isActivePage("/")}
             />
-            <NavItem
-              icon={FaFire}
-              label="Popular"
-              path="/popular"
-              isActive={isActivePage("/popular")}
-            />
+            
             <NavItem
               icon={MdGroup}
-              label="My Communities"
+              label="Cộng đồng của tôi"
               onClick={handleManageCommunities}
               isActive={isActivePage("/my-community")}
             />
@@ -300,7 +295,7 @@ const Sidebar: React.FC = () => {
             <VStack spacing={1} align="stretch">
               <NavItem
                 icon={FaHome}
-                label="My Courses"
+                label="Khóa học của tôi"
                 path="/courses"
                 isActive={isActivePage("/courses")}
               />
@@ -332,7 +327,7 @@ const Sidebar: React.FC = () => {
                 color={useColorModeValue("gray.500", "gray.400")}
                 textTransform="uppercase"
               >
-                Communities
+                Cộng đồng
               </Text>
               <Icon
                 as={isCommunitiesOpen ? FaChevronDown : FaChevronRight}
@@ -348,13 +343,13 @@ const Sidebar: React.FC = () => {
                 <>
                   <NavItem
                     icon={FaPlus}
-                    label="Create Community"
+                    label="Tạo cộng đồng"
                     onClick={handleCreateCommunity}
                   />
                   
                   <NavItem
                     icon={FaCog}
-                    label="Manage Communities"
+                    label="Quản lí cộng đồng"
                     onClick={handleManageCommunities}
                   />
                 </>

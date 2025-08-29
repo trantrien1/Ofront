@@ -15,27 +15,27 @@ const CreateCoursePage: React.FC = () => {
     setLoading(true);
     try {
       // TODO: call course service to create
-      toast({ status: "success", title: "Course created" });
+      toast({ status: "success", title: "Khóa học đã được tạo" });
       router.push("/courses");
     } catch (e) {
-      toast({ status: "error", title: "Create failed" });
+      toast({ status: "error", title: "Tạo thất bại" });
     } finally { setLoading(false); }
   };
 
   return (
     <PageContentLayout>
       <Box as="form" onSubmit={onSubmit} borderWidth="1px" borderRadius="md" p={4} bg="white">
-        <Heading size="md" mb={4}>Create Course</Heading>
+        <Heading size="md" mb={4}>Tạo khóa học</Heading>
         <Stack spacing={3}>
           <FormControl isRequired>
-            <FormLabel>Title</FormLabel>
+            <FormLabel>Tiêu đề</FormLabel>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </FormControl>
           <FormControl>
-            <FormLabel>Description</FormLabel>
+            <FormLabel>Mô tả</FormLabel>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
           </FormControl>
-          <Button type="submit" colorScheme="blue" isLoading={loading}>Create</Button>
+          <Button type="submit" colorScheme="blue" isLoading={loading}>Tạo</Button>
         </Stack>
       </Box>
       <Box />

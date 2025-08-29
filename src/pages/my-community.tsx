@@ -47,7 +47,7 @@ const MyCommunityPage: React.FC = () => {
       const list = await getGroupsByUser();
       setGroups(Array.isArray(list) ? list : []);
     } catch (e: any) {
-      toast({ status: "error", title: "Failed to load groups", description: e?.message || "" });
+      toast({ status: "error", title: "Thất bại khi tải nhóm", description: e?.message || "" });
     } finally {
       setLoading(false);
     }
@@ -143,14 +143,7 @@ const MyCommunityPage: React.FC = () => {
       <Flex align="center" justify="space-between" mb={4}>
         <HStack>
           <Icon as={BsPeople} boxSize={6} color="blue.500" />
-          <Heading size="lg">My Communities</Heading>
-        </HStack>
-        <HStack>
-          <Button as={NextLink} href="/profile" variant="ghost" size="sm">Profile</Button>
-          <Button as={NextLink} href="/settings" variant="ghost" size="sm">Settings</Button>
-          <Button colorScheme="blue" size="sm" onClick={(e)=>{ try { (window as any).dispatchEvent(new CustomEvent('open-create-community')); } catch {} }}>
-            Create Community
-          </Button>
+          <Heading size="lg">Cộng đồng của tôi</Heading>
         </HStack>
       </Flex>
 
@@ -159,7 +152,7 @@ const MyCommunityPage: React.FC = () => {
           <SearchIcon color="gray.400" />
         </InputLeftElement>
         <Input
-          placeholder="Search communities"
+          placeholder="Tìm kiếm cộng đồng"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           bg={cardBg}
@@ -168,8 +161,8 @@ const MyCommunityPage: React.FC = () => {
 
       <Tabs colorScheme="blue" isLazy>
         <TabList>
-          <Tab>Managed <Badge ml={2}>{managed.length}</Badge></Tab>
-          <Tab>Joined <Badge ml={2}>{joined.length}</Badge></Tab>
+          <Tab>Quản lý <Badge ml={2}>{managed.length}</Badge></Tab>
+          <Tab>Tham gia <Badge ml={2}>{joined.length}</Badge></Tab>
         </TabList>
         <TabPanels>
           <TabPanel px={0} pt={4}>

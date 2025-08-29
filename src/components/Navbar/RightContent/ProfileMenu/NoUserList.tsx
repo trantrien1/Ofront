@@ -23,7 +23,7 @@ const NoUserList: React.FC<NoUserListProps> = ({ setModalState }) => {
       >
         <Flex alignItems="center">
           <Icon fontSize={20} mr={2} as={MdOutlineLogin} />
-          Log In / Sign Up
+          Đăng nhập / Đăng ký
         </Flex>
       </MenuItem>
     </>

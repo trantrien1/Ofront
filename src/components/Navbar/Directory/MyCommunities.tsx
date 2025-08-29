@@ -14,7 +14,7 @@ const MyCommunities: React.FC<MyCommunitiesProps> = ({ snippets, setOpen }) => {
   return (
     <Box mt={3} mb={3}>
       <Text pl={3} mb={1} fontSize="7pt" fontWeight={500} color="gray.500">
-        MY COMMUNITIES
+        CỘNG ĐỒNG CỦA TÔI
       </Text>
       <MenuItem
         width="100%"
@@ -24,7 +24,7 @@ const MyCommunities: React.FC<MyCommunitiesProps> = ({ snippets, setOpen }) => {
       >
         <Flex alignItems="center">
           <Icon fontSize={20} mr={2} as={GrAdd} />
-          Create Community
+          Tạo cộng đồng
         </Flex>
       </MenuItem>
       {snippets.map((snippet) => (

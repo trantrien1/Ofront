@@ -8,6 +8,7 @@ import {
 	useToast,
 	Tag,
 	HStack,
+	useColorModeValue,
 } from "@chakra-ui/react";
 import { Notification } from "../../atoms/notificationsAtom";
 import { normalizeTimestamp, formatTimeAgo } from "../../helpers/timestampHelpers";
@@ -23,11 +24,11 @@ const NotificationItem = dynamic(() => Promise.resolve(NotificationItemComponent
 });
 
 const NotificationItemSkeleton = () => (
-	<Box p={3} borderBottom="1px solid" borderColor="gray.100">
+	<Box p={3} borderBottom="1px solid" borderColor={useColorModeValue("gray.100", "gray.700")}>
 		<Flex align="start" gap={3}>
 			<Avatar size="sm" />
 			<Box flex={1}>
-				<Text fontSize="sm" color="gray.500">Loading...</Text>
+				<Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>Loading...</Text>
 			</Box>
 		</Flex>
 	</Box>
@@ -136,8 +137,8 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 
 	if (loading) {
 		return (
-			<Box p={3} borderBottom="1px solid" borderColor="gray.100">
-				<Text fontSize="sm" color="gray.500">Loading...</Text>
+			<Box p={3} borderBottom="1px solid" borderColor={useColorModeValue("gray.100", "gray.700")}>
+				<Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>Loading...</Text>
 			</Box>
 		);
 	}
@@ -146,10 +147,10 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 		<Box
 			p={3}
 			borderBottom="1px solid"
-			borderColor="gray.100"
-			bg={notification.read ? "white" : "blue.50"}
+			borderColor={useColorModeValue("gray.100", "gray.700")}
+			bg={notification.read ? useColorModeValue("white", "gray.800") : useColorModeValue("blue.50", "whiteAlpha.100")}
 			cursor="pointer"
-			_hover={{ bg: "gray.50" }}
+			_hover={{ bg: useColorModeValue("gray.50", "whiteAlpha.100") }}
 			onClick={handleNotificationClick}
 		>
 			<Flex align="start" gap={3}>
@@ -161,11 +162,11 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 				<Box flex={1}>
 					<Flex align="center" gap={2} mb={1}>
 						<Text fontSize="16px">{getTypeEmoji()}</Text>
-						<Text fontSize="sm" fontWeight="medium">
+						<Text fontSize="sm" fontWeight="medium" color={useColorModeValue("gray.800", "gray.100")}>
 							{userData?.displayName || "Unknown User"}
 						</Text>
 					</Flex>
-					<Text fontSize="sm" color="gray.600" mb={1}>
+					<Text fontSize="sm" color={useColorModeValue("gray.600", "gray.300")} mb={1}>
 						{notification.message}
 					</Text>
 					{notification.pending && (
@@ -177,16 +178,16 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 						</HStack>
 					)}
 					{notification.postTitle && (
-						<Text fontSize="xs" color="gray.500" fontStyle="italic">
+						<Text fontSize="xs" color={useColorModeValue("gray.500", "gray.400")} fontStyle="italic">
 							&ldquo;{notification.postTitle}&rdquo;
 						</Text>
 					)}
 					{notification.communityName && (
-						<Text fontSize="xs" color="blue.500">
+						<Text fontSize="xs" color={useColorModeValue("blue.500", "blue.300")}>
 							r/{notification.communityName}
 						</Text>
 					)}
-					<Text fontSize="xs" color="gray.400" mt={1}>
+					<Text fontSize="xs" color={useColorModeValue("gray.400", "gray.500")} mt={1}>
 						{formatTimeAgoLocal(notification.timestamp)}
 					</Text>
 				</Box>

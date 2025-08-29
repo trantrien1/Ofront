@@ -19,11 +19,15 @@ import {
   Flex,
   Icon,
   Image,
+  useColorModeValue,
+  Spinner,
 } from "@chakra-ui/react";
-import { useState, useRef } from "react";
-import { BsCardImage, BsPerson, BsPeople } from "react-icons/bs";
+import { useEffect, useState, useRef } from "react";
+import { BsCardImage } from "react-icons/bs";
 import { createPost } from "../../../services/posts.service";
 import { useRouter } from "next/router";
+import { getGroupsByUser, type Group } from "../../../services/groups.service";
+
 
 type CreatePostModalProps = {
   isOpen: boolean;
@@ -40,13 +44,33 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [postLocation, setPostLocation] = useState("personal"); // "personal" or "community"
-  const [communityId, setCommunityId] = useState("general");
+  const [communityId, setCommunityId] = useState("");
   const [postType, setPostType] = useState("TEXT");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [communities, setCommunities] = useState<Group[]>([]);
+  const [loadingCommunities, setLoadingCommunities] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
+
+  // Load user's communities when switching to community mode or when modal opens
+  useEffect(() => {
+    const fetch = async () => {
+      setLoadingCommunities(true);
+      try {
+        const list = await getGroupsByUser();
+        setCommunities(list);
+        if (list.length && !communityId) setCommunityId(String(list[0].id));
+      } catch (e) {
+        console.error("Load communities failed", e);
+        toast({ status: "error", title: "Không tải được danh sách cộng đồng" });
+      } finally {
+        setLoadingCommunities(false);
+      }
+    };
+    if (isOpen && postLocation === "community") fetch();
+  }, [isOpen, postLocation]);
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -66,10 +90,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast({
-        title: "Title is required",
+        title: "Thiếu tiêu đề",
         status: "error",
         duration: 3000,
       });
+      return;
+    }
+    if (postLocation === "community" && !communityId) {
+      toast({ title: "Hãy chọn cộng đồng", status: "error", duration: 3000 });
       return;
     }
 
@@ -77,17 +105,16 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     try {
       let imageURL = "";
       
-      // If there's an image, upload it first (you might need to implement image upload)
+      // Nếu có ảnh, cần upload trước (tuỳ backend)
       if (selectedFile) {
-        // For now, we'll use a placeholder or skip image upload
-        // You can implement image upload to a service like Cloudinary, AWS S3, etc.
-        imageURL = imagePreview; // Temporary - in real app, upload to server
+        // Tạm thời dùng preview làm URL hiển thị
+        imageURL = imagePreview;
       }
 
       const postData = {
         title: title.trim(),
         body: body.trim(),
-        communityId: postLocation === "community" ? communityId : null,
+  communityId: postLocation === "community" ? communityId : null,
         postType,
         imageURL: imageURL || null,
         isPersonalPost: postLocation === "personal",
@@ -96,16 +123,16 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       await createPost(postData);
       
       toast({
-        title: "Post created successfully!",
-        status: "success",
-        duration: 3000,
+  title: "Đăng bài thành công!",
+  status: "success",
+  duration: 3000,
       });
 
       // Reset form
       setTitle("");
       setBody("");
       setPostLocation("personal");
-      setCommunityId("general");
+  setCommunityId("");
       setPostType("TEXT");
       setSelectedFile(null);
       setImagePreview("");
@@ -114,12 +141,12 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   // Navigate to home with refresh delay so Home page fetches after ~2s
   try { await router.push("/?refreshDelay=2000"); } catch {}
   onPostCreated?.();
-    } catch (error: any) {
+  } catch (error: any) {
       toast({
-        title: "Error creating post",
-        description: error?.message || "Something went wrong",
-        status: "error",
-        duration: 5000,
+    title: "Lỗi khi đăng bài",
+    description: error?.message || "Đã có lỗi xảy ra",
+    status: "error",
+    duration: 5000,
       });
     } finally {
       setIsLoading(false);
@@ -138,17 +165,17 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>
+      <ModalContent bg={useColorModeValue("white", "gray.800")}>
+  <ModalHeader borderBottom="1px solid" borderColor={useColorModeValue("gray.200", "gray.700")} color={useColorModeValue("gray.800", "gray.100")}>
           <Flex align="center" gap={2}>
-            <Text>Create a post</Text>
+            <Text>Tạo bài đăng</Text>
             {postLocation === "personal" && (
-              <Text fontSize="sm" color="gray.500">
-                → Personal Page
+              <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
+                → Trang cá nhân
               </Text>
             )}
             {postLocation === "community" && (
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
                 → r/{communityId}
               </Text>
             )}
@@ -158,66 +185,80 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
         <ModalBody>
           <VStack spacing={4}>
             <FormControl>
-              <FormLabel>Post to</FormLabel>
+              <FormLabel>Đăng bài lên</FormLabel>
               <Select
                 value={postLocation}
                 onChange={(e) => {
                   setPostLocation(e.target.value);
-                  // Reset community selection when switching
                   if (e.target.value === "personal") {
-                    setCommunityId("general");
+                    setCommunityId("");
                   }
                 }}
-              >
-                <option value="personal">📄 My Personal Page</option>
-                <option value="community">🏘️ Community</option>
+                borderRadius="xl"
+                boxShadow="sm"
+                _focus={{ borderColor: useColorModeValue("blue.500", "blue.300"), boxShadow: "0 0 0 1px rgba(99,179,237,0.6)" }}
+                _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
+                bg={useColorModeValue("white", "gray.800")}
+                borderColor={useColorModeValue("gray.200", "gray.600")}
+                >
+                <option value="personal">📄 Trang cá nhân của tôi</option>
+                <option value="community">🏘️ Cộng đồng</option>
               </Select>
+
             </FormControl>
 
             {postLocation === "community" && (
               <FormControl>
-                <FormLabel>Choose Community</FormLabel>
+                <FormLabel>Chọn cộng đồng</FormLabel>
                 <Select
                   value={communityId}
                   onChange={(e) => setCommunityId(e.target.value)}
+                  placeholder={loadingCommunities ? "Đang tải..." : (communities.length ? "Chọn cộng đồng" : "Không có cộng đồng")}
+                  bg={useColorModeValue("white", "gray.800")}
+                  borderColor={useColorModeValue("gray.200", "gray.600")}
+                  _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
+                  _focus={{ borderColor: useColorModeValue("blue.500", "blue.300") }}
                 >
-                  <option value="general">r/general</option>
-                  <option value="technology">r/technology</option>
-                  <option value="programming">r/programming</option>
-                  <option value="news">r/news</option>
-                  <option value="gaming">r/gaming</option>
-                  <option value="music">r/music</option>
-                  <option value="art">r/art</option>
-                  <option value="science">r/science</option>
-                  <option value="food">r/food</option>
-                  <option value="travel">r/travel</option>
+                  {communities.map((c) => (
+                    <option key={String(c.id)} value={String(c.id)}>
+                      r/{c.name}
+                    </option>
+                  ))}
                 </Select>
               </FormControl>
             )}
 
             <FormControl isRequired>
-              <FormLabel>Title</FormLabel>
+              <FormLabel>Tiêu đề</FormLabel>
               <Input
-                placeholder="An interesting title"
+                placeholder="Một tiêu đề thú vị"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={300}
+                bg={useColorModeValue("white", "gray.800")}
+                borderColor={useColorModeValue("gray.200", "gray.600")}
+                _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
+                _focus={{ borderColor: useColorModeValue("blue.500", "blue.300") }}
               />
-              <Text fontSize="sm" color="gray.500" textAlign="right">
+              <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")} textAlign="right">
                 {title.length}/300
               </Text>
             </FormControl>
 
             <FormControl>
-              <FormLabel>Text (optional)</FormLabel>
+              <FormLabel>Nội dung</FormLabel>
               <Textarea
-                placeholder="What are your thoughts?"
+                placeholder="Bạn đang nghĩ gì?"
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 rows={4}
                 maxLength={1000}
+                bg={useColorModeValue("white", "gray.800")}
+                borderColor={useColorModeValue("gray.200", "gray.600")}
+                _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
+                _focus={{ borderColor: useColorModeValue("blue.500", "blue.300") }}
               />
-              <Text fontSize="sm" color="gray.500" textAlign="right">
+              <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")} textAlign="right">
                 {body.length}/1000
               </Text>
             </FormControl>
@@ -227,18 +268,18 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
               {!imagePreview ? (
                 <Box
                   border="2px dashed"
-                  borderColor="gray.300"
+                  borderColor={useColorModeValue("gray.300", "gray.600")}
                   borderRadius="md"
                   p={6}
                   textAlign="center"
                   cursor="pointer"
-                  _hover={{ borderColor: "gray.400", bg: "gray.50" }}
+                  _hover={{ borderColor: useColorModeValue("gray.400", "gray.500"), bg: useColorModeValue("gray.50", "whiteAlpha.100") }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Icon as={BsCardImage} fontSize="40px" color="gray.400" mb={2} />
-                  <Text color="gray.500">Click to upload an image</Text>
-                  <Text fontSize="sm" color="gray.400">
-                    JPG, PNG up to 10MB
+                  <Icon as={BsCardImage} fontSize="40px" color={useColorModeValue("gray.400", "gray.500")} mb={2} />
+                  <Text color={useColorModeValue("gray.600", "gray.300")}>Nhấn để tải ảnh lên</Text>
+                  <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
+                    Hỗ trợ JPG, PNG tối đa 10MB
                   </Text>
                 </Box>
               ) : (
@@ -259,7 +300,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                     colorScheme="red"
                     onClick={removeImage}
                   >
-                    Remove
+                    Xóa bỏ
                   </Button>
                 </Box>
               )}
@@ -274,17 +315,17 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           </VStack>
         </ModalBody>
 
-        <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={onClose}>
-            Cancel
+        <ModalFooter borderTop="1px solid" borderColor={useColorModeValue("gray.200", "gray.700")}>
+          <Button variant="outline" colorScheme="gray" mr={3} onClick={onClose}>
+            Hủy
           </Button>
           <Button
             colorScheme="blue"
             onClick={handleSubmit}
             isLoading={isLoading}
-            loadingText="Creating..."
+            loadingText="Đang đăng..."
           >
-            Post
+            Đăng
           </Button>
         </ModalFooter>
       </ModalContent>

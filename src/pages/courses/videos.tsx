@@ -48,18 +48,18 @@ const VideosPage: React.FC = () => {
 
   const onEdit = (id: string, title: string, description?: string) => {
     setVideos(prev => prev.map(v => v.id === id ? { ...v, title, description } : v));
-    toast({ status: "success", title: "Saved" });
+    toast({ status: "success", title: "Đã lưu" });
   };
 
   return (
     <PageContentLayout>
       <Stack spacing={4}>
-        <Heading size="md">Manage Course Videos</Heading>
+        <Heading size="md">Quản lý video khóa học</Heading>
         <Box borderWidth="1px" borderRadius="md" p={4} bg="white">
-          <Heading size="sm" mb={3}>Upload</Heading>
+          <Heading size="sm" mb={3}>Tải lên</Heading>
           <Stack spacing={3}>
-            <Input placeholder="Video title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-            <Textarea placeholder="Description" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
+            <Input placeholder="Tiêu đề video" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+            <Textarea placeholder="Mô tả" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
             <Button onClick={onUpload} colorScheme="blue" isLoading={uploading}>Upload</Button>
           </Stack>
         </Box>

@@ -12,7 +12,7 @@ import {
 import { Tag, TagLeftIcon, TagLabel } from "@chakra-ui/react";
 import Link from "next/link";
 import { FaRegCheckCircle, FaYoutube } from "react-icons/fa";
-import { courseVideos, courseTitles, youtubeWatchToEmbed } from "../../../../data/courses";
+import { CoursesService } from "../../../../services";
 
 // Helpers for localStorage
 function getCompleted(courseId: string) {
@@ -25,12 +25,29 @@ function setCompleted(courseId: string, completed: string[]) {
   }
 }
 
+function youtubeWatchToEmbed(url?: string) {
+  if (!url) return "";
+  try {
+    if (url.includes("/embed/")) return url;
+    const u = new URL(url, "https://youtube.com");
+    if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+      return `https://www.youtube.com/embed/${u.searchParams.get("v")}`;
+    }
+    if (u.hostname === "youtu.be") {
+      const id = u.pathname.replace(/\//g, "");
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+  } catch {}
+  return "";
+}
+
+type Lesson = { id: string; title: string; link?: string };
+
 export default function WatchVideoPage() {
   const router = useRouter();
   const { courseId, videoId } = router.query as { courseId: string; videoId: string };
-
-
-  const list = courseVideos[courseId] || [];
+  const [title, setTitle] = useState<string>("Bài học");
+  const [list, setList] = useState<Lesson[]>([]);
   const current = useMemo(() => list.find((v) => v.id === videoId), [list, videoId]);
   const embed = youtubeWatchToEmbed(current?.link) || "";
 
@@ -38,11 +55,36 @@ export default function WatchVideoPage() {
   const [completed, setCompletedState] = useState<string[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load completed videos when courseId changes
+  // Load course lessons when courseId changes
   useEffect(() => {
-    if (courseId) {
+    let mounted = true;
+    (async () => {
+      if (!courseId) return;
+      try {
+        const data = await CoursesService.getCourses({ id: courseId });
+        const arr =
+          (data && Array.isArray(data) && data) ||
+          (data?.data && Array.isArray(data.data) && data.data) ||
+          (data?.content && Array.isArray(data.content) && data.content) ||
+          (data?.data?.content && Array.isArray(data.data.content) && data.data.content) ||
+          [];
+        const course = arr.find((c: any) => String(c.id ?? c.courseId ?? c._id) === String(courseId)) || arr[0];
+        if (mounted && course) {
+          setTitle(String(course.title ?? course.name ?? 'Bài học'));
+          const lessons = Array.isArray(course?.lessons) ? course.lessons : (Array.isArray(course?.videos) ? course.videos : []);
+          const mapped: Lesson[] = lessons.map((l: any, idx: number) => ({
+            id: String(l.id ?? l.videoId ?? idx),
+            title: String(l.title ?? l.name ?? `Bài ${idx + 1}`),
+            link: l.link || l.url || l.youtubeUrl,
+          }));
+          setList(mapped);
+        }
+      } catch {
+        // keep empty
+      }
       setCompletedState(getCompleted(courseId));
-    }
+    })();
+    return () => { mounted = false; };
   }, [courseId]);
 
   // Mark video as completed after 1 minute
@@ -87,7 +129,7 @@ export default function WatchVideoPage() {
         >
           {/* Header with completion pill */}
           <Box p={3} borderBottom="1px solid" borderColor={borderCol}>
-            <Heading size="sm" mb={2}>{courseTitles[courseId] || "Bài học"}</Heading>
+            <Heading size="sm" mb={2}>{title}</Heading>
             <Tag size="sm" colorScheme={allDone ? "green" : "yellow"} variant="solid" borderRadius="full">
               <TagLeftIcon as={FaRegCheckCircle} />
               <TagLabel>

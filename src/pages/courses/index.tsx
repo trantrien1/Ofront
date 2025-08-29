@@ -18,10 +18,14 @@ import {
   Tab,
   TabPanel,
   Button,
+  Skeleton,
+  Center,
+  VStack,
 } from "@chakra-ui/react";
 import { useRouter } from "next/router";
 import { SearchIcon, CheckIcon } from "@chakra-ui/icons";
 
+import { CoursesService } from "../../services";
 type CourseItem = {
   id: string;
   title: string;
@@ -29,35 +33,55 @@ type CourseItem = {
   durationMinutes: number;
   progressPercent: number;
   completed?: boolean;
+  description?: string;
 };
 
-import { courseVideos } from "../../data/courses";
-
-const initialCourses: CourseItem[] = [
-  {
-    id: "ls-dang-cs",
-    title: "Tâm lý học",
-    thumbnail: "/images/redditPersonalHome.png",
-    durationMinutes: 208,
-    progressPercent: 0,
-  },
-  {
-    id: "tu-tuong-hcm",
-    title: "Tư tưởng Hồ Chí Minh",
-    thumbnail: "/images/recCommsArt.png",
-    durationMinutes: 274,
-    progressPercent: 0,
-    completed: false,
-  },
-  {
-    id: "lap-trinh-web",
-    title: "Quản lí mã nguồn dự án Web",
-    thumbnail: "/images/ptit_logo.png",
-    durationMinutes: 125,
-    progressPercent: 0,
-  },
-];
-
+// Removed mock data and replaced with API-driven data
+const useCoursesFromApi = () => {
+  const [items, setItems] = useState<CourseItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const updateItem = (id: string, patch: Partial<CourseItem>) => {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  };
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const resp = await CoursesService.getCourses({ page: 0, size: 50 });
+        // Normalize various response envelopes
+        const maybeArray =
+          (resp && Array.isArray(resp) && resp) ||
+          (resp?.data && Array.isArray(resp.data) && resp.data) ||
+          (resp?.content && Array.isArray(resp.content) && resp.content) ||
+          (resp?.data?.content && Array.isArray(resp.data.content) && resp.data.content) ||
+          [];
+        const mapped: CourseItem[] = (maybeArray as any[]).map((c: any) => ({
+          id: String(c.id ?? c.courseId ?? c._id ?? c.slug ?? Math.random().toString(36).slice(2)),
+          title: String(c.title ?? c.name ?? "Khoá học"),
+          thumbnail: String(c.imageUrl ?? "/images/recCommsArt.png"),
+          durationMinutes: Number(c.durationMinutes ?? 0),
+          progressPercent: 0,
+          completed: false,
+          description: c?.description ?? c?.desc ?? "",
+        }));
+        if (mounted) setItems(mapped);
+      } catch (e) {
+        // fallback: empty list
+        if (mounted) {
+          setItems([]);
+          setError("fetch_failed");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+  return { items, updateItem, loading, error };
+};
 const fmtDuration = (mins: number) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
@@ -65,36 +89,7 @@ const fmtDuration = (mins: number) => {
   return `${h} giờ ${m} phút`;
 };
 
-// Helpers for localStorage
-function getCompleted(courseId: string) {
-  const data = typeof window !== "undefined" ? localStorage.getItem(`completed_${courseId}`) : null;
-  return data ? JSON.parse(data) : [];
-}
-
-const useLocalStatus = (items: CourseItem[]) => {
-  const [state, setState] = useState<CourseItem[]>(items);
-  useEffect(() => {
-    // Lấy tiến độ thực tế từ localStorage cho từng khoá học
-    setState((prev) => prev.map((it) => {
-      const videos = courseVideos[it.id] || [];
-      const completed = getCompleted(it.id);
-      const percent = videos.length ? Math.round((completed.length / videos.length) * 100) : 0;
-      return {
-        ...it,
-        progressPercent: percent,
-        completed: percent === 100,
-      };
-    }));
-  }, []);
-  // Giữ lại logic updateItem nếu cần đánh dấu thủ công
-  const updateItem = (id: string, patch: Partial<CourseItem>) => {
-    setState((prev) => {
-      const next = prev.map((it) => (it.id === id ? { ...it, ...patch } : it));
-      return next;
-    });
-  };
-  return { items: state, updateItem };
-};
+// No local mock/progress; progress can be filled when backend supports it.
 
 const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => void; onClick: () => void }>
   = ({ item, onToggleDone, onClick }) => {
@@ -117,9 +112,16 @@ const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => voi
       <Image src={item.thumbnail} alt={item.title} w="100%" h="170px" objectFit="cover" borderTopRadius="xl" />
       <Box p={4}>
         <Text fontWeight="bold" fontSize="lg" mb={2}>{item.title}</Text>
+        {item.description ? (
+          <Text fontSize="sm" color={subtitle} noOfLines={2} mb={2}>
+            {item.description}
+          </Text>
+        ) : null}
         <Box h="1px" bg={useColorModeValue("gray.100", "whiteAlpha.200")} mb={3} />
         <Flex justify="space-between" align="center">
-          <Text fontSize="sm" color={subtitle}>{fmtDuration(item.durationMinutes)}</Text>
+          {item.durationMinutes > 0 && (
+            <Text fontSize="sm" color={subtitle}>{fmtDuration(item.durationMinutes)}</Text>
+          )}
           {item.completed ? (
             <HStack spacing={2}>
               <Badge colorScheme="green" borderRadius="full" px={3} py={1} display="flex" alignItems="center">
@@ -147,7 +149,7 @@ const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => voi
 
 const CoursesPage: React.FC = () => {
   const router = useRouter();
-  const { items, updateItem } = useLocalStatus(initialCourses);
+  const { items, updateItem, loading } = useCoursesFromApi();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState(0);
 
@@ -159,7 +161,7 @@ const CoursesPage: React.FC = () => {
     return list;
   }, [items, q, tab]);
 
-  // All course video metadata now lives in src/data/courses.ts
+  // Dữ liệu khoá học lấy từ API; không còn mock trong repo
 
   const handleCourseClick = (course: CourseItem) => {
     // SPA navigation to the course list page
@@ -209,16 +211,37 @@ const CoursesPage: React.FC = () => {
 
       <Box h="1px" bg={dividerCol} mb={4} />
 
-      <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
-        {filtered.map((item) => (
-          <CourseCard
-            key={item.id}
-            item={item}
-            onToggleDone={onToggleDone}
-            onClick={() => handleCourseClick(item)}
-          />
-        ))}
-      </SimpleGrid>
+      {loading ? (
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Box key={i} borderRadius="xl" overflow="hidden">
+              <Skeleton height="170px" />
+              <Box p={4}>
+                <Skeleton height="16px" mb={3} />
+                <Skeleton height="12px" width="60%" />
+              </Box>
+            </Box>
+          ))}
+        </SimpleGrid>
+      ) : items.length === 0 ? (
+        <Center py={16}>
+          <VStack spacing={2}>
+            <Text>Chưa có khóa học nào.</Text>
+            <Text fontSize="sm" color={useColorModeValue("gray.600","gray.400")}>Hãy tạo một khóa học trong trang admin.</Text>
+          </VStack>
+        </Center>
+      ) : (
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
+          {filtered.map((item) => (
+            <CourseCard
+              key={item.id}
+              item={item}
+              onToggleDone={onToggleDone}
+              onClick={() => handleCourseClick(item)}
+            />
+          ))}
+        </SimpleGrid>
+      )}
 
   {/* Modal removed. We navigate to /courses/[courseId] with a full list */}
     </Box>

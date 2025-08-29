@@ -12,7 +12,7 @@ import {
 } from "@chakra-ui/react";
 import Link from "next/link";
 import { FaYoutube, FaLock, FaRegCheckCircle } from "react-icons/fa";
-import { courseVideos, courseTitles } from "../../../data/courses";
+import { CoursesService } from "../../../services";
 
 // Helpers for localStorage
 function getCompleted(courseId: string) {
@@ -20,11 +20,46 @@ function getCompleted(courseId: string) {
   return data ? JSON.parse(data) : [];
 }
 
+type Lesson = { id: string; title: string; date?: string; locked?: boolean };
+
 export default function CourseDetailPage() {
   const router = useRouter();
   const { courseId } = router.query as { courseId: string };
-  const title = courseTitles[courseId] || "Khoá học";
-  const list = courseVideos[courseId] || [];
+  const [title, setTitle] = useState<string>("Khoá học");
+  const [description, setDescription] = useState<string>("");
+  const [list, setList] = useState<Lesson[]>([]);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!courseId) return;
+      try {
+        const data = await CoursesService.getCourses({ id: courseId });
+        const arr =
+          (data && Array.isArray(data) && data) ||
+          (data?.data && Array.isArray(data.data) && data.data) ||
+          (data?.content && Array.isArray(data.content) && data.content) ||
+          (data?.data?.content && Array.isArray(data.data.content) && data.data.content) ||
+          [];
+        const course = arr.find((c: any) => String(c.id ?? c.courseId ?? c._id) === String(courseId)) || arr[0];
+        if (mounted && course) {
+          setTitle(String(course.title ?? course.name ?? 'Khoá học'));
+          setDescription(String(course.description ?? course.desc ?? ''));
+          // If backend provides lessons array, map it; else leave empty and keep page scaffolding
+          const lessons = Array.isArray(course?.lessons) ? course.lessons : [];
+          const mapped = lessons.map((l: any, idx: number) => ({
+            id: String(l.id ?? l.videoId ?? idx),
+            title: String(l.title ?? l.name ?? `Bài ${idx + 1}`),
+            date: l.date ? String(l.date) : undefined,
+            locked: !!l.locked,
+          }));
+          setList(mapped);
+        }
+      } catch (e) {
+        // keep defaults
+      }
+    })();
+    return () => { mounted = false; };
+  }, [courseId]);
 
   const cardBg = useColorModeValue("white", "gray.800");
   const borderCol = useColorModeValue("gray.200", "gray.700");
@@ -45,6 +80,9 @@ export default function CourseDetailPage() {
   return (
     <Box maxW="1280px" mx={0} px={{ base: 2, md: 4 }} py={4}>
       <Heading size="lg" mb={4}>{title}</Heading>
+      {description ? (
+        <Text mb={4} color={useColorModeValue('gray.700','gray.300')}>{description}</Text>
+      ) : null}
       {/* Progress bar & status */}
       <Flex align="center" mb={3} gap={3}>
         <Box minW="120px">

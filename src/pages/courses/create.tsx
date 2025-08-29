@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import PageContentLayout from "../../components/Layout/PageContent";
 import { Box, Button, FormControl, FormLabel, Heading, Input, Stack, Textarea, useToast } from "@chakra-ui/react";
 import { useRouter } from "next/router";
+import { CoursesService } from "../../services";
 
 const CreateCoursePage: React.FC = () => {
   const [title, setTitle] = useState("");
@@ -14,11 +15,18 @@ const CreateCoursePage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // TODO: call course service to create
+      if (!title.trim()) {
+        toast({ status: "warning", title: "Vui lòng nhập tiêu đề" });
+        return;
+      }
+      const payload = { title: title.trim(), description: description.trim() };
+      const resp = await CoursesService.createCourse(payload);
+      console.debug("createCourse resp:", resp);
       toast({ status: "success", title: "Khóa học đã được tạo" });
       router.push("/courses");
-    } catch (e) {
-      toast({ status: "error", title: "Tạo thất bại" });
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.response?.data?.error || e?.message || "Tạo thất bại";
+      toast({ status: "error", title: msg });
     } finally { setLoading(false); }
   };
 

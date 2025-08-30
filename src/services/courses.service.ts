@@ -21,7 +21,8 @@ export async function updateCourse(payload: CoursePayload) {
 }
 
 export async function deleteCourse(courseId: string | number) {
-  const { data } = await request.delete('/course/delete', { data: { courseId } });
+  // Use POST to align with upstream constraints and ensure body is delivered reliably
+  const { data } = await request.post('/course/delete', { courseId });
   return data;
 }
 

@@ -12,7 +12,7 @@ import {
 import { Tag, TagLeftIcon, TagLabel } from "@chakra-ui/react";
 import Link from "next/link";
 import { FaRegCheckCircle, FaYoutube } from "react-icons/fa";
-import { CoursesService } from "../../../../services";
+import { CoursesService, VideosService } from "../../../../services";
 
 // Helpers for localStorage
 function getCompleted(courseId: string) {
@@ -61,24 +61,28 @@ export default function WatchVideoPage() {
     (async () => {
       if (!courseId) return;
       try {
+        // Get course title for header
         const data = await CoursesService.getCourses({ id: courseId });
-        const arr =
-          (data && Array.isArray(data) && data) ||
-          (data?.data && Array.isArray(data.data) && data.data) ||
-          (data?.content && Array.isArray(data.content) && data.content) ||
-          (data?.data?.content && Array.isArray(data.data.content) && data.data.content) ||
-          [];
+        const arr = (Array.isArray(data) && data)
+          || (Array.isArray(data?.data) && data.data)
+          || (Array.isArray(data?.content) && data.content)
+          || (Array.isArray(data?.data?.content) && data.data.content)
+          || [];
         const course = arr.find((c: any) => String(c.id ?? c.courseId ?? c._id) === String(courseId)) || arr[0];
-        if (mounted && course) {
-          setTitle(String(course.title ?? course.name ?? 'Bài học'));
-          const lessons = Array.isArray(course?.lessons) ? course.lessons : (Array.isArray(course?.videos) ? course.videos : []);
-          const mapped: Lesson[] = lessons.map((l: any, idx: number) => ({
-            id: String(l.id ?? l.videoId ?? idx),
-            title: String(l.title ?? l.name ?? `Bài ${idx + 1}`),
-            link: l.link || l.url || l.youtubeUrl,
-          }));
-          setList(mapped);
-        }
+        if (mounted && course) setTitle(String(course.title ?? course.name ?? 'Bài học'));
+        // Fetch videos by course via upstream proxy
+        const vidsResp = await VideosService.getVideosByCourse(courseId);
+        const vidsArr = (Array.isArray(vidsResp) && vidsResp)
+          || (Array.isArray(vidsResp?.data) && vidsResp.data)
+          || (Array.isArray(vidsResp?.content) && vidsResp.content)
+          || (Array.isArray(vidsResp?.data?.content) && vidsResp.data.content)
+          || [];
+        const mapped: Lesson[] = vidsArr.map((l: any, idx: number) => ({
+          id: String(l.id ?? l.videoId ?? idx),
+          title: String(l.title ?? l.name ?? `Bài ${idx + 1}`),
+          link: l.link || l.url || l.youtubeUrl,
+        }));
+        if (mounted) setList(mapped);
       } catch {
         // keep empty
       }

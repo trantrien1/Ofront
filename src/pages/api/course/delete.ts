@@ -15,23 +15,80 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const courseId = bodyObj?.courseId ?? bodyObj?.id ?? (req.query && (req.query as any).courseId);
     if (!courseId) return res.status(400).json({ error: 'courseId required' });
 
-  const upstreamBase = process.env.UPSTREAM_URL || 'https://rehearten-production.up.railway.app';
-  const paths = ['/coure/delete'];
-    const method = req.method === 'DELETE' ? 'DELETE' : 'POST';
-    const headers = buildHeaders(req);
-    const json = JSON.stringify({ courseId });
+    const upstreamBase = process.env.UPSTREAM_URL || 'https://rehearten-production.up.railway.app';
+  const headers = buildHeaders(req);
+    if (process.env.NODE_ENV !== 'production') {
+      res.setHeader('x-proxy-has-auth', headers['Authorization'] ? '1' : '0');
+    }
 
-    for (const p of paths) {
-      const url = `${upstreamBase}${p}`;
-      const r = await fetch(url, { method, headers, body: json });
-      const t = await r.text();
-      if (r.status >= 200 && r.status < 300) {
-        const ct = r.headers.get('content-type') || '';
-        if (process.env.NODE_ENV !== 'production') { res.setHeader('x-proxy-upstream', url); }
-        if (ct.includes('application/json')) { try { return res.status(r.status).json(JSON.parse(t || 'null')); } catch { return res.status(r.status).send(t); } }
-        return res.status(r.status).send(t);
+    const id = String(courseId);
+  const attempts: Array<{ url: string; method: 'POST' | 'DELETE'; headers: Record<string,string>; body?: string; label: string }> = [];
+    const pathBase = '/coure/delete';
+  // Prioritize correct upstream mapping: DELETE /coure/delete/{id}
+  const delH = { ...headers } as Record<string,string>;
+  if (delH['Content-Type']) delete delH['Content-Type'];
+  attempts.push({ url: `${upstreamBase}${pathBase}/${encodeURIComponent(id)}`, method: 'DELETE', headers: delH, label: 'DELETE_path_id_PRIMARY' });
+  // Also try POST override at the same path
+  // For empty-body POSTs, avoid sending Content-Type
+  const noCT = { ...headers } as Record<string,string>;
+  if (noCT['Content-Type']) delete noCT['Content-Type'];
+  attempts.push({ url: `${upstreamBase}${pathBase}/${encodeURIComponent(id)}`, method: 'POST', headers: { ...noCT, 'X-HTTP-Method-Override': 'DELETE' }, label: 'POST_path_id_PRIMARY' });
+  const primaryUrl = attempts[0]?.url;
+  // Fallbacks (POST only)
+    const nId = Number(id);
+    const jsonBodies = [
+      { courseId: id },
+      { id },
+      { coureId: id },
+      // numeric variants
+      { courseId: isFinite(nId) ? nId : id },
+      { id: isFinite(nId) ? nId : id },
+      { coureId: isFinite(nId) ? nId : id },
+    ];
+  // POST with JSON bodies
+    for (const jb of jsonBodies) {
+  attempts.push({ url: `${upstreamBase}${pathBase}`, method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(jb), label: `POST_JSON_${Object.keys(jb)[0]}` });
+  if (headers['Cookie']) { const h2 = { ...headers, 'Content-Type': 'application/json' } as Record<string,string>; delete h2['Cookie']; attempts.push({ url: `${upstreamBase}${pathBase}`, method: 'POST', headers: h2, body: JSON.stringify(jb), label: `POST_JSON_${Object.keys(jb)[0]}_noCookie` }); }
+    }
+    // Form-encoded
+    const formKeys = ['courseId','id','coureId'] as const;
+    for (const k of formKeys) {
+      const form = new URLSearchParams(); form.set(k, id);
+      attempts.push({ url: `${upstreamBase}${pathBase}`, method: 'POST', headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString(), label: `POST_FORM_${k}` });
+    }
+  // Path param variant (secondary, without override header)
+  attempts.push({ url: `${upstreamBase}${pathBase}/${encodeURIComponent(id)}`, method: 'POST', headers: { ...noCT }, label: 'POST_path_id' });
+  // Query param variants (no body)
+  const qKeys = ['id','courseId','coureId'] as const;
+  for (const k of qKeys) {
+    attempts.push({ url: `${upstreamBase}${pathBase}?${encodeURIComponent(k)}=${encodeURIComponent(id)}`, method: 'POST', headers: { ...noCT }, label: `POST_query_${k}` });
+  }
+  // Plain text body with ID
+  attempts.push({ url: `${upstreamBase}${pathBase}`, method: 'POST', headers: { ...headers, 'Content-Type': 'text/plain' }, body: String(id), label: 'POST_TEXT_id' });
+
+  let last: { status: number; text: string; url: string; label: string } = { status: 0, text: '', url: '', label: '' };
+  const results: Array<{ status: number; url: string; label: string }> = [];
+    for (const a of attempts) {
+      try {
+        try { console.log(`[api/course/delete] attempt=${a.label} ${a.method} ${a.url} body=${(a.body||'').toString().slice(0,200)}`); } catch {}
+  const r = await fetch(a.url, { method: a.method, headers: a.headers, body: a.body });
+        const t = await r.text();
+        try { console.log(`[api/course/delete] upstream status=${r.status} label=${a.label} body_snippet=${(t||'').slice(0,500).replace(/\n/g,' ')}`); } catch {}
+        last = { status: r.status, text: t, url: a.url, label: a.label };
+    results.push({ status: r.status, url: a.url, label: a.label });
+        if (r.status >= 200 && r.status < 300) {
+          const ct = r.headers.get('content-type') || '';
+          if (process.env.NODE_ENV !== 'production') { res.setHeader('x-proxy-upstream', a.url); res.setHeader('x-proxy-attempt', a.label); }
+          if (ct.includes('application/json')) { try { return res.status(r.status).json(JSON.parse(t || 'null')); } catch { return res.status(r.status).send(t); } }
+          return res.status(r.status).send(t);
+        }
+      } catch (e: any) {
+    last = { status: 0, text: e?.message || String(e), url: a.url, label: a.label };
+    results.push({ status: 0, url: a.url, label: a.label });
       }
     }
+
+  if (process.env.NODE_ENV !== 'production') return res.status(last.status || 502).json({ error: 'upstream_failed', status: last.status, lastAttempt: last.label, upstreamUrl: last.url, primaryUrl, attempts: results, body: safeParseJSON(last.text) || last.text });
     return res.status(502).json({ error: 'Bad gateway' });
   } catch (e: any) {
     return res.status(500).json({ error: 'proxy_error', message: e?.message || String(e) });
@@ -58,6 +115,8 @@ function buildHeaders(req: NextApiRequest) {
   if (!token && cleanToken(req.cookies?.accessToken)) token = cleanToken(req.cookies?.accessToken);
   const h: Record<string,string> = { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': req.headers['user-agent']?.toString() || 'Mozilla/5.0 (proxy)' };
   if (token) h['Authorization'] = `Bearer ${token}`;
+  // forward cookies if any (some upstreams use session auth)
+  if (req.headers.cookie) h['Cookie'] = req.headers.cookie as string;
   const xpub = String(req.headers['x-public'] || '').toLowerCase();
   if (xpub === '1' || xpub === 'true') { delete h['Authorization']; }
   return h;

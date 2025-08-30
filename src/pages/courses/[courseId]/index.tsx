@@ -6,13 +6,17 @@ import {
   Flex,
   Heading,
   Icon,
+  Input,
+  Textarea,
+  Button,
   Text,
   VStack,
   useColorModeValue,
 } from "@chakra-ui/react";
+import { useToast } from "@chakra-ui/react";
 import Link from "next/link";
 import { FaYoutube, FaLock, FaRegCheckCircle } from "react-icons/fa";
-import { CoursesService } from "../../../services";
+import { CoursesService, VideosService } from "../../../services";
 
 // Helpers for localStorage
 function getCompleted(courseId: string) {
@@ -28,6 +32,11 @@ export default function CourseDetailPage() {
   const [title, setTitle] = useState<string>("Khoá học");
   const [description, setDescription] = useState<string>("");
   const [list, setList] = useState<Lesson[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const toast = useToast();
+  const [newTitle, setNewTitle] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+  const [newDesc, setNewDesc] = useState("");
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -44,8 +53,19 @@ export default function CourseDetailPage() {
         if (mounted && course) {
           setTitle(String(course.title ?? course.name ?? 'Khoá học'));
           setDescription(String(course.description ?? course.desc ?? ''));
-          // If backend provides lessons array, map it; else leave empty and keep page scaffolding
-          const lessons = Array.isArray(course?.lessons) ? course.lessons : [];
+          // Prefer fetching videos via upstream endpoint to be accurate
+          let lessons: any[] = [];
+          try {
+            const vidsResp = await VideosService.getVideosByCourse(courseId);
+            const vidsArr = (Array.isArray(vidsResp) && vidsResp)
+              || (Array.isArray(vidsResp?.data) && vidsResp.data)
+              || (Array.isArray(vidsResp?.content) && vidsResp.content)
+              || (Array.isArray(vidsResp?.data?.content) && vidsResp.data.content)
+              || [];
+            lessons = vidsArr;
+          } catch {
+            lessons = Array.isArray(course?.lessons) ? course.lessons : [];
+          }
           const mapped = lessons.map((l: any, idx: number) => ({
             id: String(l.id ?? l.videoId ?? idx),
             title: String(l.title ?? l.name ?? `Bài ${idx + 1}`),
@@ -72,6 +92,11 @@ export default function CourseDetailPage() {
     if (courseId) {
       setCompleted(getCompleted(courseId));
     }
+    // simple role check (mirrors useAuth persistence)
+    try {
+      const r = typeof window !== 'undefined' ? window.localStorage.getItem('role') : null;
+      setIsAdmin(!!r && r.toLowerCase().includes('admin'));
+    } catch {}
   }, [courseId]);
 
   const percent = list.length ? Math.round((completed.length / list.length) * 100) : 0;
@@ -79,10 +104,55 @@ export default function CourseDetailPage() {
 
   return (
     <Box maxW="1280px" mx={0} px={{ base: 2, md: 4 }} py={4}>
-      <Heading size="lg" mb={4}>{title}</Heading>
+      <Flex align="center" justify="space-between" mb={4}>
+        <Heading size="lg">{title}</Heading>
+        {isAdmin && (
+          <Button colorScheme="red" size="sm" onClick={async ()=>{
+            try {
+              await CoursesService.deleteCourse(courseId);
+              toast({ status: 'success', title: 'Đã xóa khóa học' });
+              router.push('/courses');
+            } catch (e: any) {
+              const msg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Xóa thất bại';
+              toast({ status: 'error', title: msg });
+            }
+          }}>Xóa khóa học</Button>
+        )}
+      </Flex>
       {description ? (
         <Text mb={4} color={useColorModeValue('gray.700','gray.300')}>{description}</Text>
       ) : null}
+
+      {isAdmin && (
+        <Box mb={6} p={4} border="1px solid" borderColor={borderCol} borderRadius="md">
+          <Heading size="sm" mb={3}>Thêm video cho khóa học</Heading>
+          <VStack align="stretch" spacing={3}>
+            <Input placeholder="Tiêu đề video" value={newTitle} onChange={(e)=>setNewTitle(e.target.value)} />
+            <Input placeholder="YouTube URL" value={newUrl} onChange={(e)=>setNewUrl(e.target.value)} />
+            <Textarea placeholder="Mô tả (tuỳ chọn)" value={newDesc} onChange={(e)=>setNewDesc(e.target.value)} />
+            <Button colorScheme="blue" onClick={async ()=>{
+              if (!newTitle || !newUrl) return;
+              try {
+                await VideosService.createVideo({ title: newTitle, url: newUrl, description: newDesc, coureId: Number(courseId) });
+                setNewTitle(""); setNewUrl(""); setNewDesc("");
+                // Refresh list
+                try {
+                  const vidsResp = await VideosService.getVideosByCourse(courseId);
+                  const vidsArr = (Array.isArray(vidsResp) && vidsResp)
+                    || (Array.isArray(vidsResp?.data) && vidsResp.data)
+                    || (Array.isArray(vidsResp?.content) && vidsResp.content)
+                    || (Array.isArray(vidsResp?.data?.content) && vidsResp.data.content)
+                    || [];
+                  const mapped = vidsArr.map((l: any, idx: number) => ({ id: String(l.id ?? l.videoId ?? idx), title: String(l.title ?? l.name ?? `Bài ${idx + 1}`), date: l.date ? String(l.date) : undefined, locked: !!l.locked }));
+                  setList(mapped);
+                } catch {}
+              } catch (e) {
+                console.error('create video failed', e);
+              }
+            }}>Thêm video</Button>
+          </VStack>
+        </Box>
+      )}
       {/* Progress bar & status */}
       <Flex align="center" mb={3} gap={3}>
         <Box minW="120px">

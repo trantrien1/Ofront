@@ -4,7 +4,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const originalQS = (req.url && req.url.includes("?")) ? req.url.split("?")[1] : "";
     const upstreamBase = process.env.UPSTREAM_URL || 'https://rehearten-production.up.railway.app';
-  const paths = ["/coure/get"]; // upstream as specified
+  const paths = ["/course/get"]; // updated upstream path
 
     // Token extraction and header building (similar to posts/get)
     const cleanToken = (t?: string | null) => {

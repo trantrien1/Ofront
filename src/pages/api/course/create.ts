@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { headers, attempts } = buildUpstreamAttempts(req, bodyObj, [
-      "/coure/create",
+      "/course/create",
     ]);
 
     let last = { status: 0, text: "", url: "", label: "" } as any;

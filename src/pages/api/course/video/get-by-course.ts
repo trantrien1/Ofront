@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const id = req.query?.courseId ?? req.query?.id;
     if (!id) return res.status(400).json({ error: 'courseId required' });
     const upstreamBase = process.env.UPSTREAM_URL || 'https://rehearten-production.up.railway.app';
-    const urlUp = `${upstreamBase}/video/get/by-coure/${id}`;
+  const urlUp = `${upstreamBase}/video/get/by-course/${id}`;
     const headers = buildHeaders(req);
     let r = await fetch(urlUp, { headers });
     let t = await r.text();

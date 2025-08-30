@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ];
 
     const attempts: Array<{ url: string; method: 'PUT'|'PATCH'|'POST'; headers: Record<string,string>; body?: string; label: string }> = [];
-    const path = '/coure/update';
+  const path = '/course/update';
     // Try PUT (controller uses @PutMapping)
     for (const p of basePayloads) attempts.push({ url: `${upstreamBase}${path}`, method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: norm(p), label: `PUT_JSON_${Object.keys(p)[0]}` });
     // PATCH fallback

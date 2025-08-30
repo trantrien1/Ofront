@@ -25,8 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const id = String(courseId);
   const attempts: Array<{ url: string; method: 'POST' | 'DELETE'; headers: Record<string,string>; body?: string; label: string }> = [];
-  const pathBase = '/coure/delete';
-  // Prioritize correct upstream mapping: DELETE /coure/delete/{id}
+  const pathBase = '/course/delete';
+  // Prioritize correct upstream mapping: DELETE /course/delete/{id}
   const delH = { ...headers } as Record<string,string>;
   if (delH['Content-Type']) delete delH['Content-Type'];
   attempts.push({ url: `${upstreamBase}${pathBase}/${encodeURIComponent(id)}`, method: 'DELETE', headers: delH, label: 'DELETE_path_id_PRIMARY' });
@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const isFk = /foreign key constraint fails/i.test(text);
       if (!isFk && !wantCascade) return false;
       // Fetch videos by course
-      const vidsUrl = `${upstreamBase}/video/get/by-coure/${encodeURIComponent(id)}`;
+  const vidsUrl = `${upstreamBase}/video/get/by-course/${encodeURIComponent(id)}`;
       let vids: any[] = [];
       try {
         const r = await fetch(vidsUrl, { method: 'GET', headers });
@@ -147,8 +147,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (process.env.NODE_ENV !== 'production') {
       const body = safeParseJSON(last.text) || last.text;
       const hint =
-        (String(last.text||'').includes("Request method 'POST' is not supported") ? 'hint: backend expects DELETE at /coure/delete/{id}' :
-        (String(last.text||'').includes('No static resource') ? 'hint: missing /coure/delete route on backend or wrong base path' : undefined));
+  (String(last.text||'').includes("Request method 'POST' is not supported") ? 'hint: backend expects DELETE at /course/delete/{id}' :
+  (String(last.text||'').includes('No static resource') ? 'hint: missing /course/delete route on backend or wrong base path' : undefined));
       return res.status(last.status || 502).json({ error: 'upstream_failed', status: last.status, lastAttempt: last.label, upstreamUrl: last.url, primaryUrl, attempts: results, hint, cascadeResults, body });
     }
     return res.status(502).json({ error: 'Bad gateway' });

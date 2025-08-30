@@ -26,6 +26,7 @@ import { useRouter } from "next/router";
 import { SearchIcon, CheckIcon } from "@chakra-ui/icons";
 
 import { CoursesService } from "../../services";
+import { getClientRole, isAdminRole } from "../../helpers/role";
 type CourseItem = {
   id: string;
   title: string;
@@ -152,6 +153,14 @@ const CoursesPage: React.FC = () => {
   const { items, updateItem, loading } = useCoursesFromApi();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    try {
+      const r = getClientRole();
+      setIsAdmin(isAdminRole(r));
+    } catch {}
+  }, []);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -183,7 +192,7 @@ const CoursesPage: React.FC = () => {
         Khóa học giúp bạn giảm strees
       </Text>
 
-      <Flex justify="space-between" align="center" mb={4} gap={4} wrap="wrap">
+  <Flex justify="space-between" align="center" mb={4} gap={4} wrap="wrap">
         <InputGroup maxW="360px">
           <InputLeftElement pointerEvents="none">
             <SearchIcon color={useColorModeValue("gray.400", "gray.300")} />
@@ -207,6 +216,11 @@ const CoursesPage: React.FC = () => {
             <Tab>Hoàn thành</Tab>
           </TabList>
         </Tabs>
+        {isAdmin && (
+          <Button colorScheme="blue" onClick={() => router.push("/courses/create")}>
+            Tạo khóa học
+          </Button>
+        )}
       </Flex>
 
       <Box h="1px" bg={dividerCol} mb={4} />
@@ -228,6 +242,11 @@ const CoursesPage: React.FC = () => {
           <VStack spacing={2}>
             <Text>Chưa có khóa học nào.</Text>
             <Text fontSize="sm" color={useColorModeValue("gray.600","gray.400")}>Hãy tạo một khóa học trong trang admin.</Text>
+            {isAdmin && (
+              <Button mt={2} colorScheme="blue" onClick={() => router.push("/courses/create")}>
+                Tạo khóa học
+              </Button>
+            )}
           </VStack>
         </Center>
       ) : (

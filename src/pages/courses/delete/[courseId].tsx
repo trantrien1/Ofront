@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Heading, Text, Spinner, useToast, Button } from "@chakra-ui/react";
 import { CoursesService } from "../../../services";
 
@@ -11,13 +11,16 @@ export default function CourseDeletePage() {
   const [message, setMessage] = useState<string>("");
   const [debug, setDebug] = useState<any>(null);
   const [headers, setHeaders] = useState<Record<string, string> | null>(null);
+  const didRunRef = useRef(false);
 
   useEffect(() => {
     if (!courseId) return;
+    if (didRunRef.current) return; // avoid double-run in React 18 StrictMode (dev)
+    didRunRef.current = true;
     const run = async () => {
       setStatus("deleting");
       try {
-        await CoursesService.deleteCourse(courseId);
+  await CoursesService.deleteCourse(courseId, { cascade: 1 });
         setStatus("done");
         toast({ status: "success", title: "Đã xóa khóa học" });
         router.replace("/courses");

@@ -20,9 +20,10 @@ export async function updateCourse(payload: CoursePayload) {
   return data;
 }
 
-export async function deleteCourse(courseId: string | number) {
-  // Use POST to align with upstream constraints and ensure body is delivered reliably
-  const { data } = await request.post('/course/delete', { courseId });
+export async function deleteCourse(courseId: string | number, extra?: Record<string, any>) {
+  // Use POST to call local API proxy (which will use DELETE upstream). Allow extra flags like cascade.
+  const payload = { courseId, ...(extra || {}) };
+  const { data } = await request.post('/course/delete', payload);
   return data;
 }
 

@@ -17,6 +17,7 @@ import { useToast } from "@chakra-ui/react";
 import Link from "next/link";
 import { FaYoutube, FaLock, FaRegCheckCircle } from "react-icons/fa";
 import { CoursesService, VideosService } from "../../../services";
+import { getClientRole, isAdminRole } from "../../../helpers/role";
 
 // Helpers for localStorage
 function getCompleted(courseId: string) {
@@ -92,10 +93,10 @@ export default function CourseDetailPage() {
     if (courseId) {
       setCompleted(getCompleted(courseId));
     }
-    // simple role check (mirrors useAuth persistence)
+    // robust role check (cookie/localStorage/JWT)
     try {
-      const r = typeof window !== 'undefined' ? window.localStorage.getItem('role') : null;
-      setIsAdmin(!!r && r.toLowerCase().includes('admin'));
+      const r = getClientRole();
+      setIsAdmin(isAdminRole(r));
     } catch {}
   }, [courseId]);
 
@@ -107,16 +108,14 @@ export default function CourseDetailPage() {
       <Flex align="center" justify="space-between" mb={4}>
         <Heading size="lg">{title}</Heading>
         {isAdmin && (
-          <Button colorScheme="red" size="sm" onClick={async ()=>{
-            try {
-              await CoursesService.deleteCourse(courseId);
-              toast({ status: 'success', title: 'Đã xóa khóa học' });
-              router.push('/courses');
-            } catch (e: any) {
-              const msg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Xóa thất bại';
-              toast({ status: 'error', title: msg });
-            }
-          }}>Xóa khóa học</Button>
+          <Flex gap={2}>
+            <Link href={`/courses/update/${courseId}`}>
+              <Button size="sm" colorScheme="blue">Sửa</Button>
+            </Link>
+            <Button colorScheme="red" size="sm" onClick={()=>{
+              router.push(`/courses/delete/${courseId}`);
+            }}>Xóa khóa học</Button>
+          </Flex>
         )}
       </Flex>
       {description ? (

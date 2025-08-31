@@ -92,7 +92,6 @@ export const communityState: RecoilState<CommunityState> = (globalThis as any)
     key: "atoms/communities/communityState",
     default: defaultCommunityState,
   });
-
 // Add create community modal state
 export interface CreateCommunityModalState {
   open: boolean;

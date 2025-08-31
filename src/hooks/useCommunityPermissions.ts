@@ -13,17 +13,17 @@ export const useCommunityPermissions = () => {
     if (community && String(community.id) === cid) {
       // Treat creator as admin for role reads (UI/gating), per requirement
       if (String(user.uid) === String(community.creatorId)) return "admin";
-      
-      // Check members array
+
+      // Ưu tiên lấy role từ members array (đã được optimistic update)
       const member = community.members?.find(m => String(m.userId) === String(user.uid));
       if (member?.role) return member.role;
 
-      // Fallback to snippet role if members are not available on the current community
+      // Fallback to snippet role nếu không có members
       const snippetHere = communityStateValue.mySnippets.find(
         (snippet: any) => String(snippet.communityId) === cid
       );
       if (snippetHere?.role) return snippetHere.role as CommunityRole;
-      // Also check visitedCommunities cache if present
+      // Check visitedCommunities cache nếu có
       const visited = (communityStateValue.visitedCommunities || {}) as any;
       const v = visited[cid];
       if (v) {
@@ -33,8 +33,7 @@ export const useCommunityPermissions = () => {
       }
       return "member";
     }
-    
-    // Check snippets for other communities
+    // Check snippets cho các community khác
     const snippet = communityStateValue.mySnippets.find(
       (snippet: any) => String(snippet.communityId) === cid
     );

@@ -42,7 +42,7 @@ import {
 import { HiOutlineDotsHorizontal } from "react-icons/hi";
 import { RiCakeLine } from "react-icons/ri";
 // import { useAuthState } from "react-firebase-hooks/auth";
-// Firebase removed
+
 import { 
   Community, 
   CommunityRole, 
@@ -50,11 +50,11 @@ import {
   CommunityRule, 
   BannedUser 
 } from "../../atoms/communitiesAtom";
-// Firebase removed
+
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { communityState } from "../../atoms/communitiesAtom";
 import { normalizeTimestamp } from "../../helpers/timestampHelpers";
-// Firebase removed
+
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCommunityPermissions } from "../../hooks/useCommunityPermissions";

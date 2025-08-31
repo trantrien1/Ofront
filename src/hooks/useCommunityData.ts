@@ -8,12 +8,14 @@ import {
   CommunitySnippet,
   communityState,
   defaultCommunity,
+  CommunityRole,
 } from "../atoms/communitiesAtom";
 // Firebase removed
 // import { getMySnippets } from "../helpers/firestore";
 import { getGroupsByUser } from "../services/groups.service";
 import { userState } from "../atoms/userAtom";
 import { useCommunityPermissions } from "./useCommunityPermissions";
+import { joinGroup } from "../services/groups.service";
 
 // Add ssrCommunityData near end as small optimization
 const useCommunityData = (ssrCommunityData?: boolean) => {
@@ -26,6 +28,30 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
+  // Hàm cập nhật role cho cả members và mySnippets
+  const handleUpdateRole = (userId: string, newRole: CommunityRole) => {
+    // Cập nhật role trong members
+    const updatedMembers = communityStateValue.currentCommunity.members?.map(member =>
+      member.userId === userId ? { ...member, role: newRole } : member
+    ) || [];
+
+    // Đồng bộ cập nhật role trong mySnippets nếu userId là user hiện tại
+    const updatedSnippets = communityStateValue.mySnippets.map(snippet => {
+      if (
+        snippet.communityId === communityStateValue.currentCommunity.id &&
+        user?.uid === userId
+      ) {
+        return { ...snippet, role: newRole };
+      }
+      return snippet;
+    });
+
+    setCommunityStateValue(prev => ({
+      ...prev,
+      currentCommunity: { ...prev.currentCommunity, members: updatedMembers },
+      mySnippets: updatedSnippets
+    }));
+  };
 
   // Client-side mounting check
   useEffect(() => {
@@ -115,9 +141,9 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
       return;
     }
 
-    // If user already has a privileged role (owner/admin/moderator), treat as joined and do nothing
+    // If user already has a privileged role (owner/admin), treat as joined and do nothing
     const role = getUserRole(community.id);
-    const hasPrivilegedRole = role === "owner" || role === "admin" || role === "moderator";
+    const hasPrivilegedRole = role === "owner" || role === "admin";
     if (hasPrivilegedRole && !isJoined) {
       // Ensure a snippet exists so UI reflects joined state
       const exists = communityStateValue.mySnippets.some(s => s.communityId === community.id);
@@ -144,34 +170,38 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   };
 
   const joinCommunity = async (community: Community) => {
-  // attempt to join community
-    try {
-      const newSnippet: CommunitySnippet = {
-        communityId: community.id,
-        imageURL: community.imageURL || "",
-        role: "member",
-      };
+  try {
+    // Gọi API backend để join group
+    await joinGroup(community.id);
 
-      // Add user to community members
-      const newMember = {
-        userId: user?.uid || "",
-        role: "member" as const,
-        joinedAt: new Date() as any,
-        displayName: "",
-        imageURL: "",
-      };
+    const newSnippet: CommunitySnippet = {
+      communityId: community.id,
+      imageURL: community.imageURL || "",
+      role: "member",
+    };
 
-      // TODO: Call API to join community and persist member
+    const newMember = {
+      userId: user?.uid || "",
+      role: "member" as const,
+      joinedAt: new Date() as any,
+      displayName: user?.displayName || "",
+      imageURL: user?.photoURL || "",
+    };
 
-      // Add current community to snippet
-      setCommunityStateValue((prev) => ({
-        ...prev,
-        mySnippets: [...prev.mySnippets, newSnippet],
-      }));
+    // Update local state
+    setCommunityStateValue((prev) => ({
+      ...prev,
+      mySnippets: [...prev.mySnippets, newSnippet],
+      currentCommunity: {
+        ...prev.currentCommunity,
+        members: [...(prev.currentCommunity.members || []), newMember],
+      },
+    }));
     } catch (error) {
-      console.error("joinCommunity error", error);
-    }
+    console.error("joinCommunity error", error);
+    } finally {
     setLoading(false);
+    }
   };
 
   const leaveCommunity = async (communityId: string) => {
@@ -240,6 +270,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
     setLoading,
     error,
     mounted,
+    handleUpdateRole,
   };
 };
 

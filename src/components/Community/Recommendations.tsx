@@ -132,7 +132,7 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
                 (snippet: any) => snippet.communityId === item.id
               );
               return (
-                <Link key={item.id} href={`/r/${item.id}`}>
+                <Link key={item.id} href={`/community/${item.id}`}>
                   <Flex
                     position="relative"
                     align="center"

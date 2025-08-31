@@ -41,18 +41,9 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
     <>
       <Header communityData={communityData} />
 
-      {/* Quick actions */}
-      <Box maxW="1060px" mx="auto" px={4} mb={3}>
+      {/* Quick actions (no duplicate Join; that's handled in Header) */}
+      <Box maxW="1060px" mx="auto" px={4} mb={4}>
         <HStack>
-          {/* Chỉ hiện toast giả lập khi bấm Join */}
-          <Button
-            size="sm"
-            onClick={() => toast({ status: "info", title: "Joined (demo)" })}
-          >
-            Join
-          </Button>
-
-          {/* Mở modal đổi tên */}
           <Button
             size="sm"
             variant="outline"
@@ -122,7 +113,7 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
 export default CommunityPage;
 
 // Map upstream Group -> Community shape used by UI
-function toCommunity(obj: any): Community | null {
+export function toCommunity(obj: any): Community | null {
   if (!obj) return null;
   const id = String(obj.id ?? obj.groupId ?? obj._id ?? obj.code ?? "");
   const name = obj.displayName || obj.name || obj.groupName || obj.title || obj.code || id;
@@ -139,7 +130,6 @@ function toCommunity(obj: any): Community | null {
   const desc = obj.description || obj.desc || obj.about;
   if (desc) result.description = desc;
   if (Array.isArray(obj.rules)) result.rules = obj.rules;
-  // Only include optional arrays if present; avoid undefined to keep Next.js serialization happy
   if (Array.isArray(obj.members)) result.members = obj.members;
   if (Array.isArray(obj.bannedUsers)) result.bannedUsers = obj.bannedUsers;
   if (Array.isArray(obj.pinnedPosts)) result.pinnedPosts = obj.pinnedPosts;
@@ -187,9 +177,8 @@ export const getServerSideProps: GetServerSideProps<CommunityPageProps> = async 
       }
     }
 
-    // Fallback: get user's groups and find by id or code string
-    const byUser = await tryFetch(`${base}/api/group/get/by-user`);
-    if (byUser.ok) {
+  const byUser = await tryFetch(`${base}/api/group/get/by-user`);
+  if (byUser.ok) {
       const list = (Array.isArray(byUser.data) ? byUser.data : (Array.isArray(byUser.data?.data) ? byUser.data.data : (Array.isArray(byUser.data?.content) ? byUser.data.content : []))) as any[];
       const found = list.find((g: any) => String(g.id ?? g.groupId ?? g.code ?? g._id) === id || String(g.code ?? '') === id);
       const comm = toCommunity(found);
@@ -199,7 +188,6 @@ export const getServerSideProps: GetServerSideProps<CommunityPageProps> = async 
       }
     }
 
-    // Final fallback: still render a minimal community so the page works and posts load by groupId
     const minimal = toCommunity({ id, name: `Community ${id}` }) || {
       id,
       creatorId: "",

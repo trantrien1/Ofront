@@ -7,15 +7,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    if (process.env.NODE_ENV !== 'production') {
+      try { console.log('[post/update] incoming body=', req.body); } catch {}
+    }
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const { postId, title, content } = body;
     if (!postId) return res.status(400).json({ error: 'postId required' });
 
     const upstream = process.env.UPSTREAM_URL || 'https://rehearten-production.up.railway.app';
     const url = `${upstream}/post/update`;
+    if (process.env.NODE_ENV !== 'production') {
+      try { console.log('[post/update] upstream url=', url); } catch {}
+    }
     const method = req.method === 'PUT' ? 'PUT' : (req.method === 'PATCH' ? 'PATCH' : 'POST');
     const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ postId, title, content }) });
     const txt = await r.text();
+    if (process.env.NODE_ENV !== 'production') {
+      try { console.log('[post/update] upstream status=', r.status); } catch {}
+    }
     try { return res.status(r.status).json(JSON.parse(txt)); } catch { return res.status(r.status).send(txt); }
   } catch (e: any) {
     return res.status(500).json({ error: e?.message || 'proxy error' });

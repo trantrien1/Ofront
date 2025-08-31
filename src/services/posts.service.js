@@ -84,12 +84,17 @@ export const getPosts = async (options = {}) => {
 			const mapped = postsArray.map((p) => {
 				// Use username from userOfPost field in database
 				const correctUsername = extractUsername(p.userOfPost);
+				const nestedGroupId = (p.group && (p.group.id ?? p.group.groupId)) || (p.groupOfPost && (p.groupOfPost.id ?? p.groupOfPost.groupId));
+				const nestedGroupName = (p.group && (p.group.name ?? p.group.displayName)) || (p.groupOfPost && (p.groupOfPost.name ?? p.groupOfPost.displayName));
+				const cid = p.communityId || p.groupId || nestedGroupId || p.categoryId || p.communityDisplayText || "general";
+				const cdisp = p.communityDisplayText || nestedGroupName || p.communityName || (p.communityId ? String(p.communityId) : "");
 				return {
 					id: String(p.id),
-					communityId: p.communityId || p.communityDisplayText || "general",
+		communityId: cid,
 					communityImageURL: p.communityImageURL || null,
 					userDisplayText: correctUsername,
 					userUID: p.userUID || p.userOfPost?.userUID || "",
+					creatorId: String(p.creatorId || p.userId || p.userOfPost?.id || p.userOfPost?.userId || ""),
 					title: p.title || "",
 					body: p.body || p.content || "",
 					numberOfComments: Number(p.numberOfComments ?? p.countComment ?? p.commentCount) || 0,
@@ -101,7 +106,7 @@ export const getPosts = async (options = {}) => {
 					postType: p.postType || "",
 					createdAt: p.createdAt || new Date().toISOString(),
 					editedAt: p.editedAt || null,
-					communityDisplayText: p.communityDisplayText || p.communityId || "",
+					communityDisplayText: cdisp,
 					isPinned: Boolean(p.isPinned),
 					communityRuleNumber: p.communityRuleNumber || null,
 				};
@@ -120,6 +125,96 @@ export const getPosts = async (options = {}) => {
 	console.debug("PostsService.getPosts: final response=", response.data);
 	return response.data;
 	};
+
+// Get posts filtered by group/community using new upstream endpoint /post/get/by-group
+export const getPostsByGroup = async ({ groupId, sort = "like", typeSort } = {}) => {
+	if (groupId === undefined || groupId === null || groupId === "") {
+		throw new Error("groupId is required");
+	}
+	const usp = new URLSearchParams();
+	usp.set("groupId", String(groupId));
+		if (sort) usp.set("sort", String(sort));
+		if (typeSort) usp.set("typeSort", String(typeSort));
+	const url = `post/get/by-group?${usp.toString()}`;
+		let response;
+	try {
+		response = await request.get(url);
+	} catch (err) {
+		// If unauthorized/forbidden, try explicit public fetch (no auth)
+		const status = err?.response?.status;
+		if (status === 401 || status === 403) {
+			try {
+				response = await request.get(url, { headers: { 'x-public': '1' } });
+			} catch (e2) {
+					// fall through to legacy attempt below
+					response = undefined;
+			}
+		} else {
+				// Not an auth error; try legacy endpoint scoped by communityId
+				response = undefined;
+		}
+	}
+
+		// If still no response, try legacy scoped endpoint: /api/group/posts?communityId={id}
+		if (!response) {
+			try {
+				const legacy = await request.get(`group/posts`, { params: { communityId: String(groupId) } });
+				response = legacy;
+			} catch (e3) {
+				// Final fallback: return empty array instead of throwing to avoid UI crash
+				return [];
+			}
+		}
+
+	// Map like getPosts
+	try {
+		const raw = response.data;
+		let postsArray = [];
+		if (Array.isArray(raw)) {
+			postsArray = raw;
+		} else if (raw && Array.isArray(raw.posts)) {
+			postsArray = raw.posts;
+		} else if (raw && raw.data && Array.isArray(raw.data)) {
+			postsArray = raw.data;
+		}
+		if (postsArray.length > 0) {
+				const mapped = postsArray.map((p) => {
+				const correctUsername = extractUsername(p.userOfPost);
+				return {
+					id: String(p.id),
+			// Ensure posts are scoped to the requested group; fallback to data fields if missing
+			communityId: (typeof groupId !== 'undefined' && groupId !== null && String(groupId) !== '')
+				? String(groupId)
+				: (p.communityId || p.groupId || p.categoryId || p.communityDisplayText || "general"),
+					communityImageURL: p.communityImageURL || null,
+					userDisplayText: correctUsername,
+					userUID: p.userUID || p.userOfPost?.userUID || "",
+					creatorId: String(p.creatorId || p.userId || p.userOfPost?.id || p.userOfPost?.userId || ""),
+					title: p.title || "",
+					body: p.body || p.content || "",
+					numberOfComments: Number(p.numberOfComments ?? p.countComment ?? p.commentCount) || 0,
+					voteStatus: Number(p.voteStatus) || Number(p.likes) ||  Number(p.countLike) || 0,
+					status: typeof p.status === 'number' ? p.status : (p.approved === true ? 1 : (p.approved === false ? 0 : undefined)),
+					approved: typeof p.approved === 'boolean' ? p.approved : (typeof p.status === 'number' ? Number(p.status) === 1 : undefined),
+					currentUserVoteStatus: p.userIsLike ? { id: `self_${p.id}`, voteValue: 1 } : undefined,
+					imageURL: p.imageURL || null,
+					postType: p.postType || "",
+					createdAt: p.createdAt || new Date().toISOString(),
+					editedAt: p.editedAt || null,
+					communityDisplayText: p.communityDisplayText || p.communityId || "",
+					isPinned: Boolean(p.isPinned),
+					communityRuleNumber: p.communityRuleNumber || null,
+				};
+			});
+			response.data = mapped;
+		} else {
+			response.data = [];
+		}
+		} catch (e) {
+			response.data = [];
+	}
+	return response.data;
+};
 
 export const likePost = async ({ postId } = {}) => {
 	// backend LikeDTO expects { postId }
@@ -149,14 +244,20 @@ export const deletePost = async ({ postId } = {}) => {
 };
 
 export const createPost = async (postData) => {
-	// Create new post via API proxy
-	const response = await request.post("post/create", postData);
+	// Create new post via API proxy; ensure groupId is present for backend
+	const payload = { ...postData };
+	if (payload && payload.communityId != null && payload.groupId == null) {
+		const n = typeof payload.communityId === 'string' ? Number(payload.communityId) : payload.communityId;
+		payload.groupId = Number.isFinite(n) ? n : payload.communityId;
+	}
+	const response = await request.post("post/create", payload);
 	try { console.debug("PostsService.createPost: response=", response.data); } catch (e) {}
 	return response.data;
 };
 
 export default {
 	getPosts,
+	getPostsByGroup,
 	likePost,
 	approvePost,
 	updatePost,

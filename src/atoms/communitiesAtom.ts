@@ -1,4 +1,4 @@
-import { atom } from "recoil";
+import { atom, type RecoilState } from "recoil";
 type Timestamp = any;
 
 export type CommunityRole = "owner" | "admin" | "moderator" | "member";
@@ -79,10 +79,19 @@ export const defaultCommunityState: CommunityState = {
   currentCommunity: defaultCommunity,
 };
 
-export const communityState = atom<CommunityState>({
-  key: `atoms/communities/communityState_${Date.now()}_${Math.random()}`,
-  default: defaultCommunityState,
-});
+declare global {
+  // eslint-disable-next-line no-var
+  var __recoil_communityState: RecoilState<CommunityState> | undefined;
+  // eslint-disable-next-line no-var
+  var __recoil_createCommunityModalState: RecoilState<CreateCommunityModalState> | undefined;
+}
+
+export const communityState: RecoilState<CommunityState> = (globalThis as any)
+  .__recoil_communityState ??=
+  atom<CommunityState>({
+    key: "atoms/communities/communityState",
+    default: defaultCommunityState,
+  });
 
 // Add create community modal state
 export interface CreateCommunityModalState {
@@ -93,7 +102,9 @@ const defaultCreateCommunityModalState: CreateCommunityModalState = {
   open: false,
 };
 
-export const createCommunityModalState = atom<CreateCommunityModalState>({
-  key: `atoms/communities/createCommunityModalState_${Date.now()}_${Math.random()}`,
-  default: defaultCreateCommunityModalState,
-});
+export const createCommunityModalState: RecoilState<CreateCommunityModalState> = (globalThis as any)
+  .__recoil_createCommunityModalState ??=
+  atom<CreateCommunityModalState>({
+    key: "atoms/communities/createCommunityModalState",
+    default: defaultCreateCommunityModalState,
+  });

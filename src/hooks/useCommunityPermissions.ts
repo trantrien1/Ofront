@@ -1,33 +1,49 @@
 import { useRecoilValue } from "recoil";
 import { communityState, CommunityRole } from "../atoms/communitiesAtom";
+import { userState } from "../atoms/userAtom";
 
 export const useCommunityPermissions = () => {
-  const user = null as any;
+  const user = useRecoilValue(userState);
   const communityStateValue = useRecoilValue(communityState);
 
   const getUserRole = (communityId: string): CommunityRole => {
     if (!user) return "member";
-    
+    const cid = String(communityId);
     const community = communityStateValue.currentCommunity;
-    if (community.id === communityId) {
-      // Check if user is the owner
-      if (user.uid === community.creatorId) return "owner";
+    if (community && String(community.id) === cid) {
+      // Treat creator as admin for role reads (UI/gating), per requirement
+      if (String(user.uid) === String(community.creatorId)) return "admin";
       
       // Check members array
-      const member = community.members?.find(m => m.userId === user.uid);
-      return member?.role || "member";
+      const member = community.members?.find(m => String(m.userId) === String(user.uid));
+      if (member?.role) return member.role;
+
+      // Fallback to snippet role if members are not available on the current community
+      const snippetHere = communityStateValue.mySnippets.find(
+        (snippet: any) => String(snippet.communityId) === cid
+      );
+      if (snippetHere?.role) return snippetHere.role as CommunityRole;
+      // Also check visitedCommunities cache if present
+      const visited = (communityStateValue.visitedCommunities || {}) as any;
+      const v = visited[cid];
+      if (v) {
+        if (String(user.uid) === String(v.creatorId)) return "owner";
+        const vm = Array.isArray(v.members) ? v.members.find((m: any) => String(m.userId) === String(user.uid)) : null;
+        if (vm?.role) return vm.role as CommunityRole;
+      }
+      return "member";
     }
     
     // Check snippets for other communities
     const snippet = communityStateValue.mySnippets.find(
-      (snippet: any) => snippet.communityId === communityId
+      (snippet: any) => String(snippet.communityId) === cid
     );
-    return snippet?.role || "member";
+    return (snippet?.role as CommunityRole) || "member";
   };
 
   const canModerate = (communityId: string): boolean => {
     const role = getUserRole(communityId);
-    return role === "owner" || role === "admin" || role === "moderator";
+  return role === "owner" || role === "admin" || role === "moderator";
   };
 
   const canManageRoles = (communityId: string): boolean => {
@@ -52,9 +68,9 @@ export const useCommunityPermissions = () => {
 
   const isBanned = (communityId: string): boolean => {
     if (!user) return false;
-    
+    const cid = String(communityId);
     const community = communityStateValue.currentCommunity;
-    if (community.id === communityId) {
+    if (String(community.id) === cid) {
       return community.bannedUsers?.some(banned => banned.userId === user.uid) || false;
     }
     return false;

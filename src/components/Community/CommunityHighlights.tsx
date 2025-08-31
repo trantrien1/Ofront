@@ -69,7 +69,7 @@ const CommunityHighlights: React.FC<CommunityHighlightsProps> = ({ pinnedPosts, 
       >
         {pinnedPosts.map((post) => {
           const handleThisPostClick = () => {
-            router.push(`/r/${communityData.id}/comments/${post.id}`);
+            router.push(`/community/${communityData.id}/comments/${post.id}`);
           };
 
           return (

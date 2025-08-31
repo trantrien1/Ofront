@@ -84,8 +84,8 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 	const [error, setError] = useState("");
 	const router = useRouter();
 	const setPostItems = useSetRecoilState(postState);
-	const [visibility, setVisibility] = useState<"public" | "community">("public");
-	const [targetCommunityId, setTargetCommunityId] = useState<string>(communityId || "");
+		const [visibility, setVisibility] = useState<"public" | "community">("community");
+		const [targetCommunityId, setTargetCommunityId] = useState<string>(communityId || (typeof window !== 'undefined' ? String((new URL(window.location.href)).pathname.split('/')[2] || '') : ""));
 	const globalUser = useRecoilValue(userState) as any;
 	const { canModerate } = useCommunityPermissions();
 
@@ -117,30 +117,36 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 									status = userIsGlobalAdmin ? 1 : 0;
 								}
 
-				const payload: any = {
+								const payload: any = {
 					title,
 					body,
 					postType: selectedFile ? "IMAGE" : "TEXT",
 					imageURL: selectedFile || null,
-					communityId: visibility === "community" ? targetCommunityId : null,
+									communityId: visibility === "community" ? targetCommunityId : null,
 					isPersonalPost: visibility !== "community",
 					status,
 				};
 				const created = await createPostApi(payload);
-				// Best-effort notifications
-				try {
-					const notifPayload: any = {
-						type: isCommunityPost ? 'community_post' : 'personal_post',
-						title: `New ${isCommunityPost ? 'community' : 'personal'} post: ${title}`,
-						postId: created?.id || created?.postId || undefined,
-						communityId: payload.communityId || undefined,
-						audience: isCommunityPost ? 'community_admins' : 'global_admins',
-						createdAt: new Date().toISOString(),
-					};
-					await Notifications.createNotification(notifPayload);
-				} catch {}
-				// Navigate home and let the Home page refresh after ~2s
-				try { await router.push('/?refreshDelay=2000'); } catch {}
+				// Notify admins only for member posts (not for admins/moderators)
+				if (!userCanModerateCommunity) {
+					try {
+						const notifPayload: any = {
+							type: isCommunityPost ? 'community_post' : 'personal_post',
+							title: `New ${isCommunityPost ? 'community' : 'personal'} post: ${title}`,
+							postId: created?.id || created?.postId || undefined,
+							communityId: payload.communityId || undefined,
+							audience: isCommunityPost ? 'community_admins' : 'global_admins',
+							createdAt: new Date().toISOString(),
+						};
+						await Notifications.createNotification(notifPayload);
+					} catch {}
+				}
+				// Keep user in context: if posted to a community, go to that community page; otherwise stay put.
+				if (isCommunityPost && targetCommunityId) {
+					try { await router.push(`/community/${encodeURIComponent(String(targetCommunityId))}`); } catch {}
+				} else {
+					// no navigation for personal/public posts
+				}
 			} catch (error) {
 				setError("Error creating post");
 			} finally {
@@ -201,7 +207,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 
 	return (
 		<Flex direction="column" bg="white" borderRadius={4} mt={2}>
-			{/* Audience / Visibility */}
+	      {/* Audience / Visibility */}
 			<Box p={4} borderBottom="1px solid" borderColor="gray.100">
 				<Stack spacing={3}>
 					<Box>
@@ -216,11 +222,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					{visibility === "community" && (
 						<Box>
 							<Text fontSize="sm" fontWeight={600} mb={2}>Select community</Text>
-							<Select value={targetCommunityId} onChange={(e) => setTargetCommunityId(e.target.value)} placeholder="Select community">
-								{communityId && (
-									<option value={communityId}>{communityId}</option>
-								)}
-							</Select>
+		      <Input value={targetCommunityId} onChange={(e) => setTargetCommunityId(e.target.value)} placeholder="Community ID" />
 						</Box>
 					)}
 				</Stack>

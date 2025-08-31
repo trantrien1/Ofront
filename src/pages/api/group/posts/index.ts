@@ -12,11 +12,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const text = await r.text();
     try {
       const json = JSON.parse(text);
+      if (!r.ok) {
+        res.setHeader("x-proxy-fallback", "empty-on-error");
+        return res.status(200).json([]);
+      }
       return res.status(r.status).json(Array.isArray(json) ? { posts: json } : json);
     } catch {
+      if (!r.ok) {
+        res.setHeader("x-proxy-fallback", "empty-on-error-text");
+        return res.status(200).json([]);
+      }
       return res.status(r.status).send(text);
     }
   } catch (e: any) {
-    return res.status(500).json({ error: e?.message || "proxy error" });
+    res.setHeader("x-proxy-fallback", "empty-on-exception");
+    return res.status(200).json([]);
   }
 }

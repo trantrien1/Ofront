@@ -51,8 +51,8 @@ const useDirectory = () => {
     setDirectoryState((prev) => ({
       ...prev,
       selectedMenuItem: {
-        displayText: `r/${existingCommunity.displayName || existingCommunity.id}`,
-        link: `/r/${existingCommunity.id}`, // thêm dấu "/" để router push đúng
+        displayText: `${existingCommunity.displayName || existingCommunity.id}`,
+  link: `/community/${existingCommunity.id}`, // thêm dấu "/" để router push đúng
         icon: FaReddit,
         iconColor: "blue.500",
         imageURL: existingCommunity.imageURL,

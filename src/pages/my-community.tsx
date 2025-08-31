@@ -27,9 +27,9 @@ import {
 } from "@chakra-ui/react";
 import NextLink from "next/link";
 import { getGroupsByUser, Group } from "../services/groups.service";
-import { useRecoilValue } from "recoil";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import { userState } from "../atoms/userAtom";
-import { communityState } from "../atoms/communitiesAtom";
+import { communityState, CommunitySnippet } from "../atoms/communitiesAtom";
 import { SearchIcon } from "@chakra-ui/icons";
 import { BsPeople } from "react-icons/bs";
 
@@ -40,6 +40,7 @@ const MyCommunityPage: React.FC = () => {
   const toast = useToast();
   const user = useRecoilValue(userState);
   const community = useRecoilValue(communityState);
+  const setCommunityState = useSetRecoilState(communityState);
 
   const load = async () => {
     setLoading(true);
@@ -54,6 +55,28 @@ const MyCommunityPage: React.FC = () => {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Mirror loaded groups into global mySnippets so other pages know join state immediately
+  useEffect(() => {
+    if (!Array.isArray(groups) || groups.length === 0) return;
+    try {
+      const uid = user?.uid?.toString?.() || "";
+    const incoming: CommunitySnippet[] = groups
+        .map((g) => ({
+          communityId: String(g.id),
+          imageURL: g.imageURL || undefined,
+      role: (uid && (g.ownerId != null && String(g.ownerId) === uid) ? "owner" : "member") as any,
+        }))
+        .filter((s) => !!s.communityId);
+      setCommunityState((prev) => {
+        const existing = new Map(prev.mySnippets.map((s) => [s.communityId, s] as const));
+        for (const s of incoming) {
+          if (!existing.has(s.communityId)) existing.set(s.communityId, s);
+        }
+        return { ...prev, mySnippets: Array.from(existing.values()), initSnippetsFetched: true };
+      });
+    } catch {}
+  }, [groups, setCommunityState, user]);
 
   const { managed, joined } = useMemo(() => {
     const uid = user?.uid?.toString?.() || user?.displayName || user?.email || "";
@@ -111,7 +134,7 @@ const MyCommunityPage: React.FC = () => {
       <Avatar name={g.name} src={g.imageURL || undefined} size="md" />
       <Box flex={1} minW={0}>
         <HStack align="center" spacing={2} wrap="wrap">
-          <CLink as={NextLink} href={`/r/${encodeURIComponent(String(g.id))}`} fontWeight="bold" noOfLines={1}>
+          <CLink as={NextLink} href={`/community/${encodeURIComponent(String(g.id))}`} fontWeight="bold" noOfLines={1}>
             {g.name}
           </CLink>
           {managed ? (
@@ -127,7 +150,7 @@ const MyCommunityPage: React.FC = () => {
         )}
       </Box>
       <HStack>
-        <Button as={NextLink} href={`/r/${encodeURIComponent(String(g.id))}`} variant="solid" size="sm" colorScheme="blue">Open</Button>
+  <Button as={NextLink} href={`/community/${encodeURIComponent(String(g.id))}`} variant="solid" size="sm" colorScheme="blue">Open</Button>
         {managed && (
           <Button size="sm" variant="outline" onClick={async()=>{
             const name = prompt("New group name", g.name);

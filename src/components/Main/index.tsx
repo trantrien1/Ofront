@@ -5,7 +5,7 @@ const Main: React.FC<{}> = () => {
   return (
     <div>
       Here is main
-      <Link href="/r/notShadeesCommunity">hehe</Link>
+  <Link href="/community/notShadeesCommunity">hehe</Link>
     </div>
   );
 };

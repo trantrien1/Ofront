@@ -89,11 +89,23 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
           window.localStorage.setItem('managedGroups', JSON.stringify(Array.from(set)));
         }
       } catch {}
-      // Best-effort snippet refresh (backend not wired here yet)
-      setSnippetState((prev) => ({ ...prev }));
+      // Best-effort snippet refresh: mark created group as managed/owner in snippets
+      setSnippetState((prev) => {
+        const createdId = (created && (created as any).id) ? String((created as any).id) : undefined;
+        if (!createdId) return { ...prev };
+        const exists = prev.mySnippets.some(s => s.communityId === createdId);
+        if (exists) return { ...prev };
+        return {
+          ...prev,
+          mySnippets: [
+            ...prev.mySnippets,
+            { communityId: createdId, imageURL: (created as any)?.imageURL || undefined, role: 'owner' as any },
+          ],
+        };
+      });
       handleCloseModal();
   const dest = created && (created as any).id ? String((created as any).id) : name;
-      router.push(`r/${encodeURIComponent(dest)}`);
+  router.push(`/community/${encodeURIComponent(dest)}`);
     } catch (error: any) {
       const msg = error?.response?.data?.error || error?.message || "Failed to create community";
       setNameError(msg);

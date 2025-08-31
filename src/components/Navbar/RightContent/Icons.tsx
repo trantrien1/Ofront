@@ -25,9 +25,9 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
   ];
   const isAdmin = user && user.email && ADMIN_EMAILS.includes(user.email);
 
-  const handlePostCreated = async () => {
-    try { await router.push('/?refreshDelay=2000'); } catch {}
-  };
+  // Navigation after creating a post is handled inside the CreatePost modal.
+  // Avoid redirecting to home here to prevent jumping away from community pages.
+  const handlePostCreated = () => {};
 
   const goToAdminDashboard = () => {
     router.push('/admin');

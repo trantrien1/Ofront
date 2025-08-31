@@ -170,7 +170,7 @@ const Posts: React.FC<PostsProps> = ({
       ...prev,
       selectedPost: { ...post, postIdx },
     }));
-    router.push(`/r/${communityData?.id!}/comments/${post.id}`);
+  router.push(`/community/${communityData?.id!}/comments/${post.id}`);
   };
 
   // Clear posts when community changes
@@ -240,8 +240,30 @@ const Posts: React.FC<PostsProps> = ({
   const getPosts = async () => {
     setLoading(true);
     try {
-      // Fetch posts from backend via PostsService (proxy to upstream)
-      const response = await PostsService.getPosts({});
+      // Fetch posts: if viewing a community, get only that community's posts; else fetch global feed
+      let response: any[] = [];
+      if (communityData?.id) {
+        try {
+          const svc: any = PostsService as any;
+          if (typeof svc.getPostsByGroup === 'function') {
+            response = await svc.getPostsByGroup({ groupId: communityData.id, sort: "like" });
+          } else {
+            // Fallback to legacy endpoint by communityId (scoped)
+            const legacy = await fetch(`/api/group/posts?communityId=${encodeURIComponent(String(communityData.id))}`);
+            try { response = await legacy.json(); } catch { response = []; }
+          }
+        } catch (e) {
+          // On error, try legacy scoped endpoint before giving up
+          try {
+            const legacy = await fetch(`/api/group/posts?communityId=${encodeURIComponent(String(communityData.id))}`);
+            try { response = await legacy.json(); } catch { response = []; }
+          } catch {
+            response = [];
+          }
+        }
+      } else {
+        response = await PostsService.getPosts({});
+      }
       const posts: Post[] = (response as Post[]) || [];
       setPostStateValue((prev) => ({
         ...prev,
@@ -269,6 +291,12 @@ const Posts: React.FC<PostsProps> = ({
           {(postStateValue.posts || []).filter((p) => {
             // Show all if user can moderate; otherwise only approved or no-status posts
             if (canModerate(communityData?.id || "")) return true;
+            // Only posts of this community when in a community page
+            if (communityData?.id) {
+              const cid = String(communityData.id);
+              const pid = String(p.communityId || (p as any).communityDisplayText || (p as any).groupId || "");
+              if (cid && pid && cid !== pid) return false;
+            }
             if (typeof p.status === 'number') return p.status === 1;
             if (typeof p.approved === 'boolean') return p.approved === true;
             return true;

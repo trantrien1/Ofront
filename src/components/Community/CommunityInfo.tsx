@@ -25,6 +25,7 @@ import {
   Avatar,
   IconButton,
   Spinner,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { 
   FaUsers, 
@@ -56,6 +57,8 @@ import { normalizeTimestamp } from "../../helpers/timestampHelpers";
 // Firebase removed
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useCommunityPermissions } from "../../hooks/useCommunityPermissions";
+import { updateGroup, deleteGroup } from "../../services/groups.service";
 
 interface CommunityInfoProps {
   communityData: Community;
@@ -89,13 +92,19 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   const [newMember, setNewMember] = useState({ userId: "", role: "member" as CommunityRole });
   const [selectedFile, setSelectedFile] = useState<string>();
   const [imageLoading, setImageLoading] = useState(false);
+  // Admin-only edit/delete state and permissions
+  const perms = useCommunityPermissions();
+  const role = perms.getUserRole(communityData.id);
+  const canModerateBool = perms.canModerate(communityData.id);
+  const canManageRolesBool = perms.canManageRoles(communityData.id);
+  const canBanUsersBool = perms.canBanUsers(communityData.id);
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const [editName, setEditName] = useState<string>(communityData.displayName || String(communityData.id));
+  const [editDescription, setEditDescription] = useState<string>(communityData.description || "");
 
-  // Check if user has admin permissions
-  const userRole = communityData.members?.find(m => m.userId === user?.uid)?.role || "member";
-  const isOwner = user?.uid === communityData.creatorId;
-  const isAdmin = isOwner || userRole === "admin" || userRole === "moderator";
-  const canManageRoles = isOwner || userRole === "admin";
-  const canBanUsers = isOwner || userRole === "admin" || userRole === "moderator";
+  // Backward-compat booleans for existing UI blocks
+  const isOwnerRole = role === "owner";
 
   const onSelectImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const reader = new FileReader();
@@ -130,7 +139,11 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
 
   const handleUpdateDescription = async () => {
     try {
-      // TODO: Update community description via API
+      await updateGroup({ communityId: communityData.id, description });
+      setCommunityStateValue(prev => ({
+        ...prev,
+        currentCommunity: { ...prev.currentCommunity, description }
+      }));
       toast({
         title: "Description updated",
         status: "success",
@@ -142,6 +155,35 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
         status: "error",
         duration: 3000,
       });
+    }
+  };
+
+  const handleSaveEditCommunity = async () => {
+    try {
+      await updateGroup({ communityId: communityData.id, name: editName, description: editDescription });
+      setCommunityStateValue((prev) => ({
+        ...prev,
+        currentCommunity: {
+          ...prev.currentCommunity,
+          displayName: editName,
+          description: editDescription,
+        },
+      }));
+      toast({ title: "Community updated", status: "success", duration: 3000 });
+      onEditClose();
+    } catch (error) {
+      toast({ title: "Error updating community", status: "error", duration: 3000 });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteGroup(communityData.id);
+      toast({ title: "Community deleted", status: "success", duration: 3000 });
+      onDeleteClose();
+      router.push("/my-community");
+    } catch (error) {
+      toast({ title: "Error deleting community", status: "error", duration: 3000 });
     }
   };
 
@@ -292,7 +334,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   };
 
   const handleUpdateRole = async (userId: string, newRole: CommunityRole) => {
-    if (!canManageRoles) return;
+    if (!canManageRolesBool) return;
     
     try {
       const updatedMembers = communityData.members?.map(member => 
@@ -319,7 +361,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   };
 
   const handleAddMember = async () => {
-    if (!newMember.userId.trim() || !canManageRoles) return;
+    if (!newMember.userId.trim() || !canManageRolesBool) return;
     
     try {
       const memberToAdd: CommunityMember = {
@@ -393,10 +435,11 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       <Flex
         justify="space-between"
         align="center"
-        p={3}
+        p={4}
         color="white"
-        bg="blue.400"
-        borderRadius="4px 4px 0px 0px"
+        bg={useColorModeValue("blue.500", "blue.400")}
+        borderRadius="8px 8px 0 0"
+        boxShadow="sm"
       >
         <Text fontSize="10pt" fontWeight={700}>
           Community Information
@@ -405,11 +448,15 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       </Flex>
 
       {/* Content with scroll */}
-      <Flex 
-        direction="column" 
-        p={3} 
-        bg="white" 
-        borderRadius="0px 0px 4px 4px"
+      <Flex
+        direction="column"
+        p={5}
+        bg={useColorModeValue("white", "gray.800")}
+        borderRadius="0 0 8px 8px"
+        border="1px solid"
+        borderColor={useColorModeValue("gray.200", "whiteAlpha.300")}
+        borderTop="none"
+        boxShadow="sm"
         maxH="600px"
         overflowY="auto"
         css={{
@@ -464,14 +511,12 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
               <Stack spacing={2}>
                 <Flex width="100%" p={2} fontWeight={600} fontSize="10pt">
                   <Flex direction="column" flexGrow={1}>
-                    <Text>
-                      {communityData?.numberOfMembers?.toLocaleString()}
-                    </Text>
-                    <Text>Members</Text>
+                    <Text fontSize="md">{communityData?.numberOfMembers?.toLocaleString()}</Text>
+                    <Text color={useColorModeValue("gray.600", "gray.400")}>Members</Text>
                   </Flex>
                   <Flex direction="column" flexGrow={1}>
-                    <Text>1</Text>
-                    <Text>Online</Text>
+                    <Text fontSize="md">1</Text>
+                    <Text color={useColorModeValue("gray.600", "gray.400")}>Online</Text>
                   </Flex>
                 </Flex>
                 <Divider />
@@ -495,8 +540,8 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                   )}
                 </Flex>
                 {!onCreatePage && (
-                  <Link href={`/r/${router.query.community}/submit`}>
-                    <Button mt={3} height="30px" width="100%">
+                  <Link href={`/community/${router.query.community}/submit`}>
+                    <Button mt={4} height="36px" width="100%" colorScheme="blue" borderRadius="md">
                       Create Post
                     </Button>
                   </Link>
@@ -563,15 +608,15 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                 Your Role & Permissions
               </Text>
               <Stack spacing={1} fontSize="10pt">
-                <Text>Your role: <Text as="span" fontWeight="bold">{userRole}</Text></Text>
-                <Text>Can moderate: <Text as="span" fontWeight="bold">{isAdmin ? "Yes" : "No"}</Text></Text>
-                <Text>Can manage roles: <Text as="span" fontWeight="bold">{canManageRoles ? "Yes" : "No"}</Text></Text>
-                <Text>Can ban users: <Text as="span" fontWeight="bold">{canBanUsers ? "Yes" : "No"}</Text></Text>
+                <Text>Your role: <Text as="span" fontWeight="bold">{role}</Text></Text>
+                <Text>Can moderate: <Text as="span" fontWeight="bold">{canModerateBool ? "Yes" : "No"}</Text></Text>
+                <Text>Can manage roles: <Text as="span" fontWeight="bold">{canManageRolesBool ? "Yes" : "No"}</Text></Text>
+                <Text>Can ban users: <Text as="span" fontWeight="bold">{canBanUsersBool ? "Yes" : "No"}</Text></Text>
               </Stack>
             </Box>
 
             {/* Community Management Section */}
-            {isAdmin && (
+            {canModerateBool && (
               <Box>
                 <Text fontSize="12pt" fontWeight={600} mb={2}>
                   Community Management
@@ -616,7 +661,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                     Manage Members
                   </Button>
                   
-                  {canBanUsers && (
+                  {canBanUsersBool && (
                     <Button
                       leftIcon={<FaBan />}
                       variant="outline"
@@ -625,6 +670,23 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                     >
                       Banned Users
                     </Button>
+                  )}
+
+                  {canManageRolesBool && (
+                    <>
+                      <Divider />
+                      <Stack spacing={2}>
+                        <Text fontSize="10pt" fontWeight={600}>Admin Actions</Text>
+                        <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
+                          <Button size="sm" leftIcon={<FaEdit />} onClick={onEditOpen} colorScheme="blue" variant="outline">
+                            Edit Community
+                          </Button>
+                          <Button size="sm" leftIcon={<FaTrash />} onClick={onDeleteOpen} colorScheme="red" variant="outline">
+                            Delete Community
+                          </Button>
+                        </Stack>
+                      </Stack>
+                    </>
                   )}
                 </Stack>
               </Box>
@@ -753,7 +815,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                         <Icon as={getRoleIcon(member.role)} mr={1} />
                         {member.role}
                       </Badge>
-                      {canManageRoles && member.userId !== user?.uid && (
+            {canManageRolesBool && member.userId !== user?.uid && (
                         <Select
                           size="sm"
                           value={member.role}
@@ -763,7 +825,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                           <option value="member">Member</option>
                           <option value="moderator">Moderator</option>
                           <option value="admin">Admin</option>
-                          {isOwner && <option value="owner">Owner</option>}
+              {isOwnerRole && <option value="owner">Owner</option>}
                         </Select>
                       )}
                     </HStack>
@@ -778,7 +840,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
               )}
 
               {/* Add Member Section */}
-              {canManageRoles && (
+              {canManageRolesBool && (
                 <Box p={4} border="1px solid" borderColor="blue.200" borderRadius="md" bg="blue.50">
                   <Text fontWeight={600} mb={2} color="blue.700">
                     Add Member by User ID
@@ -863,6 +925,41 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                 </HStack>
               ))}
             </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Community Modal */}
+      <Modal isOpen={isEditOpen} onClose={onEditClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit Community</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={3}>
+              <Input placeholder="Community name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+              <Textarea placeholder="Description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+            </Stack>
+            <Stack direction="row" justify="flex-end" mt={4}>
+              <Button variant="ghost" onClick={onEditClose}>Cancel</Button>
+              <Button colorScheme="blue" onClick={handleSaveEditCommunity}>Save</Button>
+            </Stack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* Delete Confirm Modal */}
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Delete Community</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text>Are you sure you want to delete this community? This action cannot be undone.</Text>
+            <Stack direction="row" justify="flex-end" mt={4}>
+              <Button variant="ghost" onClick={onDeleteClose}>Cancel</Button>
+              <Button colorScheme="red" onClick={handleConfirmDelete} leftIcon={<FaTrash />}>Delete</Button>
+            </Stack>
           </ModalBody>
         </ModalContent>
       </Modal>

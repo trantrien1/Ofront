@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 // Firebase removed
 import { useRouter } from "next/router";
-import { useRecoilState, useSetRecoilState } from "recoil";
+import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { authModalState } from "../atoms/authModalAtom";
 import {
   Community,
@@ -10,14 +10,18 @@ import {
   defaultCommunity,
 } from "../atoms/communitiesAtom";
 // Firebase removed
-import { getMySnippets } from "../helpers/firestore";
+// import { getMySnippets } from "../helpers/firestore";
+import { getGroupsByUser } from "../services/groups.service";
+import { userState } from "../atoms/userAtom";
+import { useCommunityPermissions } from "./useCommunityPermissions";
 
 // Add ssrCommunityData near end as small optimization
 const useCommunityData = (ssrCommunityData?: boolean) => {
-  const user = null as any;
+  const user = useRecoilValue(userState);
   const router = useRouter();
   const [communityStateValue, setCommunityStateValue] =
     useRecoilState(communityState);
+  const { getUserRole } = useCommunityPermissions();
   const setAuthModalState = useSetRecoilState(authModalState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,24 +33,48 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   }, []);
 
   useEffect(() => {
-    if (!user || !!communityStateValue.mySnippets.length || !mounted) return;
-
+    // Fetch membership snapshot once after mount. Do NOT depend on user state
+    // because it may hydrate later and we can still call the API using cookies.
+    if (communityStateValue.initSnippetsFetched || !mounted) return;
     getSnippets();
-  }, [user, mounted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, communityStateValue.initSnippetsFetched]);
 
   const getSnippets = async () => {
     setLoading(true);
     try {
-      const snippets = await getMySnippets(user?.uid!);
+      // Use real API to get all groups the current user belongs to
+      const groups = await getGroupsByUser().catch(() => [] as any[]);
+      const uid = user?.uid?.toString?.() || "";
+      const snippets: CommunitySnippet[] = (Array.isArray(groups) ? groups : []).map((g: any) => {
+        const communityId = String(g.id ?? g.groupId ?? g.code ?? "");
+        const imageURL = g.imageURL || g.imageUrl || g.avatar || "";
+        // Prefer backend userRole when provided
+        let role: any = (g.userRole || g.role || "").toString().toLowerCase();
+        if (!role) {
+          // Fallback: if creator/owner inferred locally, treat as admin per requirement
+          const owner = String(g.ownerId ?? g.userId ?? "");
+          if (owner && uid && owner === uid) role = "admin";
+          else role = "member";
+        } else if (role === 'owner') {
+          // Normalize owner to admin for permissions in UI
+          role = 'admin';
+        }
+        return { communityId, imageURL, role } as CommunitySnippet;
+      }).filter((s) => !!s.communityId);
+
       setCommunityStateValue((prev) => ({
         ...prev,
-        mySnippets: snippets as CommunitySnippet[],
+        mySnippets: snippets,
         initSnippetsFetched: true,
       }));
-      setLoading(false);
     } catch (error: any) {
-  console.error("Error getting user snippets", error);
-      setError(error.message);
+      console.error("Error getting membership snapshot", error);
+      setCommunityStateValue((prev) => ({
+        ...prev,
+        initSnippetsFetched: true,
+      }));
+      setError(error?.message || String(error));
     }
     setLoading(false);
   };
@@ -81,10 +109,29 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   };
 
   const onJoinLeaveCommunity = (community: Community, isJoined?: boolean) => {
-  // Join/leave triggered for community id: (see UI state)
-
+    // If not logged in, prompt login
     if (!user) {
       setAuthModalState({ open: true, view: "login" });
+      return;
+    }
+
+    // If user already has a privileged role (owner/admin/moderator), treat as joined and do nothing
+    const role = getUserRole(community.id);
+    const hasPrivilegedRole = role === "owner" || role === "admin" || role === "moderator";
+    if (hasPrivilegedRole && !isJoined) {
+      // Ensure a snippet exists so UI reflects joined state
+      const exists = communityStateValue.mySnippets.some(s => s.communityId === community.id);
+      if (!exists) {
+        const newSnippet: CommunitySnippet = {
+          communityId: community.id,
+          imageURL: community.imageURL || "",
+          role: role,
+        };
+        setCommunityStateValue((prev) => ({
+          ...prev,
+          mySnippets: [...prev.mySnippets, newSnippet],
+        }));
+      }
       return;
     }
 

@@ -59,7 +59,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     const fetch = async () => {
       setLoadingCommunities(true);
       try {
-        const list = await getGroupsByUser();
+  const list = await getGroupsByUser({ ttlMs: 30000 });
         setCommunities(list);
         if (list.length && !communityId) setCommunityId(String(list[0].id));
       } catch (e) {
@@ -138,9 +138,16 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setImagePreview("");
       
       onClose();
-  // Navigate to home with refresh delay so Home page fetches after ~2s
-  try { await router.push("/?refreshDelay=2000"); } catch {}
-  onPostCreated?.();
+      // Stay within context: if posting to a community, remain in that community page
+      if (postLocation === "community" && communityId) {
+        const target = `/community/${encodeURIComponent(String(communityId))}`;
+        try {
+          if (router.asPath !== target) await router.push(target);
+        } catch {}
+      } else {
+        // For personal posts, stay on current page; no redirect
+      }
+      onPostCreated?.();
   } catch (error: any) {
       toast({
     title: "Lỗi khi đăng bài",
@@ -176,7 +183,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
             )}
             {postLocation === "community" && (
               <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
-                → r/{communityId}
+                → {communityId}
               </Text>
             )}
           </Flex>
@@ -221,7 +228,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 >
                   {communities.map((c) => (
                     <option key={String(c.id)} value={String(c.id)}>
-                      r/{c.name}
+                      {c.name}
                     </option>
                   ))}
                 </Select>

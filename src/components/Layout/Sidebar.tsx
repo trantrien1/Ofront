@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { MdQuiz } from "react-icons/md";//quizz
 import { GiFox } from "react-icons/gi";//icon anime
 
@@ -39,6 +39,7 @@ import {
 import { MdGroup } from "react-icons/md";
 // Firebase removed
 import { communityState, createCommunityModalState } from "../../atoms/communitiesAtom";
+import { getGroupsByUser, type Group } from "../../services/groups.service";
 import { useSidebar } from "./SidebarContext";
 
 const Sidebar: React.FC = () => {
@@ -49,6 +50,7 @@ const Sidebar: React.FC = () => {
   const { isOpen: isCommunitiesOpen, onToggle: onCommunitiesToggle } = useDisclosure({ defaultIsOpen: true });
   const { isOpen: isAnimeOpen, onToggle: onAnimeToggle } = useDisclosure({ defaultIsOpen: true });
   const { isOpen: isCoursesOpen, onToggle: onCoursesToggle } = useDisclosure({ defaultIsOpen: true });
+  const { isOpen: isYourCommsOpen, onToggle: onYourCommsToggle } = useDisclosure({ defaultIsOpen: true });
   
   // Use shared Sidebar context from Layout to keep state in sync with content margin
   const { isCollapsed, setIsCollapsed } = useSidebar();
@@ -72,6 +74,9 @@ const Sidebar: React.FC = () => {
   const handleManageCommunities = () => {
     router.push("/my-community");
   };
+  const handleFindCommunities = () => {
+    router.push("/community/find");
+  };
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -86,6 +91,32 @@ const Sidebar: React.FC = () => {
     // Prefetch quiz page to avoid first-click blank
     router.prefetch && router.prefetch("/courses/quizz");
   }, [router.asPath, setIsCollapsed]);
+
+  // Load groups to resolve display names for user's communities
+  const [groups, setGroups] = useState<Group[]>([]);
+  useEffect(() => {
+    let mounted = true;
+  const load = async () => {
+      try {
+        if (!user) { setGroups([]); return; }
+    const list = await getGroupsByUser({ ttlMs: 30000 });
+        if (mounted) setGroups(Array.isArray(list) ? list : []);
+      } catch {
+        if (mounted) setGroups([]);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [user]);
+
+
+  const groupMap = useMemo(() => {
+    const m = new Map<string, Group>();
+    for (const g of groups) m.set(String(g.id), g);
+    return m;
+  }, [groups]);
+
+  // no sidebar-wide search state; search lives on its own page
 
   const NavItem = ({ 
     icon, 
@@ -157,7 +188,7 @@ const Sidebar: React.FC = () => {
     memberCount?: number;
     path: string;
   }) => (
-    <Tooltip label={isCollapsed ? `r/${name}` : ""} placement="right" hasArrow>
+  <Tooltip label={isCollapsed ? `${name}` : ""} placement="right" hasArrow>
       <Flex
         align="center"
         p={2}
@@ -179,7 +210,7 @@ const Sidebar: React.FC = () => {
         {!isCollapsed && (
           <Box flex={1}>
             <Text fontWeight="500" fontSize="sm">
-              r/{name}
+              {name}
             </Text>
             {memberCount && (
               <Text fontSize="xs" color="gray.500">
@@ -338,6 +369,8 @@ const Sidebar: React.FC = () => {
           )}
 
           <Collapse in={isCollapsed || isCommunitiesOpen}>
+            
+
             <VStack spacing={1} align="stretch" mb={4}>
               {user && (
                 <>
@@ -352,6 +385,11 @@ const Sidebar: React.FC = () => {
                     label="Quản lí cộng đồng"
                     onClick={handleManageCommunities}
                   />
+                  <NavItem
+                    icon={FaCog}
+                    label="Tìm cộng đồng"
+                    onClick={handleFindCommunities}
+                  />
                 </>
               )}
             </VStack>
@@ -360,25 +398,42 @@ const Sidebar: React.FC = () => {
             {user && communityStateValue.mySnippets.length > 0 && (
               <VStack spacing={1} align="stretch">
                 {!isCollapsed && (
-                  <Text
-                    fontSize="xs"
-                    fontWeight="semibold"
-                    color={useColorModeValue("gray.600", "gray.300")}
+                  <Flex
+                    align="center"
+                    justify="space-between"
                     mx={3}
-                    mb={2}
+                    mb={1}
+                    cursor="pointer"
+                    onClick={onYourCommsToggle}
                   >
-                    Your Communities
-                  </Text>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="semibold"
+                      color={useColorModeValue("gray.600", "gray.300")}
+                      textTransform="uppercase"
+                    >
+                      Your Communities
+                    </Text>
+                    <Icon as={isYourCommsOpen ? FaChevronDown : FaChevronRight} fontSize="12px" color="gray.500" />
+                  </Flex>
                 )}
-                {communityStateValue.mySnippets.map((snippet) => (
-                  <CommunityItem
-                    key={snippet.communityId}
-                    name={snippet.communityId}
-                    icon={snippet.imageURL}
-                    memberCount={undefined}
-                    path={`/r/${snippet.communityId}`}
-                  />
-                ))}
+                <Collapse in={isCollapsed || isYourCommsOpen}>
+                  {communityStateValue.mySnippets.map((snippet) => {
+                    const id = String(snippet.communityId);
+                    const g = groupMap.get(id);
+                    const name = g?.name || id; // fall back to id if name unknown
+                    const icon = snippet.imageURL || g?.imageURL || undefined;
+                    return (
+                      <CommunityItem
+                        key={id}
+                        name={name}
+                        icon={icon}
+                        memberCount={undefined}
+                        path={`/community/${id}`}
+                      />
+                    );
+                  })}
+                </Collapse>
               </VStack>
             )}
 
@@ -399,7 +454,7 @@ const Sidebar: React.FC = () => {
                 name="VietNamNation"
                 icon="/images/logo.png"
                 memberCount={15420}
-                path="/r/VietNamNation"
+                path="/community/VietNamNation"
               />
             </VStack> 
           </Collapse>

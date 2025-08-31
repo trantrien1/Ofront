@@ -10,10 +10,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const { communityId, groupId, id: idRaw } = body;
     const id = communityId || groupId || idRaw;
-    if (!id) return res.status(400).json({ error: "communityId required" });
+  if (!id) return res.status(400).json({ error: "id (communityId/groupId) required" });
 
     const upstream = process.env.UPSTREAM_URL || "https://rehearten-production.up.railway.app";
-    const url = `${upstream}/group/join`;
+    const urlNew = `${upstream}/group-member/join/${encodeURIComponent(String(id))}`;
+  const urlLegacy = `${upstream}/group/join`;
+    if (process.env.NODE_ENV !== 'production') {
+      try { console.log('[group/join] incoming body=', body, 'upstream new=', urlNew, 'legacy=', urlLegacy); } catch {}
+    }
 
     // propagate auth like other proxies
     const clean = (t?: string | null) => {
@@ -32,12 +36,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (session) cookieParts.push(`JSESSIONID=${session}`);
     if (cookieParts.length) headers["Cookie"] = cookieParts.join("; ");
 
-    const r = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ communityId: id, groupId: id })
-    });
-    const text = await r.text();
+    // Prefer new path-based endpoint: POST /group-member/join/{id}
+    let r = await fetch(urlNew, { method: "POST", headers });
+    let text = await r.text();
+    // If method/path not allowed upstream, fall back to legacy body endpoint
+    if (r.status === 404 || r.status === 405) {
+      r = await fetch(urlLegacy, { method: "POST", headers, body: JSON.stringify({ communityId: id, groupId: id }) });
+      text = await r.text();
+    }
     try { return res.status(r.status).json(JSON.parse(text)); } catch { return res.status(r.status).send(text); }
   } catch (e: any) {
     return res.status(500).json({ error: e?.message || "proxy error" });

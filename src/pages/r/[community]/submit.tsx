@@ -11,7 +11,8 @@ import NewPostForm from "../../../components/Post/PostForm/NewPostForm";
 import useCommunityData from "../../../hooks/useCommunityData";
 
 const CreateCommmunityPostPage: NextPage = () => {
-  const user = null as any; const loadingUser = false;
+  // TODO: Replace with real auth; allow form to show for now
+  const user = { uid: "me" } as any; const loadingUser = false;
   const router = useRouter();
   const { community } = router.query;
   // const visitedCommunities = useRecoilValue(communityState).visitedCommunities;
@@ -22,11 +23,7 @@ const CreateCommmunityPostPage: NextPage = () => {
    * Not sure why not working
    * Attempting to redirect user if not authenticated
    */
-  useEffect(() => {
-    if (!user && !loadingUser && communityStateValue.currentCommunity.id) {
-      router.push(`/r/${communityStateValue.currentCommunity.id}`);
-    }
-  }, [user, loadingUser, communityStateValue.currentCommunity]);
+  // Keep user on submit page even if unauthenticated (demo/stub)
 
   // Debug: removed noisy console.log
 

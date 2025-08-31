@@ -94,7 +94,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 
 		// Navigate to the relevant page
 		if (notification.type === "comment" && notification.postId && notification.communityName) {
-			const url = `/r/${notification.communityName}/comments/${notification.postId}`;
+			const url = `/community/${notification.communityName}/comments/${notification.postId}`;
 			// If we have a commentId, add it as a hash to highlight the specific comment
 			const fullUrl = notification.commentId ? `${url}#comment-${notification.commentId}` : url;
 			router.push(fullUrl);
@@ -182,11 +182,11 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 							&ldquo;{notification.postTitle}&rdquo;
 						</Text>
 					)}
-					{notification.communityName && (
-						<Text fontSize="xs" color={useColorModeValue("blue.500", "blue.300")}>
-							r/{notification.communityName}
-						</Text>
-					)}
+								{notification.communityName && (
+									<Text fontSize="xs" color={useColorModeValue("blue.500", "blue.300")}>
+										{notification.communityName}
+									</Text>
+								)}
 					<Text fontSize="xs" color={useColorModeValue("gray.400", "gray.500")} mt={1}>
 						{formatTimeAgoLocal(notification.timestamp)}
 					</Text>

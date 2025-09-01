@@ -66,7 +66,7 @@ const CommunityFeed: NextPage = () => {
           </Stack>
         )}
       </Stack>
-      <Stack spacing={5} position="sticky" top="14px">
+  <Stack spacing={5} position="sticky" top="44px" zIndex={1000}>
         {/* Right sidebar space */}
       </Stack>
     </PageContentLayout>

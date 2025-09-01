@@ -27,7 +27,7 @@ const About = dynamic(() => Promise.resolve(AboutComponent), {
 });
 
 const AboutSkeleton = () => (
-  <Box pt={0} position="sticky" top="14px">
+  <Box pt={0} position="sticky" top="44px" zIndex={1000}>
     <Flex
       justify="space-between"
       align="center"
@@ -104,7 +104,7 @@ const AboutComponent: React.FC<AboutProps> = ({
   };
 
   return (
-    <Box pt={pt} position="sticky" top="14px">
+  <Box pt={pt} position="sticky" top="44px" zIndex={1000}>
       <Flex
         justify="space-between"
         align="center"

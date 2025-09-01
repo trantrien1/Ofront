@@ -1,15 +1,12 @@
 import React from "react";
 import { Box, Flex, Image, Text, useColorModeValue } from "@chakra-ui/react";
 type NavUser = { uid: string; email?: string | null };
-// Firebase removed
 import { useSetRecoilState, useRecoilValue } from "recoil";
 import { userState } from "../../atoms/userAtom";
 import {
   defaultMenuItem,
   directoryMenuState,
 } from "../../atoms/directoryMenuAtom";
-// Firebase removed
-
 import RightContent from "./RightContent";
 import SearchInput from "./SearchInput";
 import router from "next/router";
@@ -26,6 +23,8 @@ const Navbar: React.FC = () => {
       bg="transparent" // inherit from parent header Box, which is color-mode aware
       height="44px"
       padding="6px 12px"
+      position="sticky"
+      zIndex={1400}
       justifyContent={{ md: "space-between" }}
     >
       <Flex

@@ -75,7 +75,7 @@ const Popular: NextPage = () => {
           </Stack>
         )}
       </>
-      <Stack spacing={5} position="sticky" top="14px">
+  <Stack spacing={5} position="sticky" top="44px" zIndex={1000}>
         {/* Right sidebar content can be added here */}
       </Stack>
     </PageContentLayout>

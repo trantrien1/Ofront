@@ -13,3 +13,29 @@ a {
 * {
   box-sizing: border-box;
 }
+
+/* Header height utilities */
+:root {
+  --header-height: 44px;
+}
+
+/* Utility classes to align elements relative to the fixed header */
+.top-below-header {
+  top: var(--header-height) !important;
+}
+
+.h-screen-minus-header {
+  height: calc(100vh - var(--header-height)) !important;
+}
+
+.z-above-sidebar {
+  z-index: 1000 !important;
+}
+
+.z-header {
+  z-index: 1001 !important;
+}
+
+.z-above-header {
+  z-index: 1000 !important;
+}

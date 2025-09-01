@@ -177,7 +177,7 @@ const Home: NextPage = () => {
           />
         ))}
       </Stack>
-      <Stack gap={5} position="sticky" top="14px">
+  <Stack gap={5} position="sticky" top="44px" zIndex={500} >
         <Recommendations />
       </Stack>
     </PageContentLayout>

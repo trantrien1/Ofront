@@ -164,7 +164,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       <Box height={h} width={w} bg={useColorModeValue("gray.200", "whiteAlpha.300")} borderRadius="md" mb={mb} />
     );
     return (
-      <Box pt={pt} position="sticky" top="14px">
+  <Box pt={pt} position="sticky" top="44px" zIndex={1000}>
         <Flex justify="space-between" align="center" p={3} color="white" bg={headerBg} borderRadius="4px 4px 0px 0px">
           <Box height="16px" width="140px" bg="whiteAlpha.700" borderRadius="md" />
           <Box height="16px" width="16px" bg="whiteAlpha.700" borderRadius="md" />
@@ -437,7 +437,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   };
 
   return (
-    <Box pt={pt} position="sticky" top="14px">
+  <Box pt={pt} position="sticky" top="44px" zIndex={1000}>
       {/* Header */}
       <Flex
         justify="space-between"

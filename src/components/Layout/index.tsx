@@ -29,7 +29,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             top={0}
             left={0}
             right={0}
-            zIndex={1001}
+            zIndex={1600}
             bg={{ base: "white", _dark: "gray.800" }}
             borderBottom="1px solid"
             borderColor={useColorModeValue("gray.300", "whiteAlpha.400")} // thanh duoi header
@@ -37,14 +37,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <Navbar />
           </Box>
 
-          {/* Main Layout */}
-          <Flex minH="100vh" pt="44px"> {/* Add top padding for fixed header */}
+      {/* Main Layout: content scrolls below the 44px Header */}
+      <Flex minH="100vh" pt="44px">
             <Sidebar />
             <Box 
+              zIndex={900}
               flex={1} 
               ml={isCollapsed ? "80px" : "280px"} 
               bg={{ base: "gray.50", _dark: "gray.900" }}
-              transition="margin-left 0.3s ease"
+        transition="margin-left 0.3s ease"
+        position="relative"
+        h="calc(100vh - 44px)"
+        overflowY="auto"
             >
               {children}
             </Box>

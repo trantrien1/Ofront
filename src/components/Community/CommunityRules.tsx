@@ -19,7 +19,7 @@ interface CommunityRulesProps {
 const CommunityRules: React.FC<CommunityRulesProps> = ({ communityData, loading }) => {
   if (loading) {
     return (
-      <Box pt={0} position="sticky" top="14px">
+  <Box pt={0} position="sticky" top="44px" zIndex={1000}>
         <Flex justify="space-between" align="center" p={3} color="white" bg="blue.400" borderRadius="4px 4px 0px 0px">
           <Box height="16px" width="160px" bg="whiteAlpha.700" borderRadius="md" />
         </Flex>
@@ -39,7 +39,7 @@ const CommunityRules: React.FC<CommunityRulesProps> = ({ communityData, loading 
   }
 
   return (
-    <Box pt={0} position="sticky" top="14px">
+  <Box pt={0} position="sticky" top="44px" zIndex={1000}>
       <Flex
         justify="space-between"
         align="center"

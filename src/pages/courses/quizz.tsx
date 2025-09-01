@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Box, Button, Checkbox, CheckboxGroup, Flex, Heading, HStack, Radio, RadioGroup, Spacer, Stack, Text, useColorModeValue, useToast } from "@chakra-ui/react";
+import { Box, Button, Checkbox, CheckboxGroup, Flex, Heading, HStack, Radio, RadioGroup, Spacer, Stack, Text, useColorModeValue, useToast, Spinner } from "@chakra-ui/react";
 import Link from "next/link";
 import { getClientRole, isAdminRole } from "../../helpers/role";
 import { QuizService } from "../../services";
@@ -17,6 +17,8 @@ export default function QuizPage() {
   const [audience, setAudience] = useState<string>(''); // 'student' | 'worker' | 'teacher' | 'other'
   const [answers, setAnswers] = useState<AnswersSingle>({});
   const [submitted, setSubmitted] = useState(false);
+  const [advice, setAdvice] = useState<string>("");
+  const [adviceLoading, setAdviceLoading] = useState(false);
   const toast = useToast();
 
   const cardBg = useColorModeValue("white", "gray.800");
@@ -40,8 +42,35 @@ export default function QuizPage() {
   const handleChangeSingle = (qid: string | number, v: string) => setAnswers((a) => ({ ...a, [qid]: v }));
   const handleChangeMulti = (qid: string | number, vals: string[]) => setAnswers((a) => ({ ...a, [qid]: vals }));
 
-  const handleSubmit = () => setSubmitted(true);
-  const handleReset = () => { setAnswers({}); setSubmitted(false); };
+  const handleSubmit = async () => {
+    setSubmitted(true);
+    setAdvice("");
+    setAdviceLoading(true);
+    try {
+      // Build compact payload for LLM
+      const items = questions
+        .filter((q) => (q.type || 'student') === audience)
+        .map((q) => ({
+          id: q.id,
+          question: q.content || q.text || String(q.id),
+          answer: answers[q.id as any] ?? "",
+        }));
+      const r = await fetch('/api/quiz/advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audience, items }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
+      setAdvice(String(data?.advice || ""));
+    } catch (e:any) {
+      setAdvice("");
+      toast({ status:'error', title:'Không tạo được lời khuyên', description: e?.message || 'Failed' });
+    } finally {
+      setAdviceLoading(false);
+    }
+  };
+  const handleReset = () => { setAnswers({}); setSubmitted(false); setAdvice(""); };
 
   const selectedCount = Object.keys(answers).length;
 
@@ -110,7 +139,19 @@ export default function QuizPage() {
             <Text color="gray.600">Bạn đã chọn {selectedCount} trên {questions.length} câu.</Text>
             {submitted && (
               <Box mt={3} fontSize="sm" color="gray.500">
-                <Text>Đã lưu lựa chọn của bạn trong trình duyệt. Tính điểm sẽ phụ thuộc vào quy tắc của hệ thống nếu có.</Text>
+                <Text mb={2}>Đã lưu lựa chọn của bạn trong trình duyệt. Dưới đây là lời khuyên tham khảo từ Gemini.</Text>
+                {adviceLoading ? (
+                  <HStack color="gray.500" spacing={2}>
+                    <Spinner size="sm" />
+                    <Text>Đang tạo lời khuyên…</Text>
+                  </HStack>
+                ) : advice ? (
+                  <Box whiteSpace="pre-wrap" color={useColorModeValue('gray.700','gray.200')}>
+                    {advice}
+                  </Box>
+                ) : (
+                  <Text color="gray.500">Chưa có lời khuyên.</Text>
+                )}
               </Box>
             )}
           </Box>

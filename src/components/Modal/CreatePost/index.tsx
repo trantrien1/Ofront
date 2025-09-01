@@ -54,6 +54,24 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
+  // Theme tokens (hooks must not be called conditionally)
+  const modalBg = useColorModeValue("white", "gray.800");
+  const headerBorder = useColorModeValue("gray.200", "gray.700");
+  const headerColor = useColorModeValue("gray.800", "gray.100");
+  const hintColor = useColorModeValue("gray.500", "gray.400");
+  const selectFocus = useColorModeValue("blue.500", "blue.300");
+  const selectHover = useColorModeValue("gray.300", "gray.500");
+  const inputBg = useColorModeValue("white", "gray.800");
+  const inputBorder = useColorModeValue("gray.200", "gray.600");
+  const titleCount = useColorModeValue("gray.500", "gray.400");
+  const dashedBorder = useColorModeValue("gray.300", "gray.600");
+  const dashedHoverBorder = useColorModeValue("gray.400", "gray.500");
+  const dashedHoverBg = useColorModeValue("gray.50", "whiteAlpha.100");
+  const dashedIcon = useColorModeValue("gray.400", "gray.500");
+  const dashedText = useColorModeValue("gray.600", "gray.300");
+  const dashedSubText = useColorModeValue("gray.500", "gray.400");
+  const footerBorder = useColorModeValue("gray.200", "gray.700");
+
   // Load user's communities when switching to community mode or when modal opens
   useEffect(() => {
     const fetch = async () => {
@@ -172,17 +190,17 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalOverlay />
-      <ModalContent bg={useColorModeValue("white", "gray.800")}>
-  <ModalHeader borderBottom="1px solid" borderColor={useColorModeValue("gray.200", "gray.700")} color={useColorModeValue("gray.800", "gray.100")}>
+      <ModalContent bg={modalBg}>
+        <ModalHeader borderBottom="1px solid" borderColor={headerBorder} color={headerColor}>
           <Flex align="center" gap={2}>
             <Text>Tạo bài đăng</Text>
             {postLocation === "personal" && (
-              <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
+              <Text fontSize="sm" color={hintColor}>
                 → Trang cá nhân
               </Text>
             )}
             {postLocation === "community" && (
-              <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
+              <Text fontSize="sm" color={hintColor}>
                 → {communityId}
               </Text>
             )}
@@ -203,10 +221,10 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 }}
                 borderRadius="xl"
                 boxShadow="sm"
-                _focus={{ borderColor: useColorModeValue("blue.500", "blue.300"), boxShadow: "0 0 0 1px rgba(99,179,237,0.6)" }}
-                _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
-                bg={useColorModeValue("white", "gray.800")}
-                borderColor={useColorModeValue("gray.200", "gray.600")}
+                _focus={{ borderColor: selectFocus, boxShadow: "0 0 0 1px rgba(99,179,237,0.6)" }}
+                _hover={{ borderColor: selectHover }}
+                bg={inputBg}
+                borderColor={inputBorder}
                 >
                 <option value="personal">📄 Trang cá nhân của tôi</option>
                 <option value="community">🏘️ Cộng đồng</option>
@@ -214,17 +232,17 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
             </FormControl>
 
-            {postLocation === "community" && (
+    {postLocation === "community" && (
               <FormControl>
                 <FormLabel>Chọn cộng đồng</FormLabel>
                 <Select
                   value={communityId}
                   onChange={(e) => setCommunityId(e.target.value)}
                   placeholder={loadingCommunities ? "Đang tải..." : (communities.length ? "Chọn cộng đồng" : "Không có cộng đồng")}
-                  bg={useColorModeValue("white", "gray.800")}
-                  borderColor={useColorModeValue("gray.200", "gray.600")}
-                  _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
-                  _focus={{ borderColor: useColorModeValue("blue.500", "blue.300") }}
+      bg={inputBg}
+      borderColor={inputBorder}
+      _hover={{ borderColor: selectHover }}
+      _focus={{ borderColor: selectFocus }}
                 >
                   {communities.map((c) => (
                     <option key={String(c.id)} value={String(c.id)}>
@@ -242,12 +260,12 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={300}
-                bg={useColorModeValue("white", "gray.800")}
-                borderColor={useColorModeValue("gray.200", "gray.600")}
-                _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
-                _focus={{ borderColor: useColorModeValue("blue.500", "blue.300") }}
+                bg={inputBg}
+                borderColor={inputBorder}
+                _hover={{ borderColor: selectHover }}
+                _focus={{ borderColor: selectFocus }}
               />
-              <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")} textAlign="right">
+              <Text fontSize="sm" color={titleCount} textAlign="right">
                 {title.length}/300
               </Text>
             </FormControl>
@@ -260,32 +278,32 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 onChange={(e) => setBody(e.target.value)}
                 rows={4}
                 maxLength={1000}
-                bg={useColorModeValue("white", "gray.800")}
-                borderColor={useColorModeValue("gray.200", "gray.600")}
-                _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
-                _focus={{ borderColor: useColorModeValue("blue.500", "blue.300") }}
+                bg={inputBg}
+                borderColor={inputBorder}
+                _hover={{ borderColor: selectHover }}
+                _focus={{ borderColor: selectFocus }}
               />
-              <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")} textAlign="right">
+              <Text fontSize="sm" color={hintColor} textAlign="right">
                 {body.length}/1000
               </Text>
             </FormControl>
 
             {/* Image Upload */}
             <Box width="100%">
-              {!imagePreview ? (
+        {!imagePreview ? (
                 <Box
                   border="2px dashed"
-                  borderColor={useColorModeValue("gray.300", "gray.600")}
+          borderColor={dashedBorder}
                   borderRadius="md"
                   p={6}
                   textAlign="center"
                   cursor="pointer"
-                  _hover={{ borderColor: useColorModeValue("gray.400", "gray.500"), bg: useColorModeValue("gray.50", "whiteAlpha.100") }}
+          _hover={{ borderColor: dashedHoverBorder, bg: dashedHoverBg }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Icon as={BsCardImage} fontSize="40px" color={useColorModeValue("gray.400", "gray.500")} mb={2} />
-                  <Text color={useColorModeValue("gray.600", "gray.300")}>Nhấn để tải ảnh lên</Text>
-                  <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
+          <Icon as={BsCardImage} fontSize="40px" color={dashedIcon} mb={2} />
+          <Text color={dashedText}>Nhấn để tải ảnh lên</Text>
+          <Text fontSize="sm" color={dashedSubText}>
                     Hỗ trợ JPG, PNG tối đa 10MB
                   </Text>
                 </Box>
@@ -322,7 +340,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
           </VStack>
         </ModalBody>
 
-        <ModalFooter borderTop="1px solid" borderColor={useColorModeValue("gray.200", "gray.700")}>
+  <ModalFooter borderTop="1px solid" borderColor={footerBorder}>
           <Button variant="outline" colorScheme="gray" mr={3} onClick={onClose}>
             Hủy
           </Button>

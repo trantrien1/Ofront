@@ -55,6 +55,19 @@ const PersonalHome: React.FC = () => {
   const loadingUser = false;
   const toast = useToast();
 
+  // Theme tokens (must be declared before any early returns)
+  const cardBg = useColorModeValue("white", "gray.800");
+  const borderCol = useColorModeValue("gray.300", "gray.700");
+  const subText = useColorModeValue("gray.500", "gray.400");
+  const mutedText = useColorModeValue("gray.600", "gray.300");
+  const softBg = useColorModeValue("gray.50", "gray.700");
+  const brandAlt = useColorModeValue("brand.100", "blue.300");
+  const coverGradient = useColorModeValue("linear(to-r, blue.400, blue.600)", "linear(to-r, blue.600, blue.700)");
+  const avatarBg = useColorModeValue("brand.100", "gray.700");
+  const editVariant = useColorModeValue("outline", "solid");
+  const emptyMuted = useColorModeValue("gray.400", "gray.500");
+  const loginPromptColor = useColorModeValue("gray.600", "gray.300");
+
   const [isEditing, setIsEditing] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
@@ -186,7 +199,7 @@ const PersonalHome: React.FC = () => {
       <Center minH="50vh">
         <Stack align="center" spacing={4}>
           <ChakraImage src="/images/logo.png" alt="logo" boxSize="60px" borderRadius="full" />
-          <Text fontSize="lg" color={useColorModeValue("gray.600", "gray.300")}>
+          <Text fontSize="lg" color={loginPromptColor}>
             Please login to view your profile
           </Text>
           <Button colorScheme="brand">Login</Button>
@@ -200,21 +213,16 @@ const PersonalHome: React.FC = () => {
     toast({ title: "Edit Profile", description: "Profile editing feature coming soon!", status: "info", duration: 3000, isClosable: true });
   };
 
-  const cardBg = useColorModeValue("white", "gray.800");
-  const borderCol = useColorModeValue("gray.300", "gray.700");
-  const subText = useColorModeValue("gray.500", "gray.400");
-  const mutedText = useColorModeValue("gray.600", "gray.300");
-  const softBg = useColorModeValue("gray.50", "gray.700");
-  const brandAlt = useColorModeValue("brand.100", "blue.300");
+  // tokens already declared above
 
   return (
     <Box maxW="1200px" mx="auto" p={4}>
       {/* Profile Header with Cover Image */}
       <Box bg={cardBg} borderRadius={4} border="1px solid" borderColor={borderCol} mb={4}>
-        <Box h="100px" bgGradient={useColorModeValue("linear(to-r, blue.400, blue.600)", "linear(to-r, blue.600, blue.700)")} borderRadius="4px 4px 0 0" />
+  <Box h="100px" bgGradient={coverGradient} borderRadius="4px 4px 0 0" />
         <Flex p={6} mt={-12} direction="column">
           <Flex align="flex-end" mb={4}>
-            <Avatar size="xl" src={userProfile?.photoURL} name={userProfile?.displayName} border="4px solid white" bg={useColorModeValue("brand.100", "gray.700")} />
+            <Avatar size="xl" src={userProfile?.photoURL} name={userProfile?.displayName} border="4px solid white" bg={avatarBg} />
             <Flex ml={4} direction="column" flex={1}>
               <Text fontSize="2xl" fontWeight="bold">{userProfile?.displayName}</Text>
               <HStack mt={1}><Tag size="sm" colorScheme={roleColor}>{roleLabel}</Tag></HStack>
@@ -226,7 +234,7 @@ const PersonalHome: React.FC = () => {
               )}
             </Flex>
             <HStack>
-              <Button leftIcon={<MdEdit />} colorScheme="blue" variant={useColorModeValue("outline", "solid")} size="sm" onClick={handleEditProfile}>Edit Profile</Button>
+              <Button leftIcon={<MdEdit />} colorScheme="blue" variant={editVariant} size="sm" onClick={handleEditProfile}>Edit Profile</Button>
             </HStack>
           </Flex>
 
@@ -280,7 +288,7 @@ const PersonalHome: React.FC = () => {
                   <Stack align="center" spacing={3}>
                     <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
                     <Text color={subText} fontSize="lg">No posts yet</Text>
-                    <Text color={useColorModeValue("gray.400", "gray.500")} fontSize="sm" textAlign="center">Start sharing your thoughts with the community!</Text>
+                    <Text color={emptyMuted} fontSize="sm" textAlign="center">Start sharing your thoughts with the community!</Text>
                   </Stack>
                 </Center>
               ) : (
@@ -306,7 +314,7 @@ const PersonalHome: React.FC = () => {
                 <Stack align="center" spacing={3}>
                   <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
                   <Text color={subText} fontSize="lg">Comments coming soon</Text>
-                  <Text color={useColorModeValue("gray.400", "gray.500")} fontSize="sm" textAlign="center">Your comments will be displayed here</Text>
+                  <Text color={emptyMuted} fontSize="sm" textAlign="center">Your comments will be displayed here</Text>
                 </Stack>
               </Center>
             </TabPanel>
@@ -357,7 +365,7 @@ const PersonalHome: React.FC = () => {
                       const r = String(g.userRole || "").toLowerCase();
                       return r === "owner" || r === "admin" || r === "moderator";
                     }).length === 0 ? (
-                      <Text color={subText} fontSize="sm">You don't manage any communities yet.</Text>
+                      <Text color={subText} fontSize="sm">You don&#39;t manage any communities yet.</Text>
                     ) : (
                       <Stack spacing={3}>
                         {allGroups.filter(g => {
@@ -388,7 +396,7 @@ const PersonalHome: React.FC = () => {
                       const r = String(g.userRole || "").toLowerCase();
                       return !(r === "owner" || r === "admin" || r === "moderator");
                     }).length === 0 ? (
-                      <Text color={subText} fontSize="sm">You haven't joined any communities yet.</Text>
+                      <Text color={subText} fontSize="sm">You haven&#39;t joined any communities yet.</Text>
                     ) : (
                       <Stack spacing={3}>
                         {allGroups.filter(g => {

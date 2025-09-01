@@ -27,19 +27,20 @@ const CommunityHighlights: React.FC<CommunityHighlightsProps> = ({ pinnedPosts, 
   const textColor = useColorModeValue("gray.800", "white");
   const subtitleColor = useColorModeValue("gray.600", "gray.300");
 
+  const skeletonBg = useColorModeValue("gray.200", "whiteAlpha.300");
   if (loading) {
     return (
       <Box mb={6}>
         <Flex align="center" mb={4}>
           <Icon as={MdPushPin} color="orange.500" mr={2} boxSize={5} />
-          <Box h="18px" w="180px" bg={useColorModeValue("gray.200", "whiteAlpha.300")} borderRadius="md" />
+          <Box h="18px" w="180px" bg={skeletonBg} borderRadius="md" />
         </Flex>
         <Flex gap={4} overflowX="hidden">
           {[1,2,3].map((i) => (
             <Box key={i} minW="250px" maxW="250px" flexShrink={0} bg={cardBg} border="1px solid" borderColor={borderColor} borderRadius="md" p={3}>
-              <Box h="120px" w="100%" bg={useColorModeValue("gray.200", "whiteAlpha.300")} borderRadius="md" mb={3} />
-              <Box h="12px" w="85%" bg={useColorModeValue("gray.200", "whiteAlpha.300")} borderRadius="md" mb={2} />
-              <Box h="12px" w="70%" bg={useColorModeValue("gray.200", "whiteAlpha.300")} borderRadius="md" />
+              <Box h="120px" w="100%" bg={skeletonBg} borderRadius="md" mb={3} />
+              <Box h="12px" w="85%" bg={skeletonBg} borderRadius="md" mb={2} />
+              <Box h="12px" w="70%" bg={skeletonBg} borderRadius="md" />
             </Box>
           ))}
         </Flex>

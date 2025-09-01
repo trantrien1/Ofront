@@ -23,16 +23,20 @@ const NotificationItem = dynamic(() => Promise.resolve(NotificationItemComponent
 	loading: () => <NotificationItemSkeleton />
 });
 
-const NotificationItemSkeleton = () => (
-	<Box p={3} borderBottom="1px solid" borderColor={useColorModeValue("gray.100", "gray.700")}>
-		<Flex align="start" gap={3}>
-			<Avatar size="sm" />
-			<Box flex={1}>
-				<Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>Loading...</Text>
-			</Box>
-		</Flex>
-	</Box>
-);
+const NotificationItemSkeleton = () => {
+	const borderCol = useColorModeValue("gray.100", "gray.700");
+	const muted = useColorModeValue("gray.500", "gray.400");
+	return (
+		<Box p={3} borderBottom="1px solid" borderColor={borderCol}>
+			<Flex align="start" gap={3}>
+				<Avatar size="sm" />
+				<Box flex={1}>
+					<Text fontSize="sm" color={muted}>Loading...</Text>
+				</Box>
+			</Flex>
+		</Box>
+	);
+};
 
 type NotificationItemProps = {
 	notification: Notification;
@@ -53,6 +57,18 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 	const router = useRouter();
 		const toast = useToast();
 	const setPostState = useSetRecoilState(postState);
+
+	// Precompute all theme-dependent styles up front (hooks cannot be used conditionally)
+	const borderCol = useColorModeValue("gray.100", "gray.700");
+	const bgRead = useColorModeValue("white", "gray.800");
+	const bgUnread = useColorModeValue("blue.50", "whiteAlpha.100");
+	const hoverBg = useColorModeValue("gray.50", "whiteAlpha.100");
+	const nameColor = useColorModeValue("gray.800", "gray.100");
+	const messageColor = useColorModeValue("gray.600", "gray.300");
+	const postTitleColor = useColorModeValue("gray.500", "gray.400");
+	const communityLink = useColorModeValue("blue.500", "blue.300");
+	const timeColor = useColorModeValue("gray.400", "gray.500");
+	const muted = useColorModeValue("gray.500", "gray.400");
 
 	// Fetch user data - For now, derive from notification (no Firebase)
 	useEffect(() => {
@@ -137,8 +153,8 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 
 	if (loading) {
 		return (
-			<Box p={3} borderBottom="1px solid" borderColor={useColorModeValue("gray.100", "gray.700")}>
-				<Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>Loading...</Text>
+			<Box p={3} borderBottom="1px solid" borderColor={borderCol}>
+				<Text fontSize="sm" color={muted}>Loading...</Text>
 			</Box>
 		);
 	}
@@ -147,10 +163,10 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 		<Box
 			p={3}
 			borderBottom="1px solid"
-			borderColor={useColorModeValue("gray.100", "gray.700")}
-			bg={notification.read ? useColorModeValue("white", "gray.800") : useColorModeValue("blue.50", "whiteAlpha.100")}
+			borderColor={borderCol}
+			bg={notification.read ? bgRead : bgUnread}
 			cursor="pointer"
-			_hover={{ bg: useColorModeValue("gray.50", "whiteAlpha.100") }}
+			_hover={{ bg: hoverBg }}
 			onClick={handleNotificationClick}
 		>
 			<Flex align="start" gap={3}>
@@ -162,11 +178,11 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 				<Box flex={1}>
 					<Flex align="center" gap={2} mb={1}>
 						<Text fontSize="16px">{getTypeEmoji()}</Text>
-						<Text fontSize="sm" fontWeight="medium" color={useColorModeValue("gray.800", "gray.100")}>
+						<Text fontSize="sm" fontWeight="medium" color={nameColor}>
 							{userData?.displayName || "Unknown User"}
 						</Text>
 					</Flex>
-					<Text fontSize="sm" color={useColorModeValue("gray.600", "gray.300")} mb={1}>
+					<Text fontSize="sm" color={messageColor} mb={1}>
 						{notification.message}
 					</Text>
 					{notification.pending && (
@@ -177,17 +193,17 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 							)}
 						</HStack>
 					)}
-					{notification.postTitle && (
-						<Text fontSize="xs" color={useColorModeValue("gray.500", "gray.400")} fontStyle="italic">
-							&ldquo;{notification.postTitle}&rdquo;
-						</Text>
-					)}
+						{notification.postTitle && (
+							<Text fontSize="xs" color={postTitleColor} fontStyle="italic">
+								&ldquo;{notification.postTitle}&rdquo;
+							</Text>
+						)}
 								{notification.communityName && (
-									<Text fontSize="xs" color={useColorModeValue("blue.500", "blue.300")}>
+									<Text fontSize="xs" color={communityLink}>
 										{notification.communityName}
 									</Text>
 								)}
-					<Text fontSize="xs" color={useColorModeValue("gray.400", "gray.500")} mt={1}>
+					<Text fontSize="xs" color={timeColor} mt={1}>
 						{formatTimeAgoLocal(notification.timestamp)}
 					</Text>
 				</Box>

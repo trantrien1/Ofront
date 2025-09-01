@@ -109,6 +109,10 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const chipBg = useColorModeValue("gray.100", "gray.700");
   const chipHoverBg = useColorModeValue("gray.200", "gray.600");
   const chipText = useColorModeValue("gray.800", "gray.100");
+  const likeBg = useColorModeValue("blue.500", "blue.400");
+  const likeBgHover = useColorModeValue("blue.600", "blue.500");
+  const likeBorder = useColorModeValue("blue.500", "blue.400");
+  const iconMuted = useColorModeValue("gray.600", "gray.300");
   // Determine liked state from prop or post state for immediate UI feedback
   const isLiked = ((userVoteValue ?? post.currentUserVoteStatus?.voteValue) === 1);
 
@@ -157,7 +161,6 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       cursor={singlePostView ? "unset" : "pointer"}
       _hover={{
         bg: hoverBg,
-        
       }}
   onClick={() => onSelectPost && post && onSelectPost(post, postIdx ?? 0)}
     >
@@ -259,12 +262,12 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           icon={<FaThumbsUp />}
           size="sm"
           variant="ghost"
-          bg={isLiked ? useColorModeValue("blue.500", "blue.400") : chipBg}
+          bg={isLiked ? likeBg : chipBg}
           color={isLiked ? "white" : chipText}
           borderRadius="full"
-          borderColor={isLiked ? useColorModeValue("blue.500", "blue.400") : "transparent"}
+          borderColor={isLiked ? likeBorder : "transparent"}
           _hover={{
-            bg: isLiked ? useColorModeValue("blue.600", "blue.500") : chipHoverBg,
+            bg: isLiked ? likeBgHover : chipHoverBg,
             transform: "scale(1.1)"
           }}
           transition="all 0.2s ease"
@@ -300,7 +303,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             }
           }}
         >
-          <ChatIcon color={useColorModeValue("gray.600", "gray.300")} />
+          <ChatIcon color={iconMuted} />
           <Text color={chipText}>{post.numberOfComments}</Text>
         </HStack>
 
@@ -320,7 +323,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           cursor="pointer"
           onClick={(e) => { e.stopPropagation(); toast({ title: "Chức năng này sẽ sớm ra mắt", status: "info", duration: 2500 }); }}
         >
-          <FiShare2 color={useColorModeValue("gray.600", "gray.300")} />
+          <FiShare2 color={iconMuted} />
           <Text color={chipText} fontSize="sm" fontWeight="medium">
             Share
           </Text>
@@ -350,11 +353,11 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             }}
           >
             {loadingPin ? (
-              <Spinner size="sm" color={useColorModeValue("gray.600", "gray.300")} />
+              <Spinner size="sm" color={iconMuted} />
             ) : (
-              <Icon as={MdPushPin} color={useColorModeValue("gray.600", "gray.300")} />
+              <Icon as={MdPushPin} color={iconMuted} />
             )}
-            <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="sm" fontWeight="medium">
+            <Text color={iconMuted} fontSize="sm" fontWeight="medium">
               {loadingPin ? "Processing..." : (isPinned ? "Unpin" : "Pin")}
             </Text>
           </HStack>

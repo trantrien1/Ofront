@@ -23,6 +23,7 @@ export default function QuizPage() {
 
   const cardBg = useColorModeValue("white", "gray.800");
   const borderCol = useColorModeValue("gray.200", "gray.700");
+  const adviceColor = useColorModeValue('gray.700','gray.200');
 
   useEffect(() => { const r = getClientRole(); setIsAdmin(isAdminRole(r)); }, []);
 
@@ -146,7 +147,7 @@ export default function QuizPage() {
                     <Text>Đang tạo lời khuyên…</Text>
                   </HStack>
                 ) : advice ? (
-                  <Box whiteSpace="pre-wrap" color={useColorModeValue('gray.700','gray.200')}>
+                  <Box whiteSpace="pre-wrap" color={adviceColor}>
                     {advice}
                   </Box>
                 ) : (

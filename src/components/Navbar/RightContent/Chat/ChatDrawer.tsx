@@ -213,6 +213,8 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
   const [minimized, setMinimized] = useState(false);
   const panelBg = useColorModeValue("white", "gray.800");
   const headerBg = useColorModeValue("gray.50", "gray.700");
+  const subtleBorder = useColorModeValue("gray.200", "whiteAlpha.300");
+  const subtleText = useColorModeValue("gray.600", "gray.400");
 
   return (
     <Box
@@ -231,7 +233,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
         h={minimized ? "48px" : { base: "70vh", md: "70vh" }}
         bg={panelBg}
         borderWidth="1px"
-        borderColor={useColorModeValue("gray.200", "whiteAlpha.300")}
+  borderColor={subtleBorder}
         borderRadius="lg"
         boxShadow="2xl"
         overflow="hidden"
@@ -247,7 +249,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
           py={2}
           bg={headerBg}
           borderBottomWidth="1px"
-          borderColor={useColorModeValue("gray.200", "whiteAlpha.300")}
+          borderColor={subtleBorder}
         >
           <HStack spacing={2}>
             <Icon as={BsRobot} />
@@ -275,7 +277,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
         {!minimized && (
           <Flex flex={1} minH={0}>
             {/* Left navigation */}
-            <VStack align="stretch" w="280px" borderRight="1px solid" borderColor={useColorModeValue("gray.200", "whiteAlpha.300")} spacing={1} p={3}>
+            <VStack align="stretch" w="280px" borderRight="1px solid" borderColor={subtleBorder} spacing={1} p={3}>
               <Button
                 variant={activeView === "bot" ? "solid" : "ghost"}
                 colorScheme={activeView === "bot" ? "blue" : undefined}
@@ -298,7 +300,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
               {activeView === "direct" && (
                 <VStack align="stretch" spacing={1} overflowY="auto">
                   {convos.length === 0 ? (
-                    <Box p={2} color={useColorModeValue("gray.600", "gray.400")}>No conversations</Box>
+                    <Box p={2} color={subtleText}>No conversations</Box>
                   ) : (
                     convos.map((c) => (
                       <Button
@@ -339,7 +341,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
                   <Text fontSize="lg" fontWeight="bold">
                     Welcome to chat!
                   </Text>
-                  <Text color={useColorModeValue("gray.600", "gray.400")} textAlign="center">
+                  <Text color={subtleText} textAlign="center">
                     Start a direct chat with another user.
                   </Text>
                   <HStack>

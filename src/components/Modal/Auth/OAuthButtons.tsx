@@ -15,7 +15,7 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = () => {
         onClick={() => { /* TODO: OAuth via your backend */ }}
         isLoading={loading}
       >
-        <Image src="/images/googlelogo.png" height="20px" mr={4} />
+        <Image src="/images/googlelogo.png" height="20px" mr={4} alt="Google" />
         Continue with Google
       </Button>
       <Button variant="oauth">Some Other Provider</Button>

@@ -24,6 +24,9 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
     'admin@rehearten.com',
   ];
   const isAdmin = user && user.email && ADMIN_EMAILS.includes(user.email);
+  const hoverBg = useColorModeValue("gray.200", "whiteAlpha.200");
+  const iconMuted = useColorModeValue("gray.600", "gray.300");
+  const adminIcon = useColorModeValue("red.500", "red.300");
 
   // Navigation after creating a post is handled inside the CreatePost modal.
   // Avoid redirecting to home here to prevent jumping away from community pages.
@@ -45,28 +48,28 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
           padding={1}
           cursor="pointer"
           borderRadius={4}
-          _hover={{ bg: useColorModeValue("gray.200", "whiteAlpha.200") }}
+          _hover={{ bg: hoverBg }}
           onClick={onOpenChat}
         >
-          <Icon as={BsChatDots} fontSize={20} color={useColorModeValue("gray.600", "gray.300")} />
+          <Icon as={BsChatDots} fontSize={20} color={iconMuted} />
         </Flex>
         <NotificationDropdown
           isOpen={isNotificationOpen}
           onToggle={() => setIsNotificationOpen(!isNotificationOpen)}
         />
         {/* Admin Dashboard Icon - only show for admin users */}
-        {isAdmin && (
+  {isAdmin && (
           <Flex
             mr={1.5}
             ml={1.5}
             padding={1}
             cursor="pointer"
             borderRadius={4}
-            _hover={{ bg: useColorModeValue("gray.200", "whiteAlpha.200") }}
+            _hover={{ bg: hoverBg }}
             onClick={goToAdminDashboard}
             title="Admin Dashboard"
           >
-            <Icon as={MdAdminPanelSettings} fontSize={20} color={useColorModeValue("red.500", "red.300")} />
+            <Icon as={MdAdminPanelSettings} fontSize={20} color={adminIcon} />
           </Flex>
         )}
         <Flex
@@ -76,10 +79,10 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
           padding={1}
           cursor="pointer"
           borderRadius={4}
-          _hover={{ bg: useColorModeValue("gray.200", "whiteAlpha.200") }}
+          _hover={{ bg: hoverBg }}
           onClick={() => setIsCreatePostOpen(true)}
         >
-          <Icon as={GrAdd} fontSize={20} color={useColorModeValue("gray.600", "gray.300")} />
+          <Icon as={GrAdd} fontSize={20} color={iconMuted} />
         </Flex>
       </>
       

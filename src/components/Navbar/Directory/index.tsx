@@ -44,10 +44,11 @@ const Directory: React.FC = () => {
                       borderRadius="full"
                       boxSize="24px"
                       src={directoryState.selectedMenuItem.imageURL}
+                      alt={directoryState.selectedMenuItem.displayText}
                       mr={2}
                     />
                   ) : (
-                    <Image borderRadius="full" boxSize="24px" src="/images/logo.png" mr={2} />
+                    <Image borderRadius="full" boxSize="24px" src="/images/logo.png" alt="logo" mr={2} />
                   )}
                   <Box
                     display={{ base: "none", lg: "flex" }}

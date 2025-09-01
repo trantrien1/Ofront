@@ -18,13 +18,21 @@ const CommentInput: React.FC<CommentInputProps> = ({
   user,
   onCreateComment,
 }) => {
+  // Precompute theme tokens
+  const nameColor = useColorModeValue("blue.600", "blue.300");
+  const inputBg = useColorModeValue("white", "gray.800");
+  const inputBorder = useColorModeValue("gray.200", "gray.600");
+  const placeholderCol = useColorModeValue("gray.500", "gray.400");
+  const focusBorder = useColorModeValue("blue.500", "blue.300");
+  const footerBg = useColorModeValue("gray.100", "gray.700");
+  const footerBorder = useColorModeValue("gray.200", "gray.600");
   return (
     <Flex direction="column" position="relative">
       {user && (
         <>
           <Text mb={1}>
             Comment as{" "}
-            <Text as="span" color={useColorModeValue("blue.600", "blue.300")}>
+            <Text as="span" color={nameColor}>
               {user?.displayName || user?.email?.split("@")[0] || user?.uid || "user"}
             </Text>
           </Text>
@@ -36,15 +44,15 @@ const CommentInput: React.FC<CommentInputProps> = ({
             borderRadius={4}
             minHeight="160px"
             pb={10}
-            bg={useColorModeValue("white", "gray.800")}
+            bg={inputBg}
             border="1px solid"
-            borderColor={useColorModeValue("gray.200", "gray.600")}
-            _placeholder={{ color: useColorModeValue("gray.500", "gray.400") }}
+            borderColor={inputBorder}
+            _placeholder={{ color: placeholderCol }}
             _focus={{
               outline: "none",
-              bg: useColorModeValue("white", "gray.800"),
+              bg: inputBg,
               border: "1px solid",
-              borderColor: useColorModeValue("blue.500", "blue.300"),
+              borderColor: focusBorder,
             }}
           />
           <Flex
@@ -53,9 +61,9 @@ const CommentInput: React.FC<CommentInputProps> = ({
             right={0.1}
             bottom="1px"
             justify="flex-end"
-            bg={useColorModeValue("gray.100", "gray.700")}
+            bg={footerBg}
             borderTop="1px solid"
-            borderColor={useColorModeValue("gray.200", "gray.600")}
+            borderColor={footerBorder}
             p="6px 8px"
             borderRadius="0px 0px 4px 4px"
           >

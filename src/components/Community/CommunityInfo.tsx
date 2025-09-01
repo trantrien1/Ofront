@@ -156,26 +156,32 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
     }
   };
 
+  // Precompute theme-dependent colors to avoid calling hooks conditionally
+  const headerSolidBg = useColorModeValue("blue.500", "blue.400");
+  const contentBg = useColorModeValue("white", "gray.800");
+  const contentBorder = useColorModeValue("gray.200", "whiteAlpha.300");
+  const metaMuted = useColorModeValue("gray.600", "gray.400");
+  const skeletonCardBg = useColorModeValue("white", "gray.800");
+  const skeletonHeaderBg = useColorModeValue("blue.400", "blue.500");
+  const skeletonLineBg = useColorModeValue("gray.200", "whiteAlpha.300");
+  const renderSkeletonLine = (w: string, h = "12px", mb = 2) => (
+    <Box height={h} width={w} bg={skeletonLineBg} borderRadius="md" mb={mb} />
+  );
   // Lightweight skeleton while loading
   if (loading) {
-    const cardBg = useColorModeValue("white", "gray.800");
-    const headerBg = useColorModeValue("blue.400", "blue.500");
-    const line = (w: string, h = "12px", mb = 2) => (
-      <Box height={h} width={w} bg={useColorModeValue("gray.200", "whiteAlpha.300")} borderRadius="md" mb={mb} />
-    );
     return (
-  <Box pt={pt} position="sticky" top="44px">
-        <Flex justify="space-between" align="center" p={3} color="white" bg={headerBg} borderRadius="4px 4px 0px 0px">
+      <Box pt={pt} position="sticky" top="44px">
+        <Flex justify="space-between" align="center" p={3} color="white" bg={skeletonHeaderBg} borderRadius="4px 4px 0px 0px">
           <Box height="16px" width="140px" bg="whiteAlpha.700" borderRadius="md" />
           <Box height="16px" width="16px" bg="whiteAlpha.700" borderRadius="md" />
         </Flex>
-        <Flex direction="column" p={3} bg={cardBg} borderRadius="0px 0px 4px 4px">
-          {line("70%")}
-          {line("90%")}
+        <Flex direction="column" p={3} bg={skeletonCardBg} borderRadius="0px 0px 4px 4px">
+          {renderSkeletonLine("70%")}
+          {renderSkeletonLine("90%")}
           <Divider my={3} />
-          {line("40%")}
-          {line("60%")}
-          {line("50%")}
+          {renderSkeletonLine("40%")}
+          {renderSkeletonLine("60%")}
+          {renderSkeletonLine("50%")}
         </Flex>
       </Box>
     );
@@ -444,7 +450,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
         align="center"
         p={4}
         color="white"
-        bg={useColorModeValue("blue.500", "blue.400")}
+        bg={headerSolidBg}
         borderRadius="8px 8px 0 0"
         boxShadow="sm"
       >
@@ -458,10 +464,10 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       <Flex
         direction="column"
         p={5}
-        bg={useColorModeValue("white", "gray.800")}
+  bg={contentBg}
         borderRadius="0 0 8px 8px"
         border="1px solid"
-        borderColor={useColorModeValue("gray.200", "whiteAlpha.300")}
+  borderColor={contentBorder}
         borderTop="none"
         boxShadow="sm"
         maxH="600px"
@@ -524,7 +530,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                 <Flex width="100%" p={2} fontWeight={600} fontSize="10pt">
                   <Flex direction="column" flexGrow={1}>
                     <Text fontSize="md">{(communityData?.numberOfMembers ?? 0).toLocaleString()}</Text>
-                    <Text color={useColorModeValue("gray.600", "gray.400")}>Members</Text>
+                    <Text color={metaMuted}>Members</Text>
                   </Flex>
                   <Flex direction="column" flexGrow={1}>
                     

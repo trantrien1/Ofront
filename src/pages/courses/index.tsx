@@ -97,6 +97,7 @@ const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => voi
   const cardBg = useColorModeValue("white", "gray.800");
   const cardBorder = useColorModeValue("gray.200", "gray.700");
   const subtitle = useColorModeValue("gray.600", "gray.300");
+  const hrCol = useColorModeValue("gray.100", "whiteAlpha.200");
   return (
   <Box
       bg={cardBg}
@@ -118,7 +119,7 @@ const CourseCard: React.FC<{ item: CourseItem; onToggleDone: (id: string) => voi
             {item.description}
           </Text>
         ) : null}
-        <Box h="1px" bg={useColorModeValue("gray.100", "whiteAlpha.200")} mb={3} />
+  <Box h="1px" bg={hrCol} mb={3} />
         <Flex justify="space-between" align="center">
           {item.durationMinutes > 0 && (
             <Text fontSize="sm" color={subtitle}>{fmtDuration(item.durationMinutes)}</Text>
@@ -183,28 +184,36 @@ const CoursesPage: React.FC = () => {
     updateItem(id, { completed: !it.completed, progressPercent: !it.completed ? 100 : Math.min(it.progressPercent, 95) });
   };
 
+  // Theme tokens
   const dividerCol = useColorModeValue("gray.100", "whiteAlpha.200");
+  const descCol = useColorModeValue("gray.600", "gray.400");
+  const searchIconCol = useColorModeValue("gray.400", "gray.300");
+  const inputBg = useColorModeValue("white", "gray.800");
+  const inputBorder = useColorModeValue("gray.200", "gray.700");
+  const inputHoverBorder = useColorModeValue("blue.300", "blue.400");
+  const inputFocusBorder = useColorModeValue("blue.400", "blue.300");
+  const emptyTextCol = useColorModeValue("gray.600", "gray.400");
 
   return (
     <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} py={6}>
       <Text fontSize="2xl" fontWeight="bold" mb={2}>Courses</Text>
-      <Text fontSize="sm" color={useColorModeValue("gray.600", "gray.400")} mb={4}>
+  <Text fontSize="sm" color={descCol} mb={4}>
         Khóa học giúp bạn giảm strees
       </Text>
 
   <Flex justify="space-between" align="center" mb={4} gap={4} wrap="wrap">
         <InputGroup maxW="360px">
           <InputLeftElement pointerEvents="none">
-            <SearchIcon color={useColorModeValue("gray.400", "gray.300")} />
+            <SearchIcon color={searchIconCol} />
           </InputLeftElement>
           <Input
             placeholder="Tìm kiếm..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            bg={useColorModeValue("white", "gray.800")}
-            borderColor={useColorModeValue("gray.200", "gray.700")}
-            _hover={{ borderColor: useColorModeValue("blue.300", "blue.400") }}
-            _focus={{ borderColor: useColorModeValue("blue.400", "blue.300"), boxShadow: "none" }}
+            bg={inputBg}
+            borderColor={inputBorder}
+            _hover={{ borderColor: inputHoverBorder }}
+            _focus={{ borderColor: inputFocusBorder, boxShadow: "none" }}
             borderRadius="full"
           />
         </InputGroup>
@@ -241,7 +250,7 @@ const CoursesPage: React.FC = () => {
         <Center py={16}>
           <VStack spacing={2}>
             <Text>Chưa có khóa học nào.</Text>
-            <Text fontSize="sm" color={useColorModeValue("gray.600","gray.400")}>Hãy tạo một khóa học trong trang admin.</Text>
+            <Text fontSize="sm" color={emptyTextCol}>Hãy tạo một khóa học trong trang admin.</Text>
             {isAdmin && (
               <Button mt={2} colorScheme="blue" onClick={() => router.push("/courses/create")}>
                 Tạo khóa học

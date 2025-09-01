@@ -82,9 +82,12 @@ export default function CourseDetailPage() {
     return () => { mounted = false; };
   }, [courseId]);
 
+  // Theme tokens
   const cardBg = useColorModeValue("white", "gray.800");
   const borderCol = useColorModeValue("gray.200", "gray.700");
   const rowHover = useColorModeValue("gray.50", "gray.700");
+  const descCol = useColorModeValue('gray.700','gray.300');
+  const headBar = useColorModeValue('#051d2d','gray.900');
 
   // State for completed videos
   const [completed, setCompleted] = useState<string[]>([]);
@@ -119,7 +122,7 @@ export default function CourseDetailPage() {
         )}
       </Flex>
       {description ? (
-        <Text mb={4} color={useColorModeValue('gray.700','gray.300')}>{description}</Text>
+        <Text mb={4} color={descCol}>{description}</Text>
       ) : null}
 
       {isAdmin && (
@@ -164,7 +167,7 @@ export default function CourseDetailPage() {
         </Box>
       </Flex>
       <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="md" overflow="hidden">
-        <Box h="10px" bg={useColorModeValue("#051d2d", "gray.900")} />
+        <Box h="10px" bg={headBar} />
         <VStack align="stretch" spacing={0}>
           {list.map((v) => {
             const isDone = completed.includes(v.id);

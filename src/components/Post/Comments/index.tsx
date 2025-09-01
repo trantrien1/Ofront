@@ -56,6 +56,10 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   const setPostState = useSetRecoilState(postState);
   const { createNotification } = useNotifications();
   const toast = useToast();
+  // theme tokens (must be before any conditional returns)
+  const panelBg = useColorModeValue("white", "gray.800");
+  const skeletonBg = useColorModeValue("white", "gray.800");
+  const dividerCol = useColorModeValue("gray.100", "gray.700");
 
   const onCreateComment = async (comment: string) => {
     if (!user) {
@@ -366,7 +370,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   }
 
   return (
-    <Box bg={useColorModeValue("white", "gray.800")} p={2} borderRadius="0px 0px 4px 4px">
+    <Box bg={panelBg} p={2} borderRadius="0px 0px 4px 4px">
       <Flex
         direction="column"
         pl={10}
@@ -387,7 +391,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         {commentFetchLoading ? (
           <>
             {[0, 1, 2].map((item) => (
-              <Box key={item} padding="6" bg={useColorModeValue("white", "gray.800")}>
+              <Box key={item} padding="6" bg={skeletonBg}>
                 <SkeletonCircle size="10" />
                 <SkeletonText mt="4" noOfLines={2} spacing="4" />
               </Box>
@@ -415,7 +419,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
                 justify="center"
                 align="center"
                 borderTop="1px solid"
-                borderColor={useColorModeValue("gray.100", "gray.700")}
+                borderColor={dividerCol}
                 p={20}
               >
                 <Text fontWeight={700} opacity={0.3}>

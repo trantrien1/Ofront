@@ -61,6 +61,8 @@ const Sidebar: React.FC = () => {
   const hoverBg = useColorModeValue("gray.50", "gray.700");
   const activeBg = useColorModeValue("blue.50", "blue.900");
   const activeColor = useColorModeValue("blue.600", "blue.300");
+  const labelMuted = useColorModeValue("gray.500", "gray.400");
+  const sectionMuted = useColorModeValue("gray.600", "gray.300");
 
   const isActivePage = (path: string) => router.pathname === path;
 
@@ -268,7 +270,7 @@ const Sidebar: React.FC = () => {
               <Text
               fontSize="xs"
               fontWeight="bold"
-              color={useColorModeValue("gray.500", "gray.400")}
+              color={labelMuted}
               textTransform="uppercase"
               mx={3}
               mb={2}
@@ -319,7 +321,7 @@ const Sidebar: React.FC = () => {
               <Text
                 fontSize="xs"
                 fontWeight="bold"
-                color={useColorModeValue("gray.500", "gray.400")}
+                color={labelMuted}
                 textTransform="uppercase"
               >
                 Khóa học
@@ -365,7 +367,7 @@ const Sidebar: React.FC = () => {
               <Text
                 fontSize="xs"
                 fontWeight="bold"
-                color={useColorModeValue("gray.500", "gray.400")}
+                color={labelMuted}
                 textTransform="uppercase"
               >
                 Cộng đồng
@@ -419,7 +421,7 @@ const Sidebar: React.FC = () => {
                     <Text
                       fontSize="xs"
                       fontWeight="semibold"
-                      color={useColorModeValue("gray.600", "gray.300")}
+                      color={sectionMuted}
                       textTransform="uppercase"
                     >
                       Your Communities
@@ -453,7 +455,7 @@ const Sidebar: React.FC = () => {
                 <Text
                   fontSize="xs"
                   fontWeight="semibold"
-                  color={useColorModeValue("gray.600", "gray.300")}
+                  color={sectionMuted}
                   mx={3}
                   mb={2}
                 >

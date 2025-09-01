@@ -8,6 +8,7 @@ export declare const approvePost: (params: ApprovePostParams) => Promise<any>;
 export declare const updatePost: (params: UpdatePostParams) => Promise<any>;
 export declare const deletePost: (params: { postId: string | number }) => Promise<any>;
 export declare const createPost: (postData: any) => Promise<any>;
+export declare const getPostById: (params: { postId: string | number }) => Promise<any>;
 
 declare const _default: {
   getPosts: typeof getPosts;
@@ -17,5 +18,6 @@ declare const _default: {
   updatePost: typeof updatePost;
   deletePost: typeof deletePost;
   createPost: typeof createPost;
+  getPostById: typeof getPostById;
 }
 export default _default;

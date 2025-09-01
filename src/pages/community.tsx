@@ -30,7 +30,7 @@ const CommunityFeed: NextPage = () => {
 
   return (
     <PageContentLayout>
-      <>
+      <Stack>
         <Stack
           direction="row"
           align="center"
@@ -46,7 +46,6 @@ const CommunityFeed: NextPage = () => {
             Community Feed
           </Text>
         </Stack>
-
         {loading ? (
           <PostLoader />
         ) : (
@@ -61,12 +60,12 @@ const CommunityFeed: NextPage = () => {
                 userVoteValue={undefined}
                 userIsCreator={false}
                 onSelectPost={onSelectPost}
-                homePage
+                // Không truyền homePage khi ở cộng đồng
               />
             ))}
           </Stack>
         )}
-      </>
+      </Stack>
       <Stack spacing={5} position="sticky" top="14px">
         {/* Right sidebar space */}
       </Stack>

@@ -61,17 +61,29 @@ const MyCommunityPage: React.FC = () => {
     if (!Array.isArray(groups) || groups.length === 0) return;
     try {
       const uid = user?.uid?.toString?.() || "";
-    const incoming: CommunitySnippet[] = groups
-        .map((g) => ({
-          communityId: String(g.id),
-          imageURL: g.imageURL || undefined,
-      role: (uid && (g.ownerId != null && String(g.ownerId) === uid) ? "owner" : "member") as any,
-        }))
+      const incoming: CommunitySnippet[] = groups
+        .map((g) => {
+          const ownerMatch = uid && (g.ownerId != null && String(g.ownerId) === uid);
+          const role = (g.userRole || (ownerMatch ? "owner" : "member")).toLowerCase();
+          return {
+            communityId: String(g.id),
+            imageURL: g.imageURL || undefined,
+            role: (role as any),
+          } as CommunitySnippet;
+        })
         .filter((s) => !!s.communityId);
       setCommunityState((prev) => {
         const existing = new Map(prev.mySnippets.map((s) => [s.communityId, s] as const));
         for (const s of incoming) {
           if (!existing.has(s.communityId)) existing.set(s.communityId, s);
+          else {
+            // Update role if we now have a stronger (non-member) role
+            const cur = existing.get(s.communityId)!;
+            const curRole = (cur.role || "member").toLowerCase();
+            const newRole = (s.role || "member").toLowerCase();
+            const rank = (r: string) => (r === "owner" ? 3 : r === "admin" ? 2 : r === "moderator" ? 1 : 0);
+            if (rank(newRole) > rank(curRole)) existing.set(s.communityId, s);
+          }
         }
         return { ...prev, mySnippets: Array.from(existing.values()), initSnippetsFetched: true };
       });
@@ -80,10 +92,10 @@ const MyCommunityPage: React.FC = () => {
 
   const { managed, joined } = useMemo(() => {
     const uid = user?.uid?.toString?.() || user?.displayName || user?.email || "";
-    // Build a set of communityIds where user has elevated role via snippets
+    // Build a set of communityIds where user has elevated role via snippets (fallback)
     const elevated = new Set<string>();
     (community?.mySnippets || []).forEach((s: any) => {
-      const role = s?.role || (s?.isModerator ? "moderator" : "member");
+      const role = (s?.role || (s?.isModerator ? "moderator" : "member")).toLowerCase();
       if (role === "owner" || role === "admin") elevated.add(String(s.communityId));
     });
     // Also include groups the user just created (stored locally)
@@ -100,9 +112,11 @@ const MyCommunityPage: React.FC = () => {
     const managed: Group[] = [];
     const joined: Group[] = [];
     groups.forEach((g) => {
-      const idStr = String(g.id);
-  const isOwnerMatch = g.ownerId != null && String(g.ownerId) === uid;
-      if (isOwnerMatch || elevated.has(idStr)) managed.push(g);
+      const isOwnerMatch = g.ownerId != null && String(g.ownerId) === uid;
+      const role = (g.userRole || '').toLowerCase();
+      const isAdminLike = role === 'owner' || role === 'admin';
+      const isElevated = elevated.has(String(g.id));
+      if (isOwnerMatch || isAdminLike || isElevated) managed.push(g);
       else joined.push(g);
     });
     const q = query.trim().toLowerCase();
@@ -114,7 +128,7 @@ const MyCommunityPage: React.FC = () => {
             (g.description || "").toString().toLowerCase().includes(q)
           );
     return { managed: filter(managed), joined: filter(joined) };
-  }, [groups, user, community, query]);
+  }, [groups, user, community?.mySnippets, query]);
 
   const cardBg = useColorModeValue("white", "gray.800");
   const borderCol = useColorModeValue("gray.200", "whiteAlpha.300");

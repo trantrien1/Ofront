@@ -36,6 +36,7 @@ import { communityState, CommunitySnippet } from "../../../atoms/communitiesAtom
 import { useToast } from "@chakra-ui/react";
 import { joinGroup } from "../../../services/groups.service";
 import { userState } from "../../../atoms/userAtom";
+import * as Svc from "../../../services/posts.service";
 
 // Disable SSR for this component to prevent hydration issues
 const PostItem = dynamic(() => Promise.resolve(PostItemComponent), {
@@ -85,7 +86,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   canModerate = false,
 }) => {
   const [loadingImage, setLoadingImage] = useState(true);
-  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(true);
   const [loadingPin, setLoadingPin] = useState(false);
   const [approving, setApproving] = useState(false);
   const [hidden, setHidden] = useState(false); // For spoiler functionality
@@ -168,25 +169,6 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   };
 
   const isPinned = communityData?.pinnedPosts?.includes(post.id) || false;
-  const postCommunityId = String((post as any).communityId ?? (post as any).groupId ?? (post as any).communityDisplayText ?? "");
-  const isGroupPost = !!postCommunityId && postCommunityId.toLowerCase() !== "general" && postCommunityId !== "0";
-  const userJoined = !!communityStateValue.mySnippets.find((s: CommunitySnippet) => s.communityId === postCommunityId);
-  const showJoin = isGroupPost && !userJoined && !!currentUser;
-
-  const handleJoin = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await joinGroup(postCommunityId);
-      setCommunityStateValue((prev) => ({
-        ...prev,
-        mySnippets: [...prev.mySnippets, { communityId: postCommunityId, imageURL: communityData?.imageURL || "", role: "member" }],
-      }));
-      toast({ status: "success", title: "Joined community" });
-    } catch (err: any) {
-      toast({ status: "error", title: "Join failed", description: err?.message || String(err) });
-    }
-  };
-
   return (
     <Box
       bg={cardBg}
@@ -200,33 +182,15 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         bg: hoverBg,
         
       }}
-      onClick={() => onSelectPost && post && onSelectPost(post, postIdx!)}
+  onClick={() => onSelectPost && post && onSelectPost(post, postIdx ?? 0)}
     >
       {/* Header meta - Reddit Style */}
       <HStack spacing={2} mb={2} color={metaColor} fontSize="sm">
-        <Avatar size="xs" name={post.userDisplayText} src={post.communityImageURL} />
+  <Avatar size="xs" name={post.userDisplayText} src={(post as any).authorAvatarURL || post.communityImageURL} />
         <Text>Posted by</Text>
         <Text fontWeight="semibold">{post.userDisplayText}</Text>
-        <Text>• {formatTimeAgo(normalizeTimestamp(post.createdAt))}</Text>
-        {(() => {
-          // Detect group context and render a label linking to the group
-          const rawCid = String((post as any).communityId ?? (post as any).groupId ?? (post as any).communityDisplayText ?? "");
-          const hasGroup = !!rawCid && rawCid.toLowerCase() !== "general" && rawCid !== "0";
-          if (!hasGroup) return null;
-          const current = communityData && String(communityData.id) === rawCid ? communityData : undefined;
-          const groupName = (current?.displayName as any) || (post as any).communityDisplayText || (post as any).communityName || undefined;
-          const label = groupName ? groupName : `Group ${rawCid}`;
-          return (
-            <>
-              <BsDot />
-              <Link href={`/community/${encodeURIComponent(rawCid)}`} passHref legacyBehavior>
-                <Badge as="a" colorScheme="blue" variant="subtle" _hover={{ cursor: 'pointer' }}>
-                  in {label}
-                </Badge>
-              </Link>
-            </>
-          );
-        })()}
+        <Text>  {formatTimeAgo(normalizeTimestamp(post.createdAt))}</Text>
+        
         {typeof post.status === 'number' && post.status === 0 && (
           <Badge colorScheme="yellow" variant="subtle">Pending approval</Badge>
         )}
@@ -236,10 +200,10 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         {post.imageURL && (
           <Badge colorScheme="black" variant="subtle">SPOILER</Badge>
         )}
-        {/* Hide Join button here; dedicated Join UI exists on community page */}
+        
       </HStack>
 
-  {/* Title */}
+      {/* Title */}
   <Text fontSize="xl" fontWeight="bold" mb={3} color={titleColor}>
         {post.title}
       </Text>
@@ -296,41 +260,10 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           </Box>
 
 
-          {/* Overlay + nút View spoiler */}
-          {hidden && (
-            <>
-              <Box
-                position="absolute"
-                inset={0}
-                bgGradient="radial(blackAlpha.700, transparent 70%)"
-              />
-              <Button
-                position="absolute"
-                top="50%"
-                left="50%"
-                transform="translate(-50%, -50%)"
-                onClick={() => setHidden(false)}
-                rounded="full"
-                px={5}
-                size="sm"
-                bg="blackAlpha.700"
-                _hover={{ bg: "blackAlpha.600" }}
-              >
-                View spoiler
-              </Button>
-            </>
-          )}
         </Box>
       )}
 
-      {/* Actions row: add Join when user not in group on home feed */}
-      {showJoin && (
-        <Box mb={3}>
-          <Button size="sm" colorScheme="blue" onClick={handleJoin} leftIcon={<BsGlobe />}>
-            Join
-          </Button>
-        </Box>
-      )}
+      
 
       {/* Actions - Reddit Style */}
       <Flex mt={3} gap={3} align="center" wrap="wrap">
@@ -380,29 +313,21 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             transform: "scale(1.05)"
           }}
           cursor="pointer"
-          onClick={(e) => {
-            // prevent parent post click and navigate to comments
+      onClick={async (e) => {
             e.stopPropagation();
-            console.log("=== COMMENT BUTTON CLICKED ===");
-            console.log("PostItem: comment button clicked", { 
-              postId: post?.id, 
-              postTitle: post?.title?.slice(0, 50),
-              hasOnSelectPost: !!onSelectPost,
-              postIdx: postIdx ?? 0
-            });
-            console.log("================================");
-            
-            if (onSelectPost) {
-              console.log("Calling onSelectPost...");
-              onSelectPost(post, postIdx ?? 0);
-            } else {
-              console.log("onSelectPost is not available!");
+            try {
+        const mapped = await Svc.getPostById({ postId: post.id });
+        if (onSelectPost) onSelectPost(mapped as any, postIdx ?? 0);
+            } catch (err: any) {
+              console.error("Error fetching post detail:", err);
+              toast({ status: 'error', title: 'Không tải được bình luận', description: String(err?.message || err) });
             }
           }}
         >
           <ChatIcon color={useColorModeValue("gray.600", "gray.300")} />
           <Text color={chipText}>{post.numberOfComments}</Text>
         </HStack>
+
 
         <HStack
           px={3}
@@ -451,9 +376,9 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             {loadingPin ? (
               <Spinner size="sm" color={useColorModeValue("gray.600", "gray.300")} />
             ) : (
-              <Icon as={MdPushPin} color="gray.350" />
+              <Icon as={MdPushPin} color={useColorModeValue("gray.600", "gray.300")} />
             )}
-            <Text color="gray.350" fontSize="sm" fontWeight="medium">
+            <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="sm" fontWeight="medium">
               {loadingPin ? "Processing..." : (isPinned ? "Unpin" : "Pin")}
             </Text>
           </HStack>
@@ -484,7 +409,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
               }
             }}
           >
-            <Text color="gray.350" fontSize="sm" fontWeight="medium">{approving ? 'Approving...' : 'Approve'}</Text>
+            <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="sm" fontWeight="medium">{approving ? 'Approving...' : 'Approve'}</Text>
           </HStack>
         )}
 
@@ -508,8 +433,8 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
               <Spinner size="sm" color="white" />
             ) : (
               <>
-                <Icon as={AiOutlineDelete} color="gray.350" />
-                <Text color="gray.350" fontSize="sm" fontWeight="medium">
+                <Icon as={AiOutlineDelete} color={useColorModeValue("gray.600", "gray.300")} />
+                <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="sm" fontWeight="medium">
                   Delete
                 </Text>
               </>

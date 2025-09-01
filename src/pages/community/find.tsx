@@ -88,50 +88,68 @@ const FindCommunitiesPage: React.FC = () => {
           <Spinner />
         </Flex>
       ) : (
-        <VStack spacing={3} align="stretch">
-          {filtered.map((g) => {
-            const alreadyJoined = communityStateValue.mySnippets.some(s => String(s.communityId) === String(g.id));
-            return (
-              <Flex
-                key={String(g.id)}
-                align="center"
-                p={3}
-                borderRadius="md"
-                borderWidth="1px"
-                borderColor={borderColor}
-                bg={cardBg}
-                _hover={{ bg: hoverBg }}
-                transition="background 0.2s"
-                justify="space-between"
-              >
-                <NextLink href={`/community/${encodeURIComponent(String(g.id))}`} passHref>
-                  <Flex as="a" align="center" flex={1} minW={0}>
-                    <Avatar name={g.name} src={g.imageURL || undefined} size="sm" mr={3} />
-                    <Box minW={0}>
-                      <Text fontWeight="semibold" isTruncated>{g.name}</Text>
-                      {g.description && (
-                        <Text fontSize="sm" color="gray.500" noOfLines={1}>{g.description}</Text>
-                      )}
-                    </Box>
-                  </Flex>
-                </NextLink>
-                <Button
-                  size="sm"
-                  colorScheme={alreadyJoined ? "gray" : "blue"}
-                  variant={alreadyJoined ? "outline" : "solid"}
-                  onClick={() => handleJoin(g)}
-                  isDisabled={alreadyJoined}
-                  ml={3}
-                >
-                  {alreadyJoined ? "Đã tham gia" : "Tham gia"}
-                </Button>
-              </Flex>
-            );
-          })}
-          {filtered.length === 0 && (
-            <Text color="gray.500">Không tìm thấy cộng đồng phù hợp.</Text>
-          )}
-        </VStack>
+<VStack spacing={3} align="stretch">
+  {filtered.map((g) => {
+    // Nếu userRole khác null nghĩa là user đã tham gia
+    const alreadyJoined = g.userRole !== null;
+
+    return (
+      <Flex
+        key={String(g.id)}
+        align="center"
+        p={3}
+        borderRadius="md"
+        borderWidth="1px"
+        borderColor={borderColor}
+        bg={cardBg}
+        _hover={{ bg: hoverBg }}
+        transition="background 0.2s"
+        justify="space-between"
+      >
+        <NextLink
+          href={`/community/${encodeURIComponent(String(g.id))}`}
+          passHref
+        >
+          <Flex as="a" align="center" flex={1} minW={0}>
+            <Avatar
+              name={g.name}
+              src={g.imageURL || undefined}
+              size="sm"
+              mr={3}
+            />
+            <Box minW={0}>
+              <Text fontWeight="semibold" isTruncated>
+                {g.name}
+              </Text>
+              {g.description && (
+                <Text fontSize="sm" color="gray.500" noOfLines={1}>
+                  {g.description}
+                </Text>
+              )}
+            </Box>
+          </Flex>
+        </NextLink>
+
+        {/* Chỉ hiển thị nút "Tham gia" nếu userRole == null */}
+        <Button
+          size="sm"
+          colorScheme={alreadyJoined ? "gray" : "blue"}
+          variant={alreadyJoined ? "outline" : "solid"}
+          onClick={() => handleJoin(g)}
+          isDisabled={alreadyJoined}
+          ml={3}
+        >
+          {alreadyJoined ? "Đã tham gia" : "Tham gia"}
+        </Button>
+      </Flex>
+    );
+  })}
+
+  {filtered.length === 0 && (
+    <Text color="gray.500">Không tìm thấy cộng đồng phù hợp.</Text>
+  )}
+</VStack>
+
       )}
     </Box>
   );

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Stack } from "@chakra-ui/react";
 
 import type { NextPage } from "next";
@@ -23,6 +23,9 @@ const Home: NextPage = () => {
   const router = useRouter();
   const user = useRecoilValue(userState) as any;
   const loadingUser = false;
+  // Prevent duplicate fetches (StrictMode, query changes)
+  const hasFetchedRef = useRef(false);
+  // Chỉ dùng usePosts ở mode trang chủ, không truyền communityId
   const {
     postStateValue,
     setPostStateValue,
@@ -94,16 +97,6 @@ const Home: NextPage = () => {
   };
 
   useEffect(() => {
-    // Fetch on login or when refresh flag is present
-    const run = async () => {
-      if (!user) return;
-      try {
-        const posts = await PostsService.getPosts({});
-        setPostStateValue((prev) => ({ ...prev, posts }));
-      } catch (e) {
-  console.error("home: fetch posts after login failed", (e as any)?.message || e);
-      }
-    };
     // Read from router.query so client-side navigation with query triggers this effect
     const refreshParam = router.query?.refresh;
     const refreshDelayParam = router.query?.refreshDelay;
@@ -111,23 +104,40 @@ const Home: NextPage = () => {
     const parsedDelay = Array.isArray(refreshDelayParam) ? refreshDelayParam[0] : refreshDelayParam;
     const refreshDelay = parsedDelay ? Math.max(0, Math.min(10000, Number(parsedDelay))) : 0;
 
+  const run = async () => {
+      try {
+    const posts = await PostsService.getPosts({ public: !user });
+        setPostStateValue((prev) => ({ ...prev, posts }));
+      } catch (e) {
+        console.error("home: fetch posts after login failed", (e as any)?.message || e);
+      }
+    };
+
+    // Helper to ensure we only fetch once unless explicitly refreshed
+    const runOnce = () => {
+      if (hasFetchedRef.current && !refreshFlag) return;
+      hasFetchedRef.current = true;
+      run();
+    };
+
     let timer: any;
-    if (user) {
+    if (user || refreshFlag || !postStateValue.posts.length) {
       if (refreshFlag) {
-        // Immediate refresh
-        run();
+        // Allow refresh to force a new fetch
+        hasFetchedRef.current = false;
+        runOnce();
         try { router.replace('/', undefined, { shallow: true }); } catch {}
       } else if (refreshDelay && Number.isFinite(refreshDelay)) {
-        // Delayed refresh
         timer = setTimeout(() => {
-          run();
+          runOnce();
           try { router.replace('/', undefined, { shallow: true }); } catch {}
         }, refreshDelay);
       } else if (!postStateValue.posts.length) {
         // Initial load when no posts yet
-        run();
+        runOnce();
       }
     }
+
     return () => { if (timer) clearTimeout(timer); };
   }, [user, router.query]);
 
@@ -152,32 +162,21 @@ const Home: NextPage = () => {
 
   return (
     <PageContentLayout>
-      <>
-
-        {loading ? (
-          <PostLoader />
-        ) : (
-          <Stack>
-            {Array.isArray(postStateValue.posts) && postStateValue.posts.map((post: Post, index) => (
-              <PostItem
-                key={post.id}
-                post={post}
-                postIdx={index}
-                onVote={onVote}
-                onDeletePost={onDeletePost}
-                userVoteValue={
-                  postStateValue.postVotes.find(
-                    (item) => item.postId === post.id
-                  )?.voteValue
-                }
-                userIsCreator={user?.uid === post.creatorId}
-                onSelectPost={onSelectPost}
-                homePage
-              />
-            ))}
-          </Stack>
-        )}
-      </>
+      <Stack>
+        {postStateValue.posts.map((post: Post, index) => (
+          <PostItem
+            key={post.id}
+            post={post}
+            postIdx={index}
+            onVote={onVote}
+            onDeletePost={onDeletePost}
+            userVoteValue={undefined}
+            userIsCreator={user?.uid === post.creatorId}
+            onSelectPost={onSelectPost}
+            homePage
+          />
+        ))}
+      </Stack>
       <Stack gap={5} position="sticky" top="14px">
         <Recommendations />
       </Stack>

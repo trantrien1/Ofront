@@ -57,7 +57,17 @@ const usePosts = (communityData?: Community) => {
       return;
     }
 
-    const currentCommunityId = communityId || post.communityId || communityStateValue.currentCommunity?.id;
+    // Chỉ lấy communityId khi đang ở mode cộng đồng
+    let currentCommunityId = "";
+    if (communityId) {
+      currentCommunityId = communityId;
+    } else if (post.communityId) {
+      currentCommunityId = post.communityId;
+    } else if (communityStateValue.currentCommunity?.id) {
+      currentCommunityId = communityStateValue.currentCommunity.id;
+    }
+
+    // Nếu đang ở trang chủ thì currentCommunityId sẽ là ""
 
     // Determine existing vote (from mapped post data or recoil cache)
     const existingVote = post.currentUserVoteStatus
@@ -124,7 +134,7 @@ const usePosts = (communityData?: Community) => {
 
       try {
         // backend likePost expects { postId, commentId } shape; commentId may be undefined for post likes
-        await likePost({ postId: post.id, commentId: undefined });
+  await likePost({ postId: post.id });
       } catch (e) {
         console.error("Failed to persist like to backend", e);
       }

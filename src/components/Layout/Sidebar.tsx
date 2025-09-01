@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { MdQuiz } from "react-icons/md";//quizz
 import { GiFox } from "react-icons/gi";//icon anime
-
 import {
+
   Box,
   Flex,
   Text,
@@ -25,6 +25,7 @@ import { Link as ChakraLink } from "@chakra-ui/react";
 // import { useAuthState } from "react-firebase-hooks/auth";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { userState } from "../../atoms/userAtom";
+import { postState } from "../../atoms/postsAtom";
 import {
   FaHome,
   FaFire,
@@ -37,7 +38,6 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { MdGroup } from "react-icons/md";
-// Firebase removed
 import { communityState, createCommunityModalState } from "../../atoms/communitiesAtom";
 import { getGroupsByUser, type Group } from "../../services/groups.service";
 import { useSidebar } from "./SidebarContext";
@@ -47,6 +47,7 @@ const Sidebar: React.FC = () => {
   const user = useRecoilValue(userState) as any;
   const communityStateValue = useRecoilValue(communityState);
   const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
+  const setPostState = useSetRecoilState(postState);
   const { isOpen: isCommunitiesOpen, onToggle: onCommunitiesToggle } = useDisclosure({ defaultIsOpen: true });
   const { isOpen: isAnimeOpen, onToggle: onAnimeToggle } = useDisclosure({ defaultIsOpen: true });
   const { isOpen: isCoursesOpen, onToggle: onCoursesToggle } = useDisclosure({ defaultIsOpen: true });
@@ -115,6 +116,15 @@ const Sidebar: React.FC = () => {
     for (const g of groups) m.set(String(g.id), g);
     return m;
   }, [groups]);
+  
+  const handleHomeClick = async () => {
+    // Clear any community-scoped posts and force a refresh fetch on Home
+  setPostState((prev) => ({ ...prev, posts: [], postUpdateRequired: true }));
+    const href = "?refresh=1";
+  router.push(`/${href}`);
+  };
+
+
 
   // no sidebar-wide search state; search lives on its own page
 
@@ -258,7 +268,7 @@ const Sidebar: React.FC = () => {
               <Text
               fontSize="xs"
               fontWeight="bold"
-                color={useColorModeValue("gray.500", "gray.400")}
+              color={useColorModeValue("gray.500", "gray.400")}
               textTransform="uppercase"
               mx={3}
               mb={2}
@@ -272,7 +282,7 @@ const Sidebar: React.FC = () => {
             <NavItem
               icon={FaHome}
               label="Trang chủ"
-              path="/"
+              onClick={handleHomeClick}
               isActive={isActivePage("/")}
             />
             

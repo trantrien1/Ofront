@@ -82,7 +82,7 @@ export const getPosts = async (options = {}) => {
 
 		if (postsArray.length > 0) {
 			const mapped = postsArray.map((p) => {
-				// Use username from userOfPost field in database
+				// Use username from backend userOfPost
 				const correctUsername = extractUsername(p.userOfPost);
 				const nestedGroupId = (p.group && (p.group.id ?? p.group.groupId)) || (p.groupOfPost && (p.groupOfPost.id ?? p.groupOfPost.groupId));
 				const nestedGroupName = (p.group && (p.group.name ?? p.group.displayName)) || (p.groupOfPost && (p.groupOfPost.name ?? p.groupOfPost.displayName));
@@ -97,8 +97,8 @@ export const getPosts = async (options = {}) => {
 					creatorId: String(p.creatorId || p.userId || p.userOfPost?.id || p.userOfPost?.userId || ""),
 					title: p.title || "",
 					body: p.body || p.content || "",
-					numberOfComments: Number(p.numberOfComments ?? p.countComment ?? p.commentCount) || 0,
-					voteStatus: Number(p.voteStatus) || Number(p.likes) ||  Number(p.countLike) || 0,
+					numberOfComments: Number(p.countComment ?? p.commentCount ?? p.numberOfComments) || 0,
+					voteStatus: Number(p.countLike ?? p.likes ?? p.voteStatus) || 0,
 					status: typeof p.status === 'number' ? p.status : (p.approved === true ? 1 : (p.approved === false ? 0 : undefined)),
 					approved: typeof p.approved === 'boolean' ? p.approved : (typeof p.status === 'number' ? Number(p.status) === 1 : undefined),
 					currentUserVoteStatus: p.userIsLike ? { id: `self_${p.id}`, voteValue: 1 } : undefined,
@@ -109,6 +109,15 @@ export const getPosts = async (options = {}) => {
 					communityDisplayText: cdisp,
 					isPinned: Boolean(p.isPinned),
 					communityRuleNumber: p.communityRuleNumber || null,
+					// extras for UI without changing Post type
+					// @ts-ignore
+					authorAvatarURL: p.userOfPost?.urlAvatar || null,
+					// @ts-ignore
+					userOfPost: p.userOfPost || null,
+					// @ts-ignore
+					likedByMe: !!p.userIsLike,
+					// @ts-ignore
+					likeCount: Number(p.countLike ?? 0),
 				};
 			});
 			response.data = mapped;
@@ -255,6 +264,66 @@ export const createPost = async (postData) => {
 	return response.data;
 };
 
+// Map a single raw API post object to frontend Post
+function mapRawToPost(p) {
+	const correctUsername = extractUsername(p?.userOfPost);
+	const nestedGroupId = (p?.group && (p.group.id ?? p.group.groupId)) || (p?.groupOfPost && (p.groupOfPost.id ?? p.groupOfPost.groupId));
+	const nestedGroupName = (p?.group && (p.group.name ?? p.group.displayName)) || (p?.groupOfPost && (p.groupOfPost.name ?? p.groupOfPost.displayName));
+	const cid = p?.communityId || p?.groupId || nestedGroupId || p?.categoryId || p?.communityDisplayText || "general";
+	const cdisp = p?.communityDisplayText || nestedGroupName || p?.communityName || (p?.communityId ? String(p.communityId) : "");
+	return {
+		id: String(p?.id ?? ""),
+		communityId: cid,
+		communityImageURL: p?.communityImageURL || null,
+		userDisplayText: correctUsername,
+		userUID: p?.userUID || p?.userOfPost?.userUID || "",
+		creatorId: String(p?.creatorId || p?.userId || p?.userOfPost?.id || p?.userOfPost?.userId || ""),
+		title: p?.title || "",
+	body: p?.body || p?.content || "",
+	numberOfComments: Number(p?.countComment ),
+	voteStatus: Number(p?.countLike),
+		status: typeof p?.status === 'number' ? p.status : (p?.approved === true ? 1 : (p?.approved === false ? 0 : undefined)),
+		approved: typeof p?.approved === 'boolean' ? p.approved : (typeof p?.status === 'number' ? Number(p.status) === 1 : undefined),
+		currentUserVoteStatus: p?.userIsLike ? { id: `self_${p?.id}`, voteValue: 1 } : undefined,
+		imageURL: p?.imageURL || null,
+		postType: p?.postType || "",
+		createdAt: p?.createdAt || new Date().toISOString(),
+		editedAt: p?.editedAt || null,
+		communityDisplayText: cdisp,
+		isPinned: Boolean(p?.isPinned),
+		communityRuleNumber: p?.communityRuleNumber || null,
+	// extras for UI
+	// @ts-ignore
+	authorAvatarURL: p?.userOfPost?.urlAvatar || null,
+	// @ts-ignore
+	userOfPost: p?.userOfPost || null,
+	// @ts-ignore
+	likedByMe: !!p?.userIsLike,
+	// @ts-ignore
+	likeCount: Number(p?.countLike ?? 0),
+	};
+}
+
+export const getPostById = async ({ postId } = {}) => {
+	const id = typeof postId === 'string' ? postId : String(postId);
+	const url = `post/get/${id}`; // via local API proxy
+	let response;
+	try {
+		response = await request.get(url);
+	} catch (err) {
+		// Retry public if auth fails
+		const status = err?.response?.status;
+		if (status === 401 || status === 403) {
+			response = await request.get(url, { headers: { 'x-public': '1' } });
+		} else {
+			throw err;
+		}
+	}
+	const raw = response.data;
+	const rawPost = Array.isArray(raw) ? raw[0] : (raw && raw.data ? raw.data : raw);
+	return mapRawToPost(rawPost || {});
+};
+
 export default {
 	getPosts,
 	getPostsByGroup,
@@ -262,7 +331,8 @@ export default {
 	approvePost,
 	updatePost,
 	deletePost,
-	createPost
+	createPost,
+	getPostById
 };
 function extractUsername(userOfPost) {
   if (!userOfPost) return "anonymous";

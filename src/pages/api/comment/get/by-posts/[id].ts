@@ -66,12 +66,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Build headers for upstream
-    const headers: Record<string, string> = {
+  const headers: Record<string, string> = {
       Accept: "application/json",
       "User-Agent": req.headers["user-agent"]?.toString() || "Mozilla/5.0 (proxy)",
     };
     const cookieParts: string[] = [];
-    if (token) {
+  if (token) {
       cookieParts.push(`token=${token}`);
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -82,6 +82,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (req.cookies as any)?.jsessionid;
     if (upstreamSession) cookieParts.push(`JSESSIONID=${upstreamSession}`);
     if (cookieParts.length > 0) headers["Cookie"] = cookieParts.join("; ");
+
+    // If there is no auth token at all, hint upstream to allow public access
+    if (!token) {
+      (headers as any)["x-public"] = "1";
+    }
 
     // Honor explicit public mode from client: strip Authorization and cookies
     const xPublic = String(req.headers["x-public"] || "").toLowerCase();
@@ -95,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log("Resolved token source:", token ? `${tokenSource} len=${token.length}` : "none");
     console.log("Proxy headers to upstream:", headers);
 
-    let r = await fetch(upstreamUrl, { method: "GET", headers });
+  let r = await fetch(upstreamUrl, { method: "GET", headers });
     let text = await r.text();
 
     // If unauthorized/forbidden, try conservative retries toggling auth/cookie combos
@@ -125,6 +130,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const r2 = await fetch(upstreamUrl, { method: "GET", headers: retryHeaders });
         const t2 = await r2.text();
         r = r2; text = t2;
+      } else {
+        // Final explicit public retry with x-public header
+        const publicHeaders: Record<string, string> = { Accept: "application/json", "x-public": "1" };
+        console.log("Retrying upstream with explicit x-public header");
+        const r2 = await fetch(upstreamUrl, { method: "GET", headers: publicHeaders });
+        const t2 = await r2.text();
+        r = r2; text = t2; retried = "explicit_public";
       }
     }
 

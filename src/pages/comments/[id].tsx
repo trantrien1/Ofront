@@ -36,40 +36,10 @@ const PostPage: React.FC<PostPageProps> = () => {
     setLoading(true);
     try {
       const { PostsService } = await import("../../services");
-      const posts = await PostsService.getPosts();
-      const found = (posts as any[]).find(p => p.id?.toString?.() === (id as string));
-      if (found) {
-        console.log("✅ Post found:", found.title);
-        
-        // Fetch comment count for this post
-        let commentCount = 0;
-        try {
-          const { CommentsService } = await import("../../services");
-          const comments = await CommentsService.getCommentsByPostId(found.id);
-          commentCount = comments?.length || 0;
-          console.log("✅ Comment count:", commentCount);
-        } catch (err) {
-          console.error("Failed to fetch comment count:", err);
-        }
-        
-        setPostStateValue((prev) => ({
-          ...prev,
-          selectedPost: {
-            id: found.id?.toString?.() || found.id,
-            creatorId: found.userId,
-            communityId: found.categoryId || 'user-posts', // Default for user posts
-            title: found.title,
-            body: found.content,
-            numberOfComments: commentCount,
-            voteStatus: 0,
-            userDisplayText: "",
-            createdAt: found.createdAt ? { seconds: Math.floor(new Date(found.createdAt).getTime() / 1000) } : undefined,
-            updatedAt: found.updatedAt ? { seconds: Math.floor(new Date(found.updatedAt).getTime() / 1000) } : undefined,
-            imageURL: found.imageUrl,
-            communityImageURL: "",
-            userImageURL: "",
-          } as any,
-        }));
+      const mapped = await PostsService.getPostById({ postId: id as string });
+      if (mapped && mapped.id) {
+        console.log("✅ Post found:", mapped.title);
+        setPostStateValue((prev) => ({ ...prev, selectedPost: mapped as any }));
       } else {
         console.error("❌ Post not found with ID:", id);
       }
@@ -82,15 +52,11 @@ const PostPage: React.FC<PostPageProps> = () => {
   // Fetch post if not in already in state
   useEffect(() => {
     const postId = id;
-
     if (postId) {
       console.log("Effect triggered - fetching post for ID:", postId);
-      // Always fetch post when id changes, regardless of selectedPost state
-      if (postStateValue.selectedPost?.id !== postId) {
-        fetchPost();
-      }
+      fetchPost();
     }
-  }, [router.query.id, postStateValue.selectedPost?.id]);
+  }, [router.query.id]);
 
   // Handle hash-based comment highlighting
   useEffect(() => {

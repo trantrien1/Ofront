@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Button, Flex, Icon, Stack, Text, SkeletonCircle, SkeletonText, useToast, useColorModeValue } from "@chakra-ui/react";
 import { Post, postState } from "../../../atoms/postsAtom";
 import { useNotifications } from "../../../hooks/useNotifications";
@@ -46,7 +46,10 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   
   const [comment, setComment] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
-  const [commentFetchLoading, setCommentFetchLoading] = useState(true);
+  // Start as not-loading so first effect can trigger
+  const [commentFetchLoading, setCommentFetchLoading] = useState(false);
+  // Prevent duplicate fetches (Strict Mode / re-renders)
+  const hasFetchedRef = useRef<string | null>(null);
   const [commentCreateLoading, setCommentCreateLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState("");
   const setAuthModalState = useSetRecoilState(authModalState);
@@ -347,10 +350,14 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       console.error("getPostComments error", error?.message || error);
     }
     setCommentFetchLoading(false);
-  };  useEffect(() => {
-    if (selectedPost?.id) {
-      getPostComments();
-    }
+  };
+  // Fetch once per post id change
+  useEffect(() => {
+    if (!selectedPost?.id) return;
+    if (hasFetchedRef.current === selectedPost.id) return;
+    hasFetchedRef.current = selectedPost.id;
+    setCommentFetchLoading(true);
+    getPostComments();
   }, [selectedPost?.id]);
 
   // Don't render if no selectedPost

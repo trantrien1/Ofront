@@ -109,6 +109,8 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const chipBg = useColorModeValue("gray.100", "gray.700");
   const chipHoverBg = useColorModeValue("gray.200", "gray.600");
   const chipText = useColorModeValue("gray.800", "gray.100");
+  // Determine liked state from prop or post state for immediate UI feedback
+  const isLiked = ((userVoteValue ?? post.currentUserVoteStatus?.voteValue) === 1);
 
   const handleDelete = async (
     event: React.MouseEvent<HTMLButtonElement | HTMLDivElement, MouseEvent>
@@ -284,15 +286,16 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           icon={<FaThumbsUp />}
           size="sm"
           variant="ghost"
-          bg={userVoteValue === 1 ? useColorModeValue("blue.500", "blue.400") : chipBg}
-          color={userVoteValue === 1 ? "white" : chipText}
+          bg={isLiked ? useColorModeValue("blue.500", "blue.400") : chipBg}
+          color={isLiked ? "white" : chipText}
           borderRadius="full"
-          borderColor={userVoteValue === 1 ? useColorModeValue("blue.500", "blue.400") : "transparent"}
+          borderColor={isLiked ? useColorModeValue("blue.500", "blue.400") : "transparent"}
           _hover={{
-            bg: userVoteValue === 1 ? useColorModeValue("blue.600", "blue.500") : chipHoverBg,
+            bg: isLiked ? useColorModeValue("blue.600", "blue.500") : chipHoverBg,
             transform: "scale(1.1)"
           }}
           transition="all 0.2s ease"
+          aria-pressed={isLiked}
           onClick={(event) => onVote(event, post, 1, post.communityId)}
         />
         <Text fontWeight="semibold" color={chipText}>

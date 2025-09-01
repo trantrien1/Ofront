@@ -27,41 +27,49 @@ const PostPage: React.FC<PostPageProps> = () => {
 		onVote,
 	} = usePosts(communityStateValue.currentCommunity);
 
-	const fetchPost = async () => {
-		setLoading(true);
-		try {
-			const { PostsService } = await import("../../../../services");
-			const posts = await PostsService.getPosts();
-			const found = (posts as any[]).find(p => p.id?.toString?.() === (pid as string));
-			if (found) {
-				setPostStateValue((prev) => ({
-					...prev,
-					selectedPost: {
-						id: found.id?.toString?.() || found.id,
-						creatorId: found.userId,
-						communityId: found.categoryId || community as string,
-						title: found.title,
-						body: found.content,
-						numberOfComments: 0,
-						voteStatus: 0,
-						userDisplayText: "",
-					} as any,
-				}));
-			}
-		} catch (error: any) {
-			console.error("fetchPost error", error?.message || error);
-		}
-		setLoading(false);
-	};
+		// Fetch selected post once when pid changes (and selectedPost not already matching)
+		// Avoid including a changing function in deps to prevent repeated calls
+		// and only run when pid actually differs from current selectedPost id
 
-	useEffect(() => {
-		const { pid } = router.query;
-		if (pid) {
-			if (postStateValue.selectedPost?.id !== pid) {
-				fetchPost();
-			}
-		}
-	}, [router.query.pid, postStateValue.selectedPost?.id, fetchPost]);
+		useEffect(() => {
+			const pidParam = router.query.pid as string | undefined;
+			if (!pidParam) return;
+			if (postStateValue.selectedPost?.id === pidParam) return;
+				(async () => {
+				setLoading(true);
+						try {
+							const { PostsService } = await import("../../../../services");
+							let mapped: any = null;
+							try {
+								mapped = await PostsService.getPostById({ postId: pidParam });
+							} catch (e) {
+								// continue to fallback
+							}
+							if (!mapped || !mapped.id) {
+								// Fallback: fetch posts by group/community and find by id
+								try {
+									const groupId = community as string | undefined;
+									if (groupId) {
+										const list = await PostsService.getPostsByGroup({ groupId, sort: "like" });
+										const found = Array.isArray(list) ? list.find((p: any) => String(p.id) === String(pidParam)) : null;
+										if (found) mapped = found;
+									}
+								} catch (e2) {
+									// ignore
+								}
+							}
+							if (mapped && mapped.id) {
+								setPostStateValue((prev) => ({ ...prev, selectedPost: mapped as any }));
+							} else {
+								console.warn("Post not found for id=", pidParam);
+							}
+						} catch (error: any) {
+							console.error("fetchPost error", error?.message || error);
+						} finally {
+					setLoading(false);
+				}
+			})();
+		}, [router.query.pid, postStateValue.selectedPost?.id, community, setLoading, setPostStateValue]);
 
 	useEffect(() => {
 		if (router.isReady && typeof window !== 'undefined') {

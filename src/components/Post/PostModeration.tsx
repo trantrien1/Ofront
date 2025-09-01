@@ -90,22 +90,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
   };
 
   const handlePinPost = async () => {
-    try {
-      // TODO: toggle pin via API
-      
-      toast({
-        title: isPinned ? "Post unpinned" : "Post pinned",
-        status: "success",
-        duration: 3000,
-      });
-      onPostPinned?.();
-    } catch (error) {
-      toast({
-        title: "Error pinning post",
-        status: "error",
-        duration: 3000,
-      });
-    }
+  toast({ title: "Chức năng này sẽ sớm ra mắt", status: "info", duration: 2500 });
   };
 
   const handleEditPost = async () => {

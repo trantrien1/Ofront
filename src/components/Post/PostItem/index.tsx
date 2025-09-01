@@ -139,32 +139,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const handlePinPost = async () => {
     setLoadingPin(true);
     try {
-      const isPinned = communityData?.pinnedPosts?.includes(post.id);
-      const updatedPinnedPosts = isPinned
-        ? (communityData.pinnedPosts || []).filter((id) => id !== post.id)
-        : [...(communityData.pinnedPosts || []), post.id];
-
-      // Optimistic local update; TODO: call API to persist
-      setCommunityStateValue((prev) => ({
-        ...prev,
-        currentCommunity: {
-          ...prev.currentCommunity,
-          pinnedPosts: updatedPinnedPosts,
-        },
-      }));
-
-      toast({
-        title: isPinned ? "Post unpinned successfully" : "Post pinned successfully",
-        status: "success",
-        duration: 3000,
-      });
-      
-    } catch (error) {
-      toast({
-        title: "Error pinning/unpinning post",
-        status: "error",
-        duration: 3000,
-      });
+      toast({ title: "Chức năng này sẽ sớm ra mắt", status: "info", duration: 2500 });
     } finally {
       setLoadingPin(false);
     }
@@ -345,7 +320,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           }}
           transition="all 0.2s ease"
           cursor="pointer"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); toast({ title: "Chức năng này sẽ sớm ra mắt", status: "info", duration: 2500 }); }}
         >
           <FiShare2 color={useColorModeValue("gray.600", "gray.300")} />
           <Text color={chipText} fontSize="sm" fontWeight="medium">

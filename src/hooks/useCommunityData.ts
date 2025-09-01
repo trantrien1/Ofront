@@ -12,7 +12,7 @@ import {
 } from "../atoms/communitiesAtom";
 // Firebase removed
 // import { getMySnippets } from "../helpers/firestore";
-import { getGroupsByUser } from "../services/groups.service";
+import { getGroupsByUser, getGroupById } from "../services/groups.service";
 import { userState } from "../atoms/userAtom";
 import { useCommunityPermissions } from "./useCommunityPermissions";
 import { joinGroup } from "../services/groups.service";
@@ -106,32 +106,38 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   };
 
   const getCommunityData = async (communityId: string) => {
-    // this causes weird memory leak error - not sure why
-    // setLoading(true);
+    setLoading(true);
     try {
-      // TODO: Fetch from API
-      const communityDoc = { id: communityId, data: () => ({}) } as any;
-      // setCommunityStateValue((prev) => ({
-      //   ...prev,
-      //   visitedCommunities: {
-      //     ...prev.visitedCommunities,
-      //     [communityId as string]: {
-      //       id: communityDoc.id,
-      //       ...communityDoc.data(),
-      //     } as Community,
-      //   },
-      // }));
-      setCommunityStateValue((prev) => ({
-        ...prev,
-        currentCommunity: {
-          id: communityId,
-          ...(communityDoc.data?.() || {}),
-        } as Community,
-      }));
+      // Fetch real group details (includes numberOfMembers, imageURL, ownerId, etc.)
+      const g = await getGroupById(communityId);
+      if (g) {
+        setCommunityStateValue((prev) => ({
+          ...prev,
+          currentCommunity: {
+            ...(prev.currentCommunity || {}),
+            id: String(g.id),
+            creatorId: String(g.ownerId ?? (prev.currentCommunity as any)?.creatorId ?? ""),
+            numberOfMembers: Number(g.numberOfMembers ?? (prev.currentCommunity as any)?.numberOfMembers ?? 0) || 0,
+            privacyType: ((g.privacyType as any) || (prev.currentCommunity as any)?.privacyType || "public") as any,
+            imageURL: g.imageURL ?? (prev.currentCommunity as any)?.imageURL,
+            displayName: g.name || (prev.currentCommunity as any)?.displayName || String(g.id),
+          } as Community,
+        }));
+      } else {
+        // Fallback to minimal object with given id
+        setCommunityStateValue((prev) => ({
+          ...prev,
+          currentCommunity: {
+            ...(prev.currentCommunity || {}),
+            id: communityId,
+          } as Community,
+        }));
+      }
     } catch (error: any) {
-      console.error("getCommunityData error", error.message);
+      console.error("getCommunityData error", error?.message || error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const onJoinLeaveCommunity = (community: Community, isJoined?: boolean) => {
@@ -171,16 +177,13 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
 
   const joinCommunity = async (community: Community) => {
   try {
-    // Gọi API backend để join group
-    await joinGroup(community.id);
-
-    const newSnippet: CommunitySnippet = {
+    // Optimistic add to snippets and members so UI updates immediately
+    const optimisticSnippet: CommunitySnippet = {
       communityId: community.id,
       imageURL: community.imageURL || "",
       role: "member",
     };
-
-    const newMember = {
+    const optimisticMember = {
       userId: user?.uid || "",
       role: "member" as const,
       joinedAt: new Date() as any,
@@ -188,20 +191,36 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
       imageURL: user?.photoURL || "",
     };
 
-    // Update local state
+    setCommunityStateValue((prev) => {
+      const exists = prev.mySnippets.some((s) => s.communityId === community.id);
+      return {
+        ...prev,
+        mySnippets: exists ? prev.mySnippets : [...prev.mySnippets, optimisticSnippet],
+        currentCommunity: {
+          ...prev.currentCommunity,
+          members: [...(prev.currentCommunity.members || []), optimisticMember],
+          numberOfMembers: (prev.currentCommunity.numberOfMembers || 0) + 1,
+        },
+      };
+    });
+
+    // Call backend; if it fails, rollback
+    await joinGroup(community.id);
+  } catch (error) {
+    console.error("joinCommunity error", error);
+    // Rollback optimistic updates
     setCommunityStateValue((prev) => ({
       ...prev,
-      mySnippets: [...prev.mySnippets, newSnippet],
+      mySnippets: prev.mySnippets.filter((s) => s.communityId !== community.id),
       currentCommunity: {
         ...prev.currentCommunity,
-        members: [...(prev.currentCommunity.members || []), newMember],
+        members: (prev.currentCommunity.members || []).filter((m) => m.userId !== (user?.uid || "")),
+        numberOfMembers: Math.max(0, (prev.currentCommunity.numberOfMembers || 0) - 1),
       },
     }));
-    } catch (error) {
-    console.error("joinCommunity error", error);
-    } finally {
+  } finally {
     setLoading(false);
-    }
+  }
   };
 
   const leaveCommunity = async (communityId: string) => {

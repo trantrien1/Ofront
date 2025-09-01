@@ -51,7 +51,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ communityData }) => {
   const cardBg = useColorModeValue("white", "gray.800");
   const subText = useColorModeValue("gray.500", "gray.400");
   const badgeColor = role === 'owner' ? 'yellow' : role === 'admin' ? 'red' : role === 'moderator' ? 'blue' : 'gray';
-  const members = communityStateValue.currentCommunity.numberOfMembers ?? communityData.numberOfMembers ?? 0;
+  const members = (communityStateValue.currentCommunity.numberOfMembers ?? communityData.numberOfMembers ?? 0);
 
   return (
     <Flex direction="column" width="100%" boxShadow="sm">

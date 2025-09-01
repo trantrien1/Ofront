@@ -23,8 +23,6 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
     useRecoilState(communityState);
 
   const toast = useToast();
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [newName, setNewName] = useState("");
 
   useEffect(() => {
     setCommunityStateValue((prev) => ({
@@ -44,16 +42,7 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
       {/* Quick actions (no duplicate Join; that's handled in Header) */}
       <Box maxW="1060px" mx="auto" px={4} mb={4}>
         <HStack>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setNewName(communityData.displayName || "");
-              onOpen();
-            }}
-          >
-            Edit name
-          </Button>
+          {/* Edit name button removed */}
         </HStack>
       </Box>
 
@@ -74,38 +63,7 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
         </>
       </PageContentLayout>
 
-      {/* Rename modal (demo) */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Rename community</ModalHeader>
-          <ModalBody>
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="New name"
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button mr={3} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="blue"
-              onClick={() => {
-                toast({
-                  status: "success",
-                  title: "Renamed (demo)",
-                  description: `Tên mới: ${newName}`,
-                });
-                onClose();
-              }}
-            >
-              Save
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+  {/* Rename modal removed */}
     </>
   );
 };
@@ -121,7 +79,7 @@ export function toCommunity(obj: any): Community | null {
   const result: any = {
     id,
     creatorId: String(obj.ownerId ?? obj.creatorId ?? ""),
-    numberOfMembers: Number(obj.numberOfMembers ?? obj.memberCount ?? 0) || 0,
+  numberOfMembers: Number(obj.numberOfMembers ?? obj.memberCount ?? obj.countUserJoin ?? 0) || 0,
     privacyType: (obj.privacyType || obj.communityType || "public").toLowerCase() as any,
     displayName: name,
   };

@@ -7,11 +7,13 @@ import PostLoader from "../../../../components/Post/Loader";
 import PostItem from "../../../../components/Post/PostItem";
 import useCommunityData from "../../../../hooks/useCommunityData";
 import usePosts from "../../../../hooks/usePosts";
+import useAuth from "../../../../hooks/useAuth";
 
 type PostPageProps = {};
 
 const PostPage: React.FC<PostPageProps> = () => {
-	const user = null as any;
+	const { currentUser } = useAuth();
+	const user = currentUser as any;
 	const router = useRouter();
 	const { community, pid } = router.query;
 	const { communityStateValue } = useCommunityData();

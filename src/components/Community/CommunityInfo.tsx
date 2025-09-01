@@ -98,10 +98,8 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   const canModerateBool = perms.canModerate(communityData.id);
   const canManageRolesBool = perms.canManageRoles(communityData.id);
   const canBanUsersBool = perms.canBanUsers(communityData.id);
-  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  const [editName, setEditName] = useState<string>(communityData.displayName || String(communityData.id));
-  const [editDescription, setEditDescription] = useState<string>(communityData.description || "");
+  
 
   // Backward-compat booleans for existing UI blocks
   const isOwnerRole = role === "owner";
@@ -158,23 +156,32 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
     }
   };
 
-  const handleSaveEditCommunity = async () => {
-    try {
-      await updateGroup({ communityId: communityData.id, name: editName, description: editDescription });
-      setCommunityStateValue((prev) => ({
-        ...prev,
-        currentCommunity: {
-          ...prev.currentCommunity,
-          displayName: editName,
-          description: editDescription,
-        },
-      }));
-      toast({ title: "Community updated", status: "success", duration: 3000 });
-      onEditClose();
-    } catch (error) {
-      toast({ title: "Error updating community", status: "error", duration: 3000 });
-    }
-  };
+  // Lightweight skeleton while loading
+  if (loading) {
+    const cardBg = useColorModeValue("white", "gray.800");
+    const headerBg = useColorModeValue("blue.400", "blue.500");
+    const line = (w: string, h = "12px", mb = 2) => (
+      <Box height={h} width={w} bg={useColorModeValue("gray.200", "whiteAlpha.300")} borderRadius="md" mb={mb} />
+    );
+    return (
+      <Box pt={pt} position="sticky" top="14px">
+        <Flex justify="space-between" align="center" p={3} color="white" bg={headerBg} borderRadius="4px 4px 0px 0px">
+          <Box height="16px" width="140px" bg="whiteAlpha.700" borderRadius="md" />
+          <Box height="16px" width="16px" bg="whiteAlpha.700" borderRadius="md" />
+        </Flex>
+        <Flex direction="column" p={3} bg={cardBg} borderRadius="0px 0px 4px 4px">
+          {line("70%")}
+          {line("90%")}
+          <Divider my={3} />
+          {line("40%")}
+          {line("60%")}
+          {line("50%")}
+        </Flex>
+      </Box>
+    );
+  }
+
+  
 
   const handleConfirmDelete = async () => {
     try {
@@ -509,14 +516,18 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
               )}
 
               <Stack spacing={2}>
+                {/** Prefer live count from Recoil currentCommunity, fallback to prop */}
+                {(() => {
+                  /* no-op IIFE for scoping */
+                  return null;
+                })()}
                 <Flex width="100%" p={2} fontWeight={600} fontSize="10pt">
                   <Flex direction="column" flexGrow={1}>
-                    <Text fontSize="md">{communityData?.numberOfMembers?.toLocaleString()}</Text>
+                    <Text fontSize="md">{(communityData?.numberOfMembers ?? 0).toLocaleString()}</Text>
                     <Text color={useColorModeValue("gray.600", "gray.400")}>Members</Text>
                   </Flex>
                   <Flex direction="column" flexGrow={1}>
-                    <Text fontSize="md">1</Text>
-                    <Text color={useColorModeValue("gray.600", "gray.400")}>Online</Text>
+                    
                   </Flex>
                 </Flex>
                 <Divider />
@@ -678,9 +689,6 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                       <Stack spacing={2}>
                         <Text fontSize="10pt" fontWeight={600}>Admin Actions</Text>
                         <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
-                          <Button size="sm" leftIcon={<FaEdit />} onClick={onEditOpen} colorScheme="blue" variant="outline">
-                            Edit Community
-                          </Button>
                           <Button size="sm" leftIcon={<FaTrash />} onClick={onDeleteOpen} colorScheme="red" variant="outline">
                             Delete Community
                           </Button>
@@ -929,24 +937,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
         </ModalContent>
       </Modal>
 
-      {/* Edit Community Modal */}
-      <Modal isOpen={isEditOpen} onClose={onEditClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Community</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Stack spacing={3}>
-              <Input placeholder="Community name" value={editName} onChange={(e) => setEditName(e.target.value)} />
-              <Textarea placeholder="Description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
-            </Stack>
-            <Stack direction="row" justify="flex-end" mt={4}>
-              <Button variant="ghost" onClick={onEditClose}>Cancel</Button>
-              <Button colorScheme="blue" onClick={handleSaveEditCommunity}>Save</Button>
-            </Stack>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      
 
       {/* Delete Confirm Modal */}
       <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="md">

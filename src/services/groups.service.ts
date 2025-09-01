@@ -9,6 +9,7 @@ export type Group = {
   ownerId?: string | number;
   privacyType?: string;
   userRole?: string; // backend-provided role for current user when using get/by-user
+  numberOfMembers?: number; // mapped from various backend keys
 };
 
 function normalizeGroup(item: any): Group | null {
@@ -16,6 +17,24 @@ function normalizeGroup(item: any): Group | null {
   const id = item.id ?? item.groupId ?? item.communityId ?? item.categoryId ?? item._id ?? item.code ?? item.uuid;
   const name = item.name ?? item.groupName ?? item.communityName ?? item.title ?? item.displayName ?? item.label;
   if (id == null || !name) return null;
+  // Derive member count from common keys
+  const countKeys = [
+  'numberOfMembers','memberCount','membersCount','numMembers','totalMembers','participantsCount','followersCount','subscriberCount','quantityMember','numberOfMember','countUserJoin'
+  ] as const;
+  let membersCount: number | undefined = undefined;
+  for (const k of countKeys) {
+    const v = (item as any)[k];
+    if (typeof v === 'number') { membersCount = v; break; }
+    if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) { membersCount = Number(v); break; }
+  }
+  // Fallback to array lengths if present
+  if (membersCount == null) {
+    const maybeArrays = ['members','users','participants','followers'];
+    for (const k of maybeArrays) {
+      const v = (item as any)[k];
+      if (Array.isArray(v)) { membersCount = v.length; break; }
+    }
+  }
   return {
     id,
     name,
@@ -25,6 +44,7 @@ function normalizeGroup(item: any): Group | null {
     ownerId: item.ownerId ?? item.owner ?? item.userId ?? undefined,
   privacyType: (item.privacyType || item.communityType || item.visibility || '').toLowerCase() || undefined,
   userRole: (item.userRole || item.role || '').toLowerCase() || undefined,
+  numberOfMembers: typeof membersCount === 'number' ? membersCount : undefined,
   };
 }
 
@@ -128,6 +148,13 @@ export const getGroupsByUser = async (
 };
 
 export const getGroupById = async (id: string | number): Promise<Group | null> => {
+  // 0) Try direct by-id endpoint if available
+  try {
+    const res = await request.get(`group/get/${encodeURIComponent(String(id))}`);
+    const obj = (res.data && typeof res.data === 'object') ? (res.data.data ?? res.data.group ?? res.data) : res.data;
+    const norm = normalizeGroup(obj);
+    if (norm) return norm;
+  } catch (_) {}
   // Strategy aligned to backend: search via by-user and get/all
   // 1) by-user list then find
   try {

@@ -1,5 +1,5 @@
 import React, { Ref } from "react";
-import { Flex, Stack, Button, Image } from "@chakra-ui/react";
+import { Flex, Stack, Button, Image, useColorModeValue } from "@chakra-ui/react";
 
 type ImageUploadProps = {
   selectedFile?: string;
@@ -25,6 +25,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   loading,
   textInputs,
 }) => {
+  const dashedBorder = useColorModeValue("gray.200", "whiteAlpha.300");
   return (
     <Flex direction="column" justify="center" align="center" width="100%">
       {selectedFile ? (
@@ -62,7 +63,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           align="center"
           p={20}
           border="1px dashed"
-          borderColor="gray.200"
+          borderColor={dashedBorder}
           borderRadius={4}
           width="100%"
         >

@@ -1,1 +1,1 @@
-export { default, getServerSideProps } from "./index.impl";
+export { default } from "./index.impl";

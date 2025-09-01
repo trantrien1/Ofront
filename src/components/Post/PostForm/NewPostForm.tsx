@@ -25,7 +25,7 @@ import PostsService, { createPost as createPostApi } from "../../../services/pos
 import * as Notifications from "../../../services/notifications.service";
 
 import TabItem from "./TabItem";
-import { postState } from "../../../atoms/postsAtom";
+import { Post, postState } from "../../../atoms/postsAtom";
 import { useRecoilValue } from "recoil";
 import { userState } from "../../../atoms/userAtom";
 import { useCommunityPermissions } from "../../../hooks/useCommunityPermissions";
@@ -33,6 +33,7 @@ import request from "../../../services/request";
 
 import TextInputs from "./TextInputs";
 import ImageUpload from "./ImageUpload";
+import { useColorModeValue } from "@chakra-ui/react";
 
 const formTabs = [
 	{
@@ -73,6 +74,8 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 	communityImageURL,
 	user,
 }) => {
+	const cardBg = useColorModeValue("white", "gray.800");
+	const borderColor = useColorModeValue("gray.200", "whiteAlpha.300");
 	const [selectedTab, setSelectedTab] = useState(formTabs[0].title);
 	const [textInputs, setTextInputs] = useState({
 		title: "",
@@ -126,6 +129,35 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					isPersonalPost: visibility !== "community",
 					status,
 				};
+
+				// Optimistic: insert a temp post immediately
+				const cidKey = isCommunityPost ? String(targetCommunityId || "") : "";
+				const tempId = `temp_${Date.now()}`;
+				const tempPost: Post = {
+					id: tempId,
+					communityId: cidKey,
+					communityImageURL: communityImageURL,
+					userDisplayText: globalUser?.displayName || globalUser?.email || "you",
+					creatorId: globalUser?.uid || user?.uid || "",
+					title,
+					body,
+					numberOfComments: 0,
+					voteStatus: 0,
+					status,
+					approved: status === 1,
+					imageURL: selectedFile || undefined,
+					createdAt: new Date().toISOString() as any,
+				};
+				setPostItems((prev) => {
+					const nextPosts = [tempPost, ...(prev.posts || [])];
+					return {
+						...prev,
+						posts: nextPosts,
+						postsCache: { ...prev.postsCache, [cidKey]: nextPosts },
+						postUpdateRequired: false,
+					};
+				});
+
 				const created = await createPostApi(payload);
 				// Notify admins only for member posts (not for admins/moderators)
 				if (!userCanModerateCommunity) {
@@ -141,6 +173,39 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 						await Notifications.createNotification(notifPayload);
 					} catch {}
 				}
+
+				// Reconcile optimistic temp post with actual created post
+				const realPost: Post = {
+					id: String(created?.id || created?.postId || tempId),
+					communityId: cidKey,
+					communityImageURL,
+					userDisplayText: globalUser?.displayName || globalUser?.email || "you",
+					creatorId: globalUser?.uid || user?.uid || "",
+					title,
+					body,
+					numberOfComments: 0,
+					voteStatus: 0,
+					status: typeof created?.status === 'number' ? created.status : status,
+					approved: typeof created?.approved === 'boolean' ? created.approved : (status === 1),
+					imageURL: selectedFile || undefined,
+					createdAt: new Date().toISOString() as any,
+				};
+				setPostItems((prev) => {
+					const list = [...(prev.posts || [])];
+					const idx = list.findIndex((p) => p.id === tempId);
+					if (idx !== -1) list[idx] = realPost; else list.unshift(realPost);
+					return {
+						...prev,
+						posts: list,
+						postsCache: { ...prev.postsCache, [cidKey]: list },
+						postUpdateRequired: false,
+					};
+				});
+
+				// Reset form
+				setTextInputs({ title: "", body: "" });
+				setSelectedFile(undefined);
+
 				// Keep user in context: if posted to a community, go to that community page; otherwise stay put.
 				if (isCommunityPost && targetCommunityId) {
 					try { await router.push(`/community/${encodeURIComponent(String(targetCommunityId))}`); } catch {}
@@ -148,6 +213,16 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					// no navigation for personal/public posts
 				}
 			} catch (error) {
+				// Rollback optimistic insert on error
+				const cidKey = visibility === "community" ? String(targetCommunityId || "") : "";
+				setPostItems((prev) => ({
+					...prev,
+					posts: (prev.posts || []).filter((p) => !String(p.id).startsWith("temp_")),
+					postsCache: {
+						...prev.postsCache,
+						[cidKey]: (prev.postsCache?.[cidKey] || []).filter((p) => !String(p.id).startsWith("temp_")),
+					},
+				}));
 				setError("Error creating post");
 			} finally {
 				setLoading(false);
@@ -206,9 +281,9 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 	};
 
 	return (
-		<Flex direction="column" bg="white" borderRadius={4} mt={2}>
+		<Flex direction="column" bg={cardBg} borderRadius={4} mt={2} borderWidth="1px" borderColor={borderColor}>
 	      {/* Audience / Visibility */}
-			<Box p={4} borderBottom="1px solid" borderColor="gray.100">
+			<Box p={4} borderBottom="1px solid" borderColor={borderColor}>
 				<Stack spacing={3}>
 					<Box>
 						<Text fontSize="sm" fontWeight={600} mb={2}>Audience</Text>

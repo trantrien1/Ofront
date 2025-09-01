@@ -10,7 +10,6 @@ import {
   TabPanels,
   Tab,
   TabPanel,
-  VStack,
   HStack,
   useToast,
   Stack,
@@ -19,15 +18,14 @@ import {
   Spinner,
   Center,
   Tag,
+  useColorModeValue,
+  Image as ChakraImage,
 } from "@chakra-ui/react";
-
-import { useRouter } from "next/router";
-import { BsCalendar3, BsGeoAlt, BsLink45Deg } from "react-icons/bs";
-import { MdEdit } from "react-icons/md";
+import { MdEdit, MdDateRange } from "react-icons/md";
 import { FaBirthdayCake } from "react-icons/fa";
-import { Image as ChakraImage } from "@chakra-ui/react";
-import { MdDateRange } from "react-icons/md";
+import { BsGeoAlt, BsLink45Deg } from "react-icons/bs";
 import { IoMdTrophy } from "react-icons/io";
+
 import { Post } from "../../atoms/postsAtom";
 import PostItem from "../Post/PostItem";
 import usePosts from "../../hooks/usePosts";
@@ -35,6 +33,7 @@ import { timestampToISO } from "../../helpers/timestampHelpers";
 import useAuth from "../../hooks/useAuth";
 import { getPosts as fetchAllPosts } from "../../services/posts.service";
 import nookies from "nookies";
+import { getGroupsByUser, type Group } from "../../services/groups.service";
 
 interface UserProfile {
   uid: string;
@@ -54,58 +53,59 @@ const PersonalHome: React.FC = () => {
   const { user: currentUser } = useAuth();
   const user = currentUser as any;
   const loadingUser = false;
-  const router = useRouter();
   const toast = useToast();
+
   const [isEditing, setIsEditing] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
   const { onVote, onDeletePost, onSelectPost } = usePosts();
-  // Role display in profile (fallback to localStorage)
-  const [roleLabel, setRoleLabel] = useState<string>('undefined');
-  const roleColor: any = roleLabel === 'admin' ? 'purple' : roleLabel === 'moderator' ? 'orange' : 'gray';
 
+  const [roleLabel, setRoleLabel] = useState<string>("undefined");
+  const roleColor: any = roleLabel === "admin" ? "purple" : roleLabel === "moderator" ? "orange" : "gray";
+
+  // Communities joined/managed
+  const [groupsLoading, setGroupsLoading] = useState<boolean>(false);
+  const [allGroups, setAllGroups] = useState<Group[]>([]);
+
+  // Derive role from cookies/JWT best-effort
   useEffect(() => {
-    // Decode role from JWT cookie or use user.role if already set
     const decodeJwt = (token: string) => {
       try {
         const parts = token.split(".");
         if (parts.length < 2) return null;
         const payload = parts[1];
         const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-        const decoded = typeof window !== 'undefined' && typeof window.atob === 'function'
-          ? window.atob(b64)
-          : Buffer.from(b64, 'base64').toString('binary');
+        const decoded = typeof window !== "undefined" && typeof window.atob === "function" ? window.atob(b64) : Buffer.from(b64, "base64").toString("binary");
         return JSON.parse(decoded);
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     };
     try {
       let r = (user as any)?.role as string | undefined;
       const cookies = nookies.get(undefined);
+      if (!r) r = (cookies as any)?.role || (cookies as any)?.ROLE || r;
       if (!r) {
-        // Try explicit role cookie first
-        r = (cookies?.role as string | undefined) || (cookies?.ROLE as string | undefined) || r;
-      }
-      if (!r) {
-        const token = cookies?.token as string | undefined;
+        const token = (cookies as any)?.token as string | undefined;
         if (token) {
           const payload: any = decodeJwt(token);
-          r = payload?.role || (Array.isArray(payload?.roles) ? payload.roles[0] : undefined) || (payload?.isAdmin ? 'admin' : undefined);
+          r = payload?.role || (Array.isArray(payload?.roles) ? payload.roles[0] : undefined) || (payload?.isAdmin ? "admin" : undefined);
         }
       }
-      setRoleLabel(r ? String(r).toLowerCase() : 'undefined');
-    } catch { setRoleLabel('undefined'); }
+      setRoleLabel(r ? String(r).toLowerCase() : "undefined");
+    } catch {
+      setRoleLabel("undefined");
+    }
   }, [user]);
-  //console.log("user.role:", (user as any)?.role);
-  // Fetch user profile data from database
+
   const fetchUserProfile = async () => {
     if (!user?.uid) {
       setLoading(false);
       return;
     }
     try {
-      // Derive basic profile from auth for now
       setUserProfile({
         uid: user.uid,
         email: user.email ?? "",
@@ -124,14 +124,11 @@ const PersonalHome: React.FC = () => {
     }
   };
 
-  // Fetch user's posts from database
   const fetchUserPosts = async () => {
     if (!user?.uid && !user?.displayName) return;
     setPostsLoading(true);
     try {
-      // Load all posts then filter by author (best-effort)
-  // Fetch with auth by default; service will fallback to public on 401/403 if needed
-  const all = await fetchAllPosts({});
+      const all = await fetchAllPosts({});
       const username = (user.displayName || "").toString().toLowerCase();
       const filtered = Array.isArray(all)
         ? all.filter((p: any) => {
@@ -149,24 +146,31 @@ const PersonalHome: React.FC = () => {
     }
   };
 
-  // Stay on page; show login prompt instead of redirecting
-
   useEffect(() => {
     if (user && !loadingUser) {
       fetchUserProfile();
       fetchUserPosts();
+      fetchMyGroups();
     } else if (!user) {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loadingUser]);
 
+  const fetchMyGroups = async () => {
+    try {
+      setGroupsLoading(true);
+      const list = await getGroupsByUser({ ttlMs: 15000 });
+      setAllGroups(list || []);
+    } catch (e) {
+      setAllGroups([]);
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
   const formatJoinDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   };
 
   if (loadingUser || loading) {
@@ -182,12 +186,10 @@ const PersonalHome: React.FC = () => {
       <Center minH="50vh">
         <Stack align="center" spacing={4}>
           <ChakraImage src="/images/logo.png" alt="logo" boxSize="60px" borderRadius="full" />
-          <Text fontSize="lg" color="gray.500">
+          <Text fontSize="lg" color={useColorModeValue("gray.600", "gray.300")}>
             Please login to view your profile
           </Text>
-          <Button colorScheme="brand">
-            Login
-          </Button>
+          <Button colorScheme="brand">Login</Button>
         </Stack>
       </Center>
     );
@@ -195,125 +197,64 @@ const PersonalHome: React.FC = () => {
 
   const handleEditProfile = () => {
     setIsEditing(true);
-    toast({
-      title: "Edit Profile",
-      description: "Profile editing feature coming soon!",
-      status: "info",
-      duration: 3000,
-      isClosable: true,
-    });
+    toast({ title: "Edit Profile", description: "Profile editing feature coming soon!", status: "info", duration: 3000, isClosable: true });
   };
+
+  const cardBg = useColorModeValue("white", "gray.800");
+  const borderCol = useColorModeValue("gray.300", "gray.700");
+  const subText = useColorModeValue("gray.500", "gray.400");
+  const mutedText = useColorModeValue("gray.600", "gray.300");
+  const softBg = useColorModeValue("gray.50", "gray.700");
+  const brandAlt = useColorModeValue("brand.100", "blue.300");
 
   return (
     <Box maxW="1200px" mx="auto" p={4}>
       {/* Profile Header with Cover Image */}
-      <Box bg="white" borderRadius={4} border="1px solid" borderColor="gray.300" mb={4}>
-        <Box
-          h="100px"
-          bg="blue.500"
-          bgGradient="linear(to-r, blue.400, blue.600)"
-          borderRadius="4px 4px 0 0"
-        />
+      <Box bg={cardBg} borderRadius={4} border="1px solid" borderColor={borderCol} mb={4}>
+        <Box h="100px" bgGradient={useColorModeValue("linear(to-r, blue.400, blue.600)", "linear(to-r, blue.600, blue.700)")} borderRadius="4px 4px 0 0" />
         <Flex p={6} mt={-12} direction="column">
           <Flex align="flex-end" mb={4}>
-            <Avatar
-              size="xl"
-              src={userProfile?.photoURL}
-              name={userProfile?.displayName}
-              border="4px solid white"
-              bg="brand.100"
-            />
+            <Avatar size="xl" src={userProfile?.photoURL} name={userProfile?.displayName} border="4px solid white" bg={useColorModeValue("brand.100", "gray.700")} />
             <Flex ml={4} direction="column" flex={1}>
-              <Text fontSize="2xl" fontWeight="bold">
-                {userProfile?.displayName}
-              </Text>
-              <Text color="gray.500" fontSize="sm">
-                u/{userProfile?.displayName?.toLowerCase().replace(/\s+/g, '') || 'undefined'}
-              </Text>
-              <HStack mt={1}>
-                <Tag size="sm" colorScheme={roleColor}>{roleLabel}</Tag>
-              </HStack>
+              <Text fontSize="2xl" fontWeight="bold">{userProfile?.displayName}</Text>
+              <HStack mt={1}><Tag size="sm" colorScheme={roleColor}>{roleLabel}</Tag></HStack>
               {userProfile?.createdAt && (
-                <Flex align="center" mt={1} color="gray.500" fontSize="sm">
+                <Flex align="center" mt={1} color={subText} fontSize="sm">
                   <Icon as={FaBirthdayCake} mr={1} />
-                  <Text>
-                    Joined {new Date(timestampToISO(userProfile.createdAt)).toLocaleDateString()}
-                  </Text>
+                  <Text>Joined {new Date(timestampToISO(userProfile.createdAt)).toLocaleDateString()}</Text>
                 </Flex>
               )}
             </Flex>
             <HStack>
-              <Button
-                leftIcon={<MdEdit />}
-                colorScheme="blue"
-                variant="outline"
-                size="sm"
-                onClick={handleEditProfile}
-              >
-                Edit Profile
-              </Button>
+              <Button leftIcon={<MdEdit />} colorScheme="blue" variant={useColorModeValue("outline", "solid")} size="sm" onClick={handleEditProfile}>Edit Profile</Button>
             </HStack>
           </Flex>
 
-          {/* Enhanced User Stats */}
+          {/* Stats */}
           <Flex gap={6} wrap="wrap">
-            <Flex align="center" bg="gray.50" p={3} borderRadius={6}>
-              <Icon as={IoMdTrophy} color="orange.400" mr={2} />
+            <Flex align="center" bg={softBg} p={3} borderRadius={6}>
+              <Icon as={MdDateRange} color={brandAlt} mr={2} />
               <Box>
-                <Text fontWeight="bold" fontSize="lg">
-                  {userProfile?.karma || 0}
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  Karma
-                </Text>
-              </Box>
-            </Flex>
-            
-            <Flex align="center" bg="gray.50" p={3} borderRadius={6}>
-              <Icon as={MdDateRange} color="brand.100" mr={2} />
-              <Box>
-                <Text fontWeight="bold" fontSize="lg">
-                  {userPosts.length}
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  Posts
-                </Text>
-              </Box>
-            </Flex>
-
-            <Flex align="center" bg="gray.50" p={3} borderRadius={6}>
-              <ChakraImage src="/images/logo.png" alt="logo" boxSize="24px" borderRadius="full" mr={2} />
-              <Box>
-                <Text fontWeight="bold" fontSize="lg">
-                  {userProfile?.commentCount || 0}
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  Comments
-                </Text>
+                <Text fontWeight="bold" fontSize="lg">{userPosts.length}</Text>
+                <Text fontSize="xs" color={subText}>Posts</Text>
               </Box>
             </Flex>
           </Flex>
-          
-          {/* Bio and additional info */}
+
+          {/* Bio & Links */}
           <Box mt={4}>
-            <Text color="gray.600" mb={2}>
-              {userProfile?.bio}
-            </Text>
+            <Text color={mutedText} mb={2}>{userProfile?.bio}</Text>
             <HStack spacing={4} mb={2}>
               {userProfile?.location && (
                 <HStack spacing={1}>
                   <BsGeoAlt />
-                  <Text fontSize="sm" color="gray.600">
-                    {userProfile.location}
-                  </Text>
+                  <Text fontSize="sm" color={mutedText}>{userProfile.location}</Text>
                 </HStack>
               )}
               {userProfile?.website && (
                 <HStack spacing={1}>
                   <BsLink45Deg />
-                  <Text fontSize="sm" color="blue.500" cursor="pointer">
-                    {userProfile.website}
-                  </Text>
+                  <Text fontSize="sm" color={brandAlt} cursor="pointer">{userProfile.website}</Text>
                 </HStack>
               )}
             </HStack>
@@ -321,41 +262,25 @@ const PersonalHome: React.FC = () => {
         </Flex>
       </Box>
 
-      {/* Enhanced Content Tabs with Real Data */}
-      <Box bg="white" borderRadius={4} border="1px solid" borderColor="gray.300">
+      {/* Tabs */}
+      <Box bg={cardBg} borderRadius={4} border="1px solid" borderColor={borderCol}>
         <Tabs variant="enclosed">
           <TabList>
-            <Tab _selected={{ color: "brand.100", borderBottomColor: "brand.100" }}>
-              Posts ({userPosts.length})
-            </Tab>
-            <Tab _selected={{ color: "brand.100", borderBottomColor: "brand.100" }}>
-              Comments
-            </Tab>
-            <Tab _selected={{ color: "brand.100", borderBottomColor: "brand.100" }}>
-              About
-            </Tab>
-            <Tab _selected={{ color: "brand.100", borderBottomColor: "brand.100" }}>
-              Communities
-            </Tab>
+            <Tab _selected={{ color: brandAlt, borderBottomColor: brandAlt }}>Posts ({userPosts.length})</Tab>
+            <Tab _selected={{ color: brandAlt, borderBottomColor: brandAlt }}>Comments</Tab>
+            <Tab _selected={{ color: brandAlt, borderBottomColor: brandAlt }}>About</Tab>
+            <Tab _selected={{ color: brandAlt, borderBottomColor: brandAlt }}>Communities</Tab>
           </TabList>
-
           <TabPanels>
-            {/* Posts Tab with Real Data */}
             <TabPanel p={0}>
               {postsLoading ? (
-                <Center py={10}>
-                  <Spinner size="lg" color="brand.100" />
-                </Center>
+                <Center py={10}><Spinner size="lg" color={brandAlt} /></Center>
               ) : userPosts.length === 0 ? (
                 <Center py={10}>
                   <Stack align="center" spacing={3}>
                     <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
-                    <Text color="gray.500" fontSize="lg">
-                      No posts yet
-                    </Text>
-                    <Text color="gray.400" fontSize="sm" textAlign="center">
-                      Start sharing your thoughts with the community!
-                    </Text>
+                    <Text color={subText} fontSize="lg">No posts yet</Text>
+                    <Text color={useColorModeValue("gray.400", "gray.500")} fontSize="sm" textAlign="center">Start sharing your thoughts with the community!</Text>
                   </Stack>
                 </Center>
               ) : (
@@ -376,75 +301,116 @@ const PersonalHome: React.FC = () => {
                 </Stack>
               )}
             </TabPanel>
-
-            {/* Comments Tab */}
             <TabPanel>
               <Center py={10}>
                 <Stack align="center" spacing={3}>
                   <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
-                  <Text color="gray.500" fontSize="lg">
-                    Comments coming soon
-                  </Text>
-                  <Text color="gray.400" fontSize="sm" textAlign="center">
-                    Your comments will be displayed here
-                  </Text>
+                  <Text color={subText} fontSize="lg">Comments coming soon</Text>
+                  <Text color={useColorModeValue("gray.400", "gray.500")} fontSize="sm" textAlign="center">Your comments will be displayed here</Text>
                 </Stack>
               </Center>
             </TabPanel>
-
-            {/* About Tab */}
             <TabPanel>
               <Stack spacing={4} p={4}>
                 <Box>
                   <Text fontWeight="bold" mb={2}>About</Text>
-                  <Text color="gray.600">
-                    {userProfile?.bio || "Welcome to your profile! Here you can view your posts, comments, and activity."}
-                  </Text>
+                  <Text color={mutedText} mb={2}>{userProfile?.bio || "Welcome to your profile! Here you can view your posts, comments, and activity."}</Text>
                 </Box>
-                
                 <Divider />
-                
                 <Box>
                   <Text fontWeight="bold" mb={2}>Account Details</Text>
                   <Stack spacing={2} fontSize="sm">
                     <Flex>
                       <Text fontWeight="semibold" w="100px">Email:</Text>
-                      <Text color="gray.600">{userProfile?.email}</Text>
+                      <Text color={mutedText}>{userProfile?.email}</Text>
                     </Flex>
                     <Flex>
                       <Text fontWeight="semibold" w="100px">User ID:</Text>
-                      <Text color="gray.600" fontSize="xs">{userProfile?.uid}</Text>
+                      <Text color={mutedText} fontSize="xs">{userProfile?.uid}</Text>
                     </Flex>
                     {userProfile?.location && (
                       <Flex>
                         <Text fontWeight="semibold" w="100px">Location:</Text>
-                        <Text color="gray.600">{userProfile.location}</Text>
+                        <Text color={mutedText}>{userProfile.location}</Text>
                       </Flex>
                     )}
                     {userProfile?.website && (
                       <Flex>
                         <Text fontWeight="semibold" w="100px">Website:</Text>
-                        <Text color="blue.500" cursor="pointer">{userProfile.website}</Text>
+                        <Text color={brandAlt} cursor="pointer">{userProfile.website}</Text>
                       </Flex>
                     )}
                   </Stack>
                 </Box>
               </Stack>
             </TabPanel>
-
-            {/* Communities Tab */}
             <TabPanel>
-              <Center py={10}>
-                <Stack align="center" spacing={3}>
-                  <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
-                  <Text color="gray.500" fontSize="lg">
-                    Communities coming soon
-                  </Text>
-                  <Text color="gray.400" fontSize="sm" textAlign="center">
-                    Your joined communities will be displayed here
-                  </Text>
+              {/* Communities joined & managed */}
+              {groupsLoading ? (
+                <Center py={10}><Spinner size="lg" color={brandAlt} /></Center>
+              ) : (
+                <Stack spacing={6} p={2}>
+                  {/* Managed communities */}
+                  <Box>
+                    <Text fontWeight="bold" mb={3}>Managed communities</Text>
+                    {allGroups.filter(g => {
+                      const r = String(g.userRole || "").toLowerCase();
+                      return r === "owner" || r === "admin" || r === "moderator";
+                    }).length === 0 ? (
+                      <Text color={subText} fontSize="sm">You don't manage any communities yet.</Text>
+                    ) : (
+                      <Stack spacing={3}>
+                        {allGroups.filter(g => {
+                          const r = String(g.userRole || "").toLowerCase();
+                          return r === "owner" || r === "admin" || r === "moderator";
+                        }).map(g => (
+                          <Flex key={String(g.id)} align="center" justify="space-between" p={3} bg={softBg} borderRadius={8}>
+                            <HStack spacing={3}>
+                              <Avatar size="sm" name={g.name} src={g.imageURL || undefined} />
+                              <Box>
+                                <Text fontWeight="semibold">{g.name}</Text>
+                                <Text fontSize="xs" color={subText}>ID: {String(g.id)}</Text>
+                              </Box>
+                            </HStack>
+                            <Tag size="sm" colorScheme="orange">{String(g.userRole || "moderator")}</Tag>
+                          </Flex>
+                        ))}
+                      </Stack>
+                    )}
+                  </Box>
+
+                  <Divider />
+
+                  {/* Joined communities */}
+                  <Box>
+                    <Text fontWeight="bold" mb={3}>Joined communities</Text>
+                    {allGroups.filter(g => {
+                      const r = String(g.userRole || "").toLowerCase();
+                      return !(r === "owner" || r === "admin" || r === "moderator");
+                    }).length === 0 ? (
+                      <Text color={subText} fontSize="sm">You haven't joined any communities yet.</Text>
+                    ) : (
+                      <Stack spacing={3}>
+                        {allGroups.filter(g => {
+                          const r = String(g.userRole || "").toLowerCase();
+                          return !(r === "owner" || r === "admin" || r === "moderator");
+                        }).map(g => (
+                          <Flex key={String(g.id)} align="center" justify="space-between" p={3} bg={softBg} borderRadius={8}>
+                            <HStack spacing={3}>
+                              <Avatar size="sm" name={g.name} src={g.imageURL || undefined} />
+                              <Box>
+                                <Text fontWeight="semibold">{g.name}</Text>
+                                <Text fontSize="xs" color={subText}>ID: {String(g.id)}</Text>
+                              </Box>
+                            </HStack>
+                            <Tag size="sm" colorScheme="blue">member</Tag>
+                          </Flex>
+                        ))}
+                      </Stack>
+                    )}
+                  </Box>
                 </Stack>
-              </Center>
+              )}
             </TabPanel>
           </TabPanels>
         </Tabs>

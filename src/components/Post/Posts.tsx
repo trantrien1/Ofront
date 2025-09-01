@@ -12,6 +12,8 @@ import { useRouter } from "next/router";
 import usePosts from "../../hooks/usePosts";
 import { PostsService } from "../../services";
 import { useCommunityPermissions } from "../../hooks/useCommunityPermissions";
+import { useRecoilValue } from "recoil";
+import { userState } from "../../atoms/userAtom";
 
 type PostsProps = {
   communityData?: Community;
@@ -37,6 +39,9 @@ const Posts: React.FC<PostsProps> = ({
 
   // Get user permissions for moderation
   const { canModerate } = useCommunityPermissions();
+  // Fallback to global user when userId prop is not provided
+  const userData = useRecoilValue(userState);
+  const currentUserId = userId || userData?.uid;
 
   /**
    * USE ALL BELOW INITIALLY THEN CONVERT TO A CUSTOM HOOK AFTER
@@ -297,6 +302,8 @@ const Posts: React.FC<PostsProps> = ({
               const pid = String(p.communityId || (p as any).communityDisplayText || (p as any).groupId || "");
               if (cid && pid && cid !== pid) return false;
             }
+            // Always show my own posts immediately (even if pending)
+            if (currentUserId && String(p.creatorId) === String(currentUserId)) return true;
             if (typeof p.status === 'number') return p.status === 1;
             if (typeof p.approved === 'boolean') return p.approved === true;
             return true;
@@ -311,7 +318,7 @@ const Posts: React.FC<PostsProps> = ({
                 postStateValue.postVotes.find((item) => item.postId === post.id)
                   ?.voteValue
               }
-              userIsCreator={userId === post.creatorId}
+              userIsCreator={String(currentUserId || "") === String(post.creatorId)}
               onSelectPost={onSelectPost}
               canModerate={canModerate(communityData?.id || "")}
             />

@@ -1,5 +1,5 @@
 import React from "react";
-import { Stack, Input, Textarea, Flex, Button } from "@chakra-ui/react";
+import { Stack, Input, Textarea, Flex, Button, useColorModeValue } from "@chakra-ui/react";
 
 type TextInputsProps = {
   textInputs: {
@@ -19,18 +19,24 @@ const TextInputs: React.FC<TextInputsProps> = ({
   handleCreatePost,
   loading,
 }) => {
+  const inputBg = useColorModeValue("white", "gray.700");
+  const inputBorder = useColorModeValue("gray.200", "whiteAlpha.300");
+  const inputFocusBorder = useColorModeValue("blue.500", "blue.300");
+  const placeholderColor = useColorModeValue("gray.500", "whiteAlpha.500");
   return (
     <Stack spacing={3} width="100%">
       <Input
         name="title"
         value={textInputs.title}
         onChange={onChange}
-        _placeholder={{ color: "gray.500" }}
+        bg={inputBg}
+        borderColor={inputBorder}
+        _placeholder={{ color: placeholderColor }}
         _focus={{
           outline: "none",
-          bg: "white",
+          bg: inputBg,
           border: "1px solid",
-          borderColor: "black",
+          borderColor: inputFocusBorder,
         }}
         fontSize="10pt"
         borderRadius={4}
@@ -42,12 +48,14 @@ const TextInputs: React.FC<TextInputsProps> = ({
         onChange={onChange}
         fontSize="10pt"
         placeholder="Text (optional)"
-        _placeholder={{ color: "gray.500" }}
+        bg={inputBg}
+        borderColor={inputBorder}
+        _placeholder={{ color: placeholderColor }}
         _focus={{
           outline: "none",
-          bg: "white",
+          bg: inputBg,
           border: "1px solid",
-          borderColor: "black",
+          borderColor: inputFocusBorder,
         }}
         height="100px"
       />

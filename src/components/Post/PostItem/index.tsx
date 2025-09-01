@@ -86,7 +86,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   canModerate = false,
 }) => {
   const [loadingImage, setLoadingImage] = useState(true);
-  const [loadingDelete, setLoadingDelete] = useState(true);
+  const [loadingDelete, setLoadingDelete] = useState(false);
   const [loadingPin, setLoadingPin] = useState(false);
   const [approving, setApproving] = useState(false);
   const [hidden, setHidden] = useState(false); // For spoiler functionality
@@ -171,9 +171,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         {typeof post.status === 'number' && post.status === 0 && (
           <Badge colorScheme="yellow" variant="subtle">Pending approval</Badge>
         )}
-        {post.approved === true && (
-          <Badge colorScheme="green" variant="subtle">Approved</Badge>
-        )}
+        {/* Approved badge hidden per request */}
         {post.imageURL && (
           <Badge colorScheme="black" variant="subtle">SPOILER</Badge>
         )}
@@ -362,63 +360,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           </HStack>
         )}
 
-        {/* Approve action for moderators when post is pending */}
-        {canModerate && typeof post.status === 'number' && post.status === 0 && (
-          <HStack
-            px={3}
-            py={2}
-            rounded="full"
-            borderColor="gray.800"
-            bg="gray.300"
-            _hover={{ bg: "gray.350", borderColor: "gray.600", transform: "scale(1.05)" }}
-            transition="all 0.2s ease"
-            cursor={approving ? "not-allowed" : "pointer"}
-            onClick={async (e) => {
-              e.stopPropagation();
-              try {
-                setApproving(true);
-                const svc = await import("../../../services/posts.service");
-                await (svc as any).approvePost({ postId: post.id, approve: true });
-                toast({ status: 'success', title: 'Post approved' });
-              } catch (err) {
-                toast({ status: 'error', title: 'Approve failed' });
-              } finally {
-                setApproving(false);
-              }
-            }}
-          >
-            <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="sm" fontWeight="medium">{approving ? 'Approving...' : 'Approve'}</Text>
-          </HStack>
-        )}
-
-        {userIsCreator && (
-          <HStack
-            px={3}
-            py={2}
-            rounded="full"
-            borderColor="gray.800"
-            bg="gray.300"
-            _hover={{ 
-              bg: "gray.350", 
-              borderColor: "gray.600",
-              transform: "scale(1.05)"
-            }}
-            transition="all 0.2s ease"
-            cursor="pointer"
-            onClick={handleDelete}
-          >
-            {loadingDelete ? (
-              <Spinner size="sm" color="white" />
-            ) : (
-              <>
-                <Icon as={AiOutlineDelete} color={useColorModeValue("gray.600", "gray.300")} />
-                <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="sm" fontWeight="medium">
-                  Delete
-                </Text>
-              </>
-            )}
-          </HStack>
-        )}
+  {/* Approve/Delete controls removed per request */}
       </Flex>
     </Box>
   );

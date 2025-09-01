@@ -1,5 +1,5 @@
 import React from "react";
-import { Flex, Icon, Text } from "@chakra-ui/react";
+import { Flex, Icon, Text, useColorModeValue } from "@chakra-ui/react";
 import { TabItemType } from "./NewPostForm";
 
 type TabItemProps = {
@@ -13,6 +13,10 @@ const TabItem: React.FC<TabItemProps> = ({
   selected,
   setSelectedTab,
 }) => {
+  const hoverBg = useColorModeValue("gray.50", "whiteAlpha.100");
+  const borderColor = useColorModeValue("gray.200", "whiteAlpha.300");
+  const selectedColor = useColorModeValue("blue.500", "blue.300");
+  const textColor = useColorModeValue("gray.600", "gray.300");
   return (
     <Flex
       justify="center"
@@ -21,11 +25,11 @@ const TabItem: React.FC<TabItemProps> = ({
       p="14px 0px"
       cursor="pointer"
       fontWeight={700}
-      color={selected ? "blue.500" : "gray.500"}
+      color={selected ? selectedColor : textColor}
       borderWidth={selected ? "0px 1px 2px 0px" : "0px 1px 1px 0px"}
-      borderBottomColor={selected ? "blue.500" : "gray.200"}
-      borderRightColor="gray.200"
-      _hover={{ bg: "gray.50" }}
+      borderBottomColor={selected ? selectedColor : borderColor}
+      borderRightColor={borderColor}
+      _hover={{ bg: hoverBg }}
       onClick={() => setSelectedTab(item.title)}
     >
       <Flex align="center" height="20px" mr={2}>

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import type { NextPage, GetServerSideProps } from "next";
+import { useEffect, useMemo, useState } from "react";
+import type { NextPage } from "next";
+import { useRouter } from "next/router";
 import { useRecoilState } from "recoil";
 import { Community, communityState } from "../../../atoms/communitiesAtom";
 import CommunityNotFound from "../../../components/Community/CommunityNotFound";
@@ -9,13 +10,14 @@ import CommunityRules from "../../../components/Community/CommunityRules";
 import CommunityHighlights from "../../../components/Community/CommunityHighlights";
 import PageContentLayout from "../../../components/Layout/PageContent";
 import Posts from "../../../components/Post/Posts";
-import { Box, Button, HStack, Input, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, useToast } from "@chakra-ui/react";
+import { Box, HStack, Spinner, Center, useToast } from "@chakra-ui/react";
 
-interface CommunityPageProps {
-  communityData: Community;
-}
-
-const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
+const CommunityPage: NextPage = () => {
+  const router = useRouter();
+  const communityId = useMemo(() => {
+    const raw = router.query?.community;
+    return Array.isArray(raw) ? raw[0] : raw || "";
+  }, [router.query]);
   const user = null as any;
   const loadingUser = false;
 
@@ -23,21 +25,52 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
     useRecoilState(communityState);
 
   const toast = useToast();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setCommunityStateValue((prev) => ({
-      ...prev,
-      currentCommunity: communityData,
-    }));
-  }, [communityData]);
+    const id = String(communityId || "");
+    if (!id) return;
+    let ignore = false;
+    const fetchCommunity = async () => {
+      setLoading(true); setError(null);
+      try {
+        const r = await fetch(`/api/group/get/${encodeURIComponent(id)}`);
+        if (!r.ok) throw new Error(`Fetch failed: ${r.status}`);
+        const j = await r.json();
+        const obj = j?.data ?? j;
+        const comm = toCommunity(obj);
+        if (!ignore) {
+          setCommunityStateValue((prev) => ({ ...prev, currentCommunity: comm as any }));
+        }
+      } catch (e: any) {
+        if (!ignore) setError(e?.message || "Failed to load community");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    fetchCommunity();
+    return () => { ignore = true; };
+  }, [communityId, setCommunityStateValue]);
 
-  if (!communityData) {
+  const communityData = communityStateValue.currentCommunity as Community | undefined;
+  if (!communityId) {
+    return (
+      <Center py={20}><Spinner /></Center>
+    );
+  }
+  if (loading && !communityData) {
+    return (
+      <Center py={20}><Spinner /></Center>
+    );
+  }
+  if (error && !communityData) {
     return <CommunityNotFound />;
   }
 
   return (
     <>
-      <Header communityData={communityData} />
+      {communityData && <Header communityData={communityData} />}
 
       {/* Quick actions (no duplicate Join; that's handled in Header) */}
       <Box maxW="1060px" mx="auto" px={4} mb={4}>
@@ -49,17 +82,19 @@ const CommunityPage: NextPage<CommunityPageProps> = ({ communityData }) => {
       <PageContentLayout>
         {/* Left Content */}
         <>
-          <CommunityHighlights pinnedPosts={[]} communityData={communityData} />
+          {communityData && <CommunityHighlights pinnedPosts={[]} communityData={communityData} />}
           <Posts
-            communityData={communityData}
+            communityData={communityData as any}
             userId={user?.uid}
             loadingUser={loadingUser}
           />
         </>
         {/* Right Content */}
         <>
-          <CommunityInfo communityData={communityData} />
-          <CommunityRules communityData={communityData} />
+          {communityData && <>
+            <CommunityInfo communityData={communityData} />
+            <CommunityRules communityData={communityData} />
+          </>}
         </>
       </PageContentLayout>
 
@@ -94,75 +129,4 @@ export function toCommunity(obj: any): Community | null {
   return result as Community;
 }
 
-export const getServerSideProps: GetServerSideProps<CommunityPageProps> = async (ctx) => {
-  try {
-    const id = String(ctx.params?.community || "");
-    if (!id) return { notFound: true };
-
-    const cookie = ctx.req.headers.cookie || "";
-    const proto = (ctx.req.headers["x-forwarded-proto"] as string) || "http";
-    const host = ctx.req.headers.host;
-    const base = `${proto}://${host}`;
-    const upstream = process.env.UPSTREAM_URL || "https://rehearten-production.up.railway.app";
-
-    const tryFetch = async (url: string, hdrs?: Record<string,string>) => {
-      try {
-        const r = await fetch(url, { headers: { ...(hdrs||{}), cookie } });
-        const text = await r.text();
-        let data: any; try { data = JSON.parse(text); } catch { data = text; }
-        return { ok: r.ok, status: r.status, data } as { ok: boolean; status: number; data: any };
-      } catch (e: any) { return { ok: false, status: 0, data: { error: e?.message || String(e) } } as { ok: boolean; status: number; data: any }; }
-    };
-
-    const attempts = [
-      { label: 'local_by_id', url: `${base}/api/group/get/${encodeURIComponent(id)}` },
-      { label: 'local_by_id_public', url: `${base}/api/group/get/${encodeURIComponent(id)}`, headers: { 'x-public': '1' } as Record<string,string> },
-      { label: 'upstream_list_name', url: `${upstream}/group/get/all?name=${encodeURIComponent(id)}` },
-      { label: 'upstream_list', url: `${upstream}/group/get/all` },
-    ];
-
-    for (const a of attempts) {
-      const r = await tryFetch(a.url, a.headers);
-      if (r.ok && r.data) {
-        const obj = (r.data && typeof r.data === 'object') ? (r.data.data ?? r.data.group ?? r.data) : r.data;
-        const arr = Array.isArray(obj?.content) ? obj.content : Array.isArray(obj?.data?.content) ? obj.data.content : undefined;
-        const candidate = Array.isArray(arr) ? (arr[0] || null) : obj;
-        const comm = toCommunity(candidate);
-        if (comm) {
-          if (process.env.NODE_ENV !== 'production') ctx.res.setHeader('x-gssp-group-source', a.label);
-          return { props: { communityData: comm } };
-        }
-      }
-    }
-
-  const byUser = await tryFetch(`${base}/api/group/get/by-user`);
-  if (byUser.ok) {
-      const list = (Array.isArray(byUser.data) ? byUser.data : (Array.isArray(byUser.data?.data) ? byUser.data.data : (Array.isArray(byUser.data?.content) ? byUser.data.content : []))) as any[];
-      const found = list.find((g: any) => String(g.id ?? g.groupId ?? g.code ?? g._id) === id || String(g.code ?? '') === id);
-      const comm = toCommunity(found);
-      if (comm) {
-        if (process.env.NODE_ENV !== 'production') ctx.res.setHeader('x-gssp-group-source', 'by_user_search');
-        return { props: { communityData: comm } };
-      }
-    }
-
-    const minimal = toCommunity({ id, name: `Community ${id}` }) || {
-      id,
-      creatorId: "",
-      numberOfMembers: 0,
-      privacyType: "public" as const,
-      displayName: `Community ${id}`,
-    };
-    return { props: { communityData: minimal as any } };
-  } catch (e) {
-    const id = String(ctx.params?.community || "");
-    const minimal = id ? (toCommunity({ id, name: `Community ${id}` }) || {
-      id,
-      creatorId: "",
-      numberOfMembers: 0,
-      privacyType: "public" as const,
-      displayName: `Community ${id}`,
-    }) : (null as any);
-    return { props: { communityData: minimal } };
-  }
-};
+// SSR removed; client-side fetching is used instead.

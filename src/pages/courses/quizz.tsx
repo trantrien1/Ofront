@@ -104,7 +104,7 @@ export default function QuizPage() {
           </HStack>
         </Box>
 
-  <Box w={{ base: "100%", lg: "360px" }} position="sticky" top="44px" zIndex={1000}>
+  <Box w={{ base: "100%", lg: "360px" }} position="sticky" top="44px">
           <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="md" p={4}>
             <Heading size="md" mb={2}>Tóm tắt</Heading>
             <Text color="gray.600">Bạn đã chọn {selectedCount} trên {questions.length} câu.</Text>

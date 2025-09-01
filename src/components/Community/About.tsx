@@ -27,7 +27,7 @@ const About = dynamic(() => Promise.resolve(AboutComponent), {
 });
 
 const AboutSkeleton = () => (
-  <Box pt={0} position="sticky" top="44px" zIndex={1000}>
+  <Box pt={0} position="sticky" top="44px" >
     <Flex
       justify="space-between"
       align="center"

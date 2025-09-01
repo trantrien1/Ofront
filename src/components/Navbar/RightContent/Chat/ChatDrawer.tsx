@@ -1,14 +1,8 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
   Divider,
-  Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerHeader,
-  DrawerOverlay,
   Flex,
   HStack,
   Icon,
@@ -18,9 +12,11 @@ import {
   VStack,
   useDisclosure,
   useToast,
+  useColorModeValue,
+  SlideFade,
 } from "@chakra-ui/react";
 import { keyframes as emotionKeyframes } from "@emotion/react";
-import { ChatIcon, ArrowUpIcon } from "@chakra-ui/icons";
+import { ChatIcon, ArrowUpIcon, ChevronDownIcon, ChevronUpIcon, CloseIcon } from "@chakra-ui/icons";
 import { BsRobot, BsPeople } from "react-icons/bs";
 
 type Message = { id: string; from: "user" | "bot" | "peer"; text: string; time: number; thinking?: boolean };
@@ -58,6 +54,11 @@ const MessageBubble: React.FC<{ m: Message }> = ({ m }) => {
 
 const ChatInput: React.FC<{ onSend: (t: string) => void; placeholder?: string }> = ({ onSend, placeholder }) => {
   const [text, setText] = useState("");
+  // Color-mode-aware input styles
+  const inputBg = useColorModeValue("white", "gray.700");
+  const inputColor = useColorModeValue("gray.800", "gray.100");
+  const inputBorder = useColorModeValue("gray.200", "whiteAlpha.300");
+  const placeholderColor = useColorModeValue("gray.500", "gray.400");
   const submit = () => {
     const t = text.trim();
     if (!t) return;
@@ -76,25 +77,75 @@ const ChatInput: React.FC<{ onSend: (t: string) => void; placeholder?: string }>
             submit();
           }
         }}
+        variant="outline"
+        bg={inputBg}
+        color={inputColor}
+        borderColor={inputBorder}
+        _placeholder={{ color: placeholderColor }}
+        _focus={{
+          borderColor: "blue.400",
+          boxShadow: "0 0 0 1px var(--chakra-colors-blue-400)",
+          bg: inputBg,
+        }}
       />
-      <IconButton aria-label="Send" icon={<ArrowUpIcon />} onClick={submit} colorScheme="blue" />
+      <IconButton aria-label="Send" icon={<ArrowUpIcon />} onClick={submit} colorScheme="blue" isDisabled={!text.trim()} />
     </HStack>
   );
 };
 
 const ChatPanel: React.FC<{ messages: Message[] }> = ({ messages }) => {
+  // Only autoscroll if user is near the bottom to avoid disrupting reading history
+  const viewportRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const list = useMemo(
-    () =>
-      messages
-        .slice()
-        .sort((a, b) => a.time - b.time)
-        .map((m) => <MessageBubble key={m.id} m={m} />),
-    [messages]
-  );
+  const [autoScroll, setAutoScroll] = useState(true);
+
+  const sorted = useMemo(() => messages.slice().sort((a, b) => a.time - b.time), [messages]);
+
+  const isNearBottom = (el: HTMLElement, threshold = 80) => {
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  };
+
+  const onScroll = () => {
+    const el = viewportRef.current;
+    if (!el) return;
+    setAutoScroll(isNearBottom(el));
+  };
+
+  // Scroll to bottom for new messages only when near bottom
+  useEffect(() => {
+    if (autoScroll) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [sorted, autoScroll]);
+
+  // On mount, jump to bottom without animation
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "auto" });
+  }, []);
+
+  // If content height changes (images, async content), keep at bottom when allowed
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      if (autoScroll) bottomRef.current?.scrollIntoView({ behavior: "auto" });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [autoScroll]);
+
   return (
-    <VStack align="stretch" spacing={3} overflowY="auto" flex={1} minH={0}>
-      {list}
+    <VStack
+      ref={viewportRef}
+      onScroll={onScroll}
+      align="stretch"
+      spacing={3}
+      overflowY="auto"
+      flex={1}
+      minH={0}
+      sx={{ scrollBehavior: "smooth" }}
+    >
+      {sorted.map((m) => (
+        <MessageBubble key={m.id} m={m} />
+      ))}
       <Box ref={bottomRef} />
     </VStack>
   );
@@ -159,19 +210,72 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
     );
   };
 
+  const [minimized, setMinimized] = useState(false);
+  const panelBg = useColorModeValue("white", "gray.800");
+  const headerBg = useColorModeValue("gray.50", "gray.700");
+
   return (
-    <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="xl">
-      <DrawerOverlay />
-      <DrawerContent>
-        <DrawerCloseButton />
-        <DrawerHeader>Chats</DrawerHeader>
-        <DrawerBody p={0}>
-          <Flex height="calc(100vh - 120px)">
+    <Box
+      as={SlideFade}
+      in={isOpen}
+      offsetY="16px"
+      unmountOnExit
+      position="fixed"
+      right={{ base: 2, md: 4 }}
+      bottom={{ base: 2, md: 4 }}
+      w={{ base: "95vw", md: "420px", lg: "860px" }}
+      maxW="95vw"
+      zIndex={3000}
+    >
+      <Box
+        h={minimized ? "48px" : { base: "70vh", md: "70vh" }}
+        bg={panelBg}
+        borderWidth="1px"
+        borderColor={useColorModeValue("gray.200", "whiteAlpha.300")}
+        borderRadius="lg"
+        boxShadow="2xl"
+        overflow="hidden"
+        transition="height 0.25s ease"
+        display="flex"
+        flexDirection="column"
+      >
+        {/* Header with minimize/close */}
+        <Flex
+          align="center"
+          justify="space-between"
+          px={3}
+          py={2}
+          bg={headerBg}
+          borderBottomWidth="1px"
+          borderColor={useColorModeValue("gray.200", "whiteAlpha.300")}
+        >
+          <HStack spacing={2}>
+            <Icon as={BsRobot} />
+            <Text fontWeight="bold">Chats</Text>
+          </HStack>
+          <HStack spacing={1}>
+            <IconButton
+              aria-label={minimized ? "Expand" : "Minimize"}
+              icon={minimized ? <ChevronUpIcon /> : <ChevronDownIcon />}
+              size="sm"
+              variant="ghost"
+              onClick={() => setMinimized((v) => !v)}
+            />
+            <IconButton
+              aria-label="Close"
+              icon={<CloseIcon boxSize={3} />}
+              size="sm"
+              variant="ghost"
+              onClick={onClose}
+            />
+          </HStack>
+        </Flex>
+
+        {/* Body */}
+        {!minimized && (
+          <Flex flex={1} minH={0}>
             {/* Left navigation */}
-            <VStack align="stretch" w="280px" borderRight="1px solid" borderColor="gray.200" spacing={1} p={3}>
-              <Text fontWeight="bold" mb={1}>
-                Chats
-              </Text>
+            <VStack align="stretch" w="280px" borderRight="1px solid" borderColor={useColorModeValue("gray.200", "whiteAlpha.300")} spacing={1} p={3}>
               <Button
                 variant={activeView === "bot" ? "solid" : "ghost"}
                 colorScheme={activeView === "bot" ? "blue" : undefined}
@@ -194,7 +298,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
               {activeView === "direct" && (
                 <VStack align="stretch" spacing={1} overflowY="auto">
                   {convos.length === 0 ? (
-                    <Box p={2} color="gray.500">No conversations</Box>
+                    <Box p={2} color={useColorModeValue("gray.600", "gray.400")}>No conversations</Box>
                   ) : (
                     convos.map((c) => (
                       <Button
@@ -235,7 +339,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
                   <Text fontSize="lg" fontWeight="bold">
                     Welcome to chat!
                   </Text>
-                  <Text color="gray.600" textAlign="center">
+                  <Text color={useColorModeValue("gray.600", "gray.400")} textAlign="center">
                     Start a direct chat with another user.
                   </Text>
                   <HStack>
@@ -263,9 +367,9 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
               )}
             </Flex>
           </Flex>
-        </DrawerBody>
-      </DrawerContent>
-    </Drawer>
+        )}
+      </Box>
+  </Box>
   );
 };
 

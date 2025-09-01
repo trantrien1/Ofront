@@ -8,6 +8,8 @@ import { communityState } from "../../../../atoms/communitiesAtom";
 import { useRouter } from "next/router";
 import nookies from "nookies";
 import { request } from "../../../../services";
+import { updateRequestToken } from "../../../../services/request";
+import { clearGroupsCache } from "../../../../services/groups.service";
 import { userState } from "../../../../atoms/userAtom";
 
 type UserListProps = {};
@@ -34,21 +36,28 @@ const UserList: React.FC<UserListProps> = () => {
         maxAge: -1, // immediately expire
         sameSite: "lax"
       });
+      // remove any NextAuth-like or fallback storage
+      if (typeof window !== "undefined") {
+        try { window.localStorage.removeItem("authToken"); } catch {}
+        try { window.localStorage.removeItem("userState"); } catch {}
+        try { window.localStorage.removeItem("managedGroups"); } catch {}
+      }
     } catch (e) {
       // ignore
     }
 
     // Remove default Authorization header
     try {
-      if (request && request.defaults && request.defaults.headers) {
-        delete request.defaults.headers.common["Authorization"];
-      }
+      updateRequestToken("");
     } catch (e) {}
+
+    // Invalidate any in-memory caches that depend on the user
+    try { clearGroupsCache(); } catch {}
 
     // Reset application state and user
     resetCommunityState();
     setCurrentUser(null);
-
+    // Navigate and force a soft reload to ensure all hooks/components re-evaluate quickly
     router.push("/");
   };
 

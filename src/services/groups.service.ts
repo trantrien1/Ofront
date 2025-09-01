@@ -90,6 +90,12 @@ function extractList(raw: any): any[] {
 let __groupsByUserCache: { ts: number; data: Group[] } | null = null;
 let __groupsByUserInflight: Promise<Group[]> | null = null;
 
+// Expose a way to clear caches (useful on logout or account switch)
+export const clearGroupsCache = () => {
+  __groupsByUserCache = null;
+  __groupsByUserInflight = null as any;
+};
+
 export const getGroupsByUser = async (
   opts?: { force?: boolean; ttlMs?: number }
 ): Promise<Group[]> => {

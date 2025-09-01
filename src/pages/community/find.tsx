@@ -25,6 +25,8 @@ const FindCommunitiesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [joinedLocal, setJoinedLocal] = useState<Record<string, boolean>>({});
+  const [joining, setJoining] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let active = true;
@@ -55,18 +57,39 @@ const FindCommunitiesPage: React.FC = () => {
   const toast = useToast();
   const communityStateValue = useRecoilValue(communityState);
   const setCommunityStateValue = useSetRecoilState(communityState);
+
+
+
+  //handle join group
   const handleJoin = async (g: Group) => {
     try {
+      // prevent double-click for this item
+      setJoining((prev) => ({ ...prev, [String(g.id)]: true }));
       await joinGroup(g.id);
-      setCommunityStateValue((prev) => ({
-        ...prev,
-        mySnippets: [...prev.mySnippets, { communityId: String(g.id), imageURL: g.imageURL || "", role: "member" }],
-      }));
+      // Avoid pushing duplicate snippets if already present
+      setCommunityStateValue((prev) => {
+        const exists = prev.mySnippets?.some((s) => s.communityId === String(g.id));
+        if (exists) return prev;
+        return {
+          ...prev,
+          mySnippets: [
+            ...(prev.mySnippets || []),
+            { communityId: String(g.id), imageURL: g.imageURL || "", role: "member" },
+          ],
+        };
+      });
+      // Mark as joined locally so the button disables immediately
+      setJoinedLocal((prev) => ({ ...prev, [String(g.id)]: true }));
       toast({ status: "success", title: `Đã tham gia cộng đồng ${g.name}` });
     } catch (e: any) {
       toast({ status: "error", title: "Tham gia thất bại", description: e?.message || String(e) });
     }
+    finally {
+      setJoining((prev) => ({ ...prev, [String(g.id)]: false }));
+    }
   };
+
+
 
   return (
     <Box maxW="960px" mx="auto" px={{ base: 4, md: 6 }} py={{ base: 6, md: 8 }}>
@@ -90,9 +113,9 @@ const FindCommunitiesPage: React.FC = () => {
       ) : (
 <VStack spacing={3} align="stretch">
   {filtered.map((g) => {
-    // Nếu userRole khác null nghĩa là user đã tham gia
-    const alreadyJoined = g.userRole !== null;
-
+  // Nếu userRole khác null/undefined hoặc đã join local => user đã tham gia
+  const alreadyJoined = g.userRole != null || !!joinedLocal[String(g.id)];
+    console.log("Rendering group:", g.name, "Already joined:", alreadyJoined);
     return (
       <Flex
         key={String(g.id)}
@@ -136,7 +159,8 @@ const FindCommunitiesPage: React.FC = () => {
           colorScheme={alreadyJoined ? "gray" : "blue"}
           variant={alreadyJoined ? "outline" : "solid"}
           onClick={() => handleJoin(g)}
-          isDisabled={alreadyJoined}
+          isDisabled={alreadyJoined || !!joining[String(g.id)]}
+          isLoading={!!joining[String(g.id)]}
           ml={3}
         >
           {alreadyJoined ? "Đã tham gia" : "Tham gia"}

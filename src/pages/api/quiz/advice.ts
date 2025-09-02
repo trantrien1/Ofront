@@ -39,12 +39,27 @@ async function callGemini(prompt: string) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {
-    const { audience, items } = req.body || {};
-    if (!Array.isArray(items) || !audience) return res.status(400).json({ error: 'Invalid payload' });
+  const { audience, items, dass, partialDass, totalQuestions, answeredCount } = req.body || {};
+  if (!Array.isArray(items) || !audience) return res.status(400).json({ error: 'Invalid payload' });
 
     const lines: string[] = [];
     lines.push(`Bạn là một chuyên gia hỗ trợ tâm lý, giảng viên kỹ năng sống. Đối tượng: ${audience}.`);
     lines.push("Đối tượng: người đang cảm thấy căng thẳng, áp lực, stress trong học tập, công việc hoặc cuộc sống.");
+    if (dass && dass.depression && dass.anxiety && dass.stress) {
+      lines.push("Kết quả đánh giá DASS-21 của người dùng (điểm đã nhân đôi theo chuẩn DASS-42):");
+      lines.push(`- Trầm cảm: ${dass.depression.score} — mức độ ${dass.depression.level}`);
+      lines.push(`- Lo âu: ${dass.anxiety.score} — mức độ ${dass.anxiety.level}`);
+      lines.push(`- Stress: ${dass.stress.score} — mức độ ${dass.stress.level}`);
+      lines.push("Hãy điều chỉnh mức độ khẩn cấp và mức cụ thể của khuyến nghị tương ứng với mức độ trên. Nếu có mức 'Nặng' hoặc 'Rất nặng', ưu tiên khuyến nghị tìm hỗ trợ chuyên môn và nguồn lực chính thống.");
+    }
+    if (!dass && partialDass) {
+      lines.push("Người dùng chưa trả lời đủ 21 câu. Đây là điểm tạm tính:");
+      lines.push(`- Trầm cảm (tạm): ${partialDass.depression.scaled}, đã trả lời ${partialDass.depression.answered}/7`);
+      lines.push(`- Lo âu (tạm): ${partialDass.anxiety.scaled}, đã trả lời ${partialDass.anxiety.answered}/7`);
+      lines.push(`- Stress (tạm): ${partialDass.stress.scaled}, đã trả lời ${partialDass.stress.answered}/7`);
+      lines.push("Chỉ đưa ra lời khuyên nhẹ nhàng/khái quát khi dữ liệu chưa đầy đủ; tránh kết luận nặng nề.");
+    }
+    lines.push(`Tổng số câu hỏi hiển thị: ${totalQuestions ?? '?'}; số câu đã trả lời: ${answeredCount ?? 0}.`);
     lines.push('Dưới đây là câu hỏi và lựa chọn của người dùng. Hãy phân tích nhanh điểm mạnh/yếu và đưa ra 3-6 lời khuyên cụ thể, ngắn gọn, có thể hành động ngay.');
     lines.push(`Định dạng:
     - Mở đầu 1-2 câu đồng cảm, xác nhận cảm xúc của người dùng.
@@ -53,10 +68,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     lines.push('---');
     items.forEach((it: any, i: number) => {
       const q = String(it?.question || `Câu hỏi #${i + 1}`);
-      const ans = Array.isArray(it?.answer) ? it.answer.join(', ') : String(it?.answer ?? '');
+      const ansTxt = String(it?.answerText ?? '').trim();
+      const score = typeof it?.score === 'number' ? it.score : '';
       lines.push(`Q${i + 1}: ${q}`);
-      if (ans) lines.push(`→ Trả lời: ${ans}`);
+      if (ansTxt) {
+        lines.push(`→ Trả lời: ${ansTxt} (điểm: ${score})`);
+      } else {
+        lines.push(`→ Chưa trả lời`);
+      }
     });
+    lines.push("Khi dữ liệu ít hoặc toàn điểm thấp (0), tránh gợi ý mức khẩn cấp quá cao. Hãy cân nhắc tính phù hợp.");
     const prompt = lines.join('\n');
 
     const advice = await callGemini(prompt);

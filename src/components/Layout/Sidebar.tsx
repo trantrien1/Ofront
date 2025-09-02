@@ -92,7 +92,7 @@ const Sidebar: React.FC = () => {
       setIsCollapsed(true);
     }
     // Prefetch quiz page to avoid first-click blank
-    router.prefetch && router.prefetch("/courses/quizz");
+  router.prefetch && router.prefetch("/quiz");
   }, [router.asPath, setIsCollapsed]);
 
   // Load groups to resolve display names for user's communities
@@ -480,10 +480,6 @@ const Sidebar: React.FC = () => {
                             {user.displayName || user.uid || "User"}
                           </Text>
                       <Text fontSize="xs" color="gray.500">
-                        
-                        
-
-
                       </Text>
                     </Box>
                   )}

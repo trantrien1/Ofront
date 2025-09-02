@@ -11,14 +11,14 @@ import AuthModal from "../Modal/Auth";
 import CreateCommunityModal from "../Modal/CreateCommunity";
 import ClientOnlyWrapper from "./ClientOnlyWrapper";
 import { SidebarContext } from "./SidebarContext";
-
+import { authModalState } from "../../atoms/authModalAtom";
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Always call hooks; useAuth internally guards side-effects and returns the current user
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const createCommunityModalStateValue = useRecoilValue(createCommunityModalState);
   const setCreateCommunityModal = useSetRecoilState(createCommunityModalState);
-
+  const authModal = useRecoilValue(authModalState);
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
       <ClientOnlyWrapper>
@@ -29,12 +29,24 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             top={0}
             left={0}
             right={0}
-            zIndex={1600}
+            zIndex={1000}
             bg={{ base: "white", _dark: "gray.800" }}
             borderBottom="1px solid"
-            borderColor={useColorModeValue("gray.300", "whiteAlpha.400")} // thanh duoi header
+            borderColor={useColorModeValue("whiteAlpha.300", "whiteAlpha.400")} // thanh duoi header
           >
             <Navbar />
+            {authModal.open && (
+              <Box
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                bg="blackAlpha.300"
+                backdropFilter="blur(2px)"
+                zIndex={1600}
+              />
+            )}
           </Box>
 
       {/* Main Layout: content scrolls below the 44px Header */}

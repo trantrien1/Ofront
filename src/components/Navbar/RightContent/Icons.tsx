@@ -50,6 +50,7 @@ const ActionIcons: React.FC<ActionIconsProps> = ({ onOpenChat }) => {
           borderRadius={4}
           _hover={{ bg: hoverBg }}
           onClick={onOpenChat}
+          //zIndex="sticky"
         >
           <Icon as={BsChatDots} fontSize={20} color={iconMuted} />
         </Flex>

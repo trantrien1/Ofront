@@ -23,8 +23,11 @@ const ModalWrapper: React.FC<ModalWrapperProps & { children: React.ReactNode }> 
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent width={{ base: "sm", md: "xl" }}>{children}</ModalContent>
+        {/* Keep overlay below header to avoid blocking header interactions; header dim is handled locally */}
+        <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(2px)"  />
+        <ModalContent width={{ base: "sm", md: "xl" }} >
+          {children}
+        </ModalContent>
       </Modal>
     </>
   );

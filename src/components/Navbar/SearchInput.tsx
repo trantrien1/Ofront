@@ -22,6 +22,8 @@ const SearchInput: React.FC<SearchInputProps> = ({ user }) => {
       mr={{ base: 2, md: 4 }}
       ml={{ base: 2, md: 4, lg: 6 }}
       align="center"
+      zIndex="sticky"
+      position="sticky"
     >
       <InputGroup>
         <InputLeftElement pointerEvents="none" color={iconCol}>

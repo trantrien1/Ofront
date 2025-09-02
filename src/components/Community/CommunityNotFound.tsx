@@ -10,9 +10,9 @@ const CommunityNotFound: React.FC = () => {
       alignItems="center"
       minHeight="60vh"
     >
-      Sorry, that community does not exist or has been banned
+      Rất tiếc, cộng đồng đó không tồn tại hoặc đã bị cấm.
       <Link href="/">
-        <Button mt={4}>GO HOME</Button>
+        <Button mt={4}>VỀ TRANG CHỦ</Button>
       </Link>
     </Flex>
   );

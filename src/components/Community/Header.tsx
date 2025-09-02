@@ -92,7 +92,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ communityData }) => {
               <HStack spacing={3} color={subText} fontSize="sm">
                 <HStack spacing={1}>
                   <Box as="span" fontWeight="semibold">{members.toLocaleString()}</Box>
-                  <Box as="span">Members</Box>
+                  <Box as="span">Thành viên</Box>
                 </HStack>
                 <Box>•</Box>
                 <Text noOfLines={1}>{communityData.id}</Text>

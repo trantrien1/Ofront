@@ -130,7 +130,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
         },
       }));
     } catch (error: any) {
-  console.error("updateImage error", error?.message || error);
+  console.error("Lỗi cập nhật hình ảnh", error?.message || error);
     }
     setImageLoading(false);
   };
@@ -143,13 +143,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
         currentCommunity: { ...prev.currentCommunity, description }
       }));
       toast({
-        title: "Description updated",
+        title: "Đã cập nhật mô tả",
         status: "success",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        title: "Error updating description",
+        title: "Lỗi cập nhật mô tả",
         status: "error",
         duration: 3000,
       });
@@ -192,11 +192,11 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
   const handleConfirmDelete = async () => {
     try {
       await deleteGroup(communityData.id);
-      toast({ title: "Community deleted", status: "success", duration: 3000 });
+      toast({ title: "Cộng đồng đã bị xóa", status: "success", duration: 3000 });
       onDeleteClose();
       router.push("/my-community");
     } catch (error) {
-      toast({ title: "Error deleting community", status: "error", duration: 3000 });
+      toast({ title: "Lỗi khi xóa cộng đồng", status: "error", duration: 3000 });
     }
   };
 
@@ -222,13 +222,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
 
       setNewRule({ title: "", description: "" });
       toast({
-        title: "Rule added",
+        title: "Đã thêm quy tắc",
         status: "success",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        title: "Error adding rule",
+        title: "Lỗi khi thêm quy tắc",
         status: "error",
         duration: 3000,
       });
@@ -250,13 +250,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
 
       setEditingRule(null);
       toast({
-        title: "Rule updated",
+        title: "Đã cập nhật quy tắc",
         status: "success",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        title: "Error updating rule",
+        title: "Lỗi khi cập nhật quy tắc",
         status: "error",
         duration: 3000,
       });
@@ -273,13 +273,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       }));
 
       toast({
-        title: "Rule deleted",
+        title: "Đã xóa quy tắc",
         status: "success",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        title: "Error deleting rule",
+        title: "Lỗi khi xóa quy tắc",
         status: "error",
         duration: 3000,
       });
@@ -310,13 +310,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
 
       setBanUser({ userId: "", reason: "" });
       toast({
-        title: "User banned",
+        title: "Người dùng đã bị cấm",
         status: "success",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        title: "Error banning user",
+        title: "Lỗi khi cấm người dùng",
         status: "error",
         duration: 3000,
       });
@@ -333,13 +333,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       }));
 
       toast({
-        title: "User unbanned",
+        title: "Người dùng đã được bỏ cấm",
         status: "success",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        title: "Error unbanning user",
+        title: "Lỗi khi bỏ cấm người dùng",
         status: "error",
         duration: 3000,
       });
@@ -360,13 +360,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       }));
 
       toast({
-        title: "Role updated",
+        title: "Đã cập nhật vai trò",
         status: "success",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        title: "Error updating role",
+        title: "Lỗi khi cập nhật vai trò",
         status: "error",
         duration: 3000,
       });
@@ -397,13 +397,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
 
       setNewMember({ userId: "", role: "member" });
       toast({
-        title: "Member added",
+        title: "Người dùng đã được thêm",
         status: "success",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        title: "Error adding member",
+        title: "Lỗi khi thêm người dùng",
         status: "error",
         duration: 3000,
       });
@@ -502,7 +502,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
             {/* About Section */}
             <Box>
               <Text fontSize="12pt" fontWeight={600} mb={2}>
-                About Community
+                Giới thiệu về cộng đồng
               </Text>
               
               {communityData?.description && (
@@ -559,7 +559,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                 {!onCreatePage && (
                   <Link href={`/community/${router.query.community}/submit`}>
                     <Button mt={4} height="36px" width="100%" colorScheme="blue" borderRadius="md">
-                      Create Post
+                      Tạo bài viết
                     </Button>
                   </Link>
                 )}
@@ -580,7 +580,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                       _hover={{ textDecoration: "underline" }}
                       onClick={() => selectFileRef.current?.click()}
                     >
-                      Change Image
+                      Thay đổi hình ảnh
                     </Text>
                     {communityData?.imageURL || selectedFile ? (
                       <Image
@@ -598,7 +598,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                       <Spinner />
                     ) : (
                       <Text cursor="pointer" onClick={updateImage} color="blue.500">
-                        Save Changes
+                        Lưu thay đổi
                       </Text>
                     ))}
                   <input
@@ -622,13 +622,12 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
               bg="gray.50"
             >
               <Text fontSize="12pt" fontWeight={600} mb={2}>
-                Your Role & Permissions
+                Quyền và vai trò của bạn
               </Text>
               <Stack spacing={1} fontSize="10pt">
-                <Text>Your role: <Text as="span" fontWeight="bold">{role}</Text></Text>
-                <Text>Can moderate: <Text as="span" fontWeight="bold">{canModerateBool ? "Yes" : "No"}</Text></Text>
-                <Text>Can manage roles: <Text as="span" fontWeight="bold">{canManageRolesBool ? "Yes" : "No"}</Text></Text>
-                <Text>Can ban users: <Text as="span" fontWeight="bold">{canBanUsersBool ? "Yes" : "No"}</Text></Text>
+                <Text>Vai trò của bạn: <Text as="span" fontWeight="bold">{role}</Text></Text>
+                <Text>Có thể quản lý vai trò: <Text as="span" fontWeight="bold">{canManageRolesBool ? "Có" : "Không"}</Text></Text>
+                <Text>Có thể cấm người dùng: <Text as="span" fontWeight="bold">{canBanUsersBool ? "Có" : "Không"}</Text></Text>
               </Stack>
             </Box>
 
@@ -636,23 +635,23 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
             {canModerateBool && (
               <Box>
                 <Text fontSize="12pt" fontWeight={600} mb={2}>
-                  Community Management
+                  Quản lý cộng đồng
                 </Text>
                 
                 {/* Description Management */}
                 <Box mb={3}>
                   <Text fontSize="10pt" fontWeight={600} mb={2}>
-                    Community Description
+                    Mô tả cộng đồng
                   </Text>
                   <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Add a description for your community..."
+                    placeholder="Thêm mô tả cho cộng đồng của bạn..."
                     size="sm"
                     mb={2}
                   />
                   <Button size="sm" onClick={handleUpdateDescription}>
-                    Update Description
+                    Cập nhật mô tả
                   </Button>
                 </Box>
                 
@@ -666,7 +665,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                     size="sm"
                     onClick={onRulesOpen}
                   >
-                    Manage Rules
+                    Quản lý quy tắc
                   </Button>
                   
                   <Button
@@ -675,7 +674,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                     size="sm"
                     onClick={onMembersOpen}
                   >
-                    Manage Members
+                    Quản lý thành viên
                   </Button>
                   
                   {canBanUsersBool && (
@@ -685,7 +684,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                       size="sm"
                       onClick={onBannedOpen}
                     >
-                      Banned Users
+                      Quản lý người bị cấm
                     </Button>
                   )}
 
@@ -696,7 +695,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                         <Text fontSize="10pt" fontWeight={600}>Admin Actions</Text>
                         <Stack direction={{ base: "column", sm: "row" }} spacing={2}>
                           <Button size="sm" leftIcon={<FaTrash />} onClick={onDeleteOpen} colorScheme="red" variant="outline">
-                            Delete Community
+                            Xóa cộng đồng
                           </Button>
                         </Stack>
                       </Stack>
@@ -713,21 +712,21 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       <Modal isOpen={isRulesOpen} onClose={onRulesClose} size="xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Community Rules</ModalHeader>
+          <ModalHeader>Quy tắc cộng đồng</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
               {/* Add New Rule */}
               <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md">
-                <Text fontWeight={600} mb={2}>Add New Rule</Text>
+                <Text fontWeight={600} mb={2}>Thêm quy tắc mới</Text>
                 <Input
-                  placeholder="Rule title"
+                  placeholder="Tiêu đề quy tắc"
                   value={newRule.title}
                   onChange={(e) => setNewRule(prev => ({ ...prev, title: e.target.value }))}
                   mb={2}
                 />
                 <Textarea
-                  placeholder="Rule description"
+                  placeholder="Mô tả quy tắc"
                   value={newRule.description}
                   onChange={(e) => setNewRule(prev => ({ ...prev, description: e.target.value }))}
                   mb={2}
@@ -761,13 +760,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                         <Text fontWeight={600}>{rule.title}</Text>
                         <HStack>
                           <IconButton
-                            aria-label="Edit rule"
+                            aria-label="Chỉnh sửa quy tắc"
                             icon={<FaEdit />}
                             size="sm"
                             onClick={() => setEditingRule(rule)}
                           />
                           <IconButton
-                            aria-label="Delete rule"
+                            aria-label="Xóa quy tắc"
                             icon={<FaTrash />}
                             size="sm"
                             onClick={() => handleDeleteRule(rule.id)}
@@ -788,7 +787,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       <Modal isOpen={isMembersOpen} onClose={onMembersClose} size="xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Community Members</ModalHeader>
+          <ModalHeader>Thành viên cộng đồng</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
@@ -798,15 +797,15 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                   <HStack>
                     <Avatar size="sm" name="Owner" />
                     <VStack align="start" spacing={0}>
-                      <Text fontWeight={600}>Community Owner</Text>
+                      <Text fontWeight={600}>Chủ sở hữu cộng đồng</Text>
                       <Text fontSize="xs" color="gray.500">
-                        Creator of this community
+                        Người tạo ra cộng đồng này
                       </Text>
                     </VStack>
                   </HStack>
                   <Badge colorScheme="yellow">
                     <Icon as={FaCrown} mr={1} />
-                    Owner
+                    Chủ sở hữu
                   </Badge>
                 </HStack>
               </Box>
@@ -820,7 +819,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                       <VStack align="start" spacing={0}>
                         <Text fontWeight={600}>{member.displayName || member.userId}</Text>
                         <Text fontSize="xs" color="gray.500">
-                          Joined {formatTimestamp(member.joinedAt)}
+                          Tham gia {formatTimestamp(member.joinedAt)}
                         </Text>
                       </VStack>
                     </HStack>
@@ -836,10 +835,9 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                           onChange={(e) => handleUpdateRole(member.userId, e.target.value as CommunityRole)}
                           width="120px"
                         >
-                          <option value="member">Member</option>
-                          <option value="moderator">Moderator</option>
-                          <option value="admin">Admin</option>
-              {isOwnerRole && <option value="owner">Owner</option>}
+                          <option value="member">Thành viên</option>
+                          <option value="admin">Quản trị viên</option>
+              {isOwnerRole && <option value="owner">Chủ sở hữu</option>}
                         </Select>
                       )}
                     </HStack>
@@ -848,7 +846,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
               ) : (
                 <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md" textAlign="center">
                   <Text color="gray.500" fontSize="sm">
-                    No members found. Members will appear here when they join the community.
+                    Không tìm thấy thành viên. Thành viên sẽ xuất hiện ở đây khi họ tham gia cộng đồng.
                   </Text>
                 </Box>
               )}
@@ -857,11 +855,11 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
               {canManageRolesBool && (
                 <Box p={4} border="1px solid" borderColor="blue.200" borderRadius="md" bg="blue.50">
                   <Text fontWeight={600} mb={2} color="blue.700">
-                    Add Member by User ID
+                    Thêm thành viên bằng ID người dùng
                   </Text>
                   <HStack>
                     <Input
-                      placeholder="Enter user ID"
+                      placeholder="Nhập ID người dùng"
                       size="sm"
                       flex={1}
                       value={newMember.userId}
@@ -883,7 +881,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                       onClick={handleAddMember}
                       isDisabled={!newMember.userId.trim()}
                     >
-                      Add
+                      Thêm
                     </Button>
                   </HStack>
                 </Box>
@@ -897,7 +895,7 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       <Modal isOpen={isBannedOpen} onClose={onBannedClose} size="xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Banned Users</ModalHeader>
+          <ModalHeader>Người dùng bị cấm</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
@@ -911,13 +909,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                   mb={2}
                 />
                 <Textarea
-                  placeholder="Reason for ban"
+                  placeholder="Lý do cấm"
                   value={banUser.reason}
                   onChange={(e) => setBanUser(prev => ({ ...prev, reason: e.target.value }))}
                   mb={2}
                 />
                 <Button size="sm" colorScheme="red" onClick={handleBanUser}>
-                  Ban User
+                  Cấm người dùng
                 </Button>
               </Box>
 
@@ -927,14 +925,14 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
                   <VStack align="start" spacing={0}>
                     <Text fontWeight={600}>{bannedUser.displayName || bannedUser.userId}</Text>
                     <Text fontSize="xs" color="gray.500">
-                      Banned on {formatTimestamp(bannedUser.bannedAt)}
+                      Bị cấm vào {formatTimestamp(bannedUser.bannedAt)}
                     </Text>
                     <Text fontSize="sm" color="red.500">
-                      Reason: {bannedUser.reason}
+                      Lý do: {bannedUser.reason}
                     </Text>
                   </VStack>
                   <Button size="sm" variant="outline" onClick={() => handleUnbanUser(bannedUser.userId)}>
-                    Unban
+                    Gỡ cấm
                   </Button>
                 </HStack>
               ))}
@@ -949,13 +947,13 @@ const CommunityInfo: React.FC<CommunityInfoProps> = ({
       <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="md">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Delete Community</ModalHeader>
+          <ModalHeader>Xóa cộng đồng</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Text>Are you sure you want to delete this community? This action cannot be undone.</Text>
+            <Text>Bạn có chắc chắn muốn xóa cộng đồng này không? Hành động này không thể hoàn tác.</Text>
             <Stack direction="row" justify="flex-end" mt={4}>
-              <Button variant="ghost" onClick={onDeleteClose}>Cancel</Button>
-              <Button colorScheme="red" onClick={handleConfirmDelete} leftIcon={<FaTrash />}>Delete</Button>
+              <Button variant="ghost" onClick={onDeleteClose}>Hủy</Button>
+              <Button colorScheme="red" onClick={handleConfirmDelete} leftIcon={<FaTrash />}>Xóa</Button>
             </Stack>
           </ModalBody>
         </ModalContent>

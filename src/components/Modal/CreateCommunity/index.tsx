@@ -142,7 +142,7 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
             Tên
           </Text>
           <Text fontSize={11} color={useColorModeValue("gray.500", "gray.400")}>
-            Community names including capitalization cannot be changed
+            Tên cộng đồng, bao gồm cả chữ hoa chữ thường, không thể thay đổi.
           </Text>
           <Text
             color={useColorModeValue("gray.400", "gray.500")}
@@ -184,7 +184,7 @@ const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
           </Text>
           <Box mt={4} mb={4}>
             <Text fontWeight={600} fontSize={15}>
-              Community Type
+              Loại cộng đồng
             </Text>
             <Stack spacing={2} pt={1}>
               <Checkbox

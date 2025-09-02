@@ -24,7 +24,6 @@ const Navbar: React.FC = () => {
       height="44px"
       padding="6px 12px"
       position="sticky"
-      zIndex={1400}
       justifyContent={{ md: "space-between" }}
     >
       <Flex

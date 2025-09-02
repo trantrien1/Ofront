@@ -339,14 +339,14 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
               ) : (
                 <Flex flex={1} direction="column" align="center" justify="center" gap={3}>
                   <Text fontSize="lg" fontWeight="bold">
-                    Welcome to chat!
+                    Chào mừng bạn đến với phòng chat!
                   </Text>
                   <Text color={subtleText} textAlign="center">
-                    Start a direct chat with another user.
+                    Bắt đầu một cuộc trò chuyện trực tiếp với người dùng khác.
                   </Text>
                   <HStack>
                     <Input
-                      placeholder="Enter username"
+                      placeholder="Nhập tên người dùng"
                       value={newPeer}
                       onChange={(e) => setNewPeer(e.target.value)}
                       width="260px"
@@ -362,7 +362,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
                         setNewPeer("");
                       }}
                     >
-                      Start new chat
+                      Bắt đầu cuộc trò chuyện mới
                     </Button>
                   </HStack>
                 </Flex>

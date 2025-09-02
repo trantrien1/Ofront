@@ -22,7 +22,7 @@ const AuthButtons: React.FC<AuthButtonsProps> = () => {
         mr={2}
         onClick={() => setAuthModalState({ open: true, view: "login" })}
       >
-        Log In
+        Đăng nhập
       </Button>
       <Button
         variant="solid"
@@ -32,7 +32,7 @@ const AuthButtons: React.FC<AuthButtonsProps> = () => {
         mr={2}
         onClick={() => setAuthModalState({ open: true, view: "signup" })}
       >
-        Sign Up
+        Đăng kí
       </Button>
     </>
   );

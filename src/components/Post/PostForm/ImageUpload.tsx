@@ -38,14 +38,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           />
           <Stack direction="row" mt={4}>
             <Button height="28px" onClick={() => setSelectedTab("Post")}>
-              Back to Post
+              Quay lại bài viết
             </Button>
             <Button
               variant="outline"
               height="28px"
               onClick={() => setSelectedFile("")}
             >
-              Remove
+              Xóa
             </Button>
             <Button
               height="28px"
@@ -54,7 +54,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               isLoading={loading}
               onClick={handleCreatePost}
             >
-              Post
+              Đăng bài
             </Button>
           </Stack>
         </>
@@ -73,7 +73,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             height="28px"
             onClick={() => selectFileRef.current?.click()}
           >
-            Upload
+            Tải lên
           </Button>
           <input
             id="file-upload"

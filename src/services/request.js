@@ -115,6 +115,57 @@ request.interceptors.response.use(
 		} catch (e) {
 			// ignore
 		}
+		// Map error to Vietnamese, so UI can show friendly messages instead of just status codes
+		try {
+			const localized = (() => {
+				// Network or CORS error (no response)
+				if (!error?.response) {
+					const msg = String(error?.message || "").toLowerCase();
+					if (msg.includes("network")) return "Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối mạng.";
+					return "Đã xảy ra lỗi. Vui lòng thử lại.";
+				}
+
+				const { status, data } = error.response;
+
+				const extractText = (val) => {
+					if (!val) return "";
+					if (typeof val === "string") return val;
+					if (typeof val === "object") {
+						// Common fields
+						if (typeof val.message === "string" && val.message) return val.message;
+						if (typeof val.error === "string" && val.error) return val.error;
+						// Validation style { errors: [{ message | defaultMessage }] }
+						if (Array.isArray(val.errors) && val.errors.length) {
+							const msgs = val.errors
+								.map((e) => e?.message || e?.defaultMessage || e?.msg)
+								.filter(Boolean);
+							if (msgs.length) return msgs.join("; ");
+						}
+						// Next API proxy: { upstreamBody: ... }
+						if (val.upstreamBody) return extractText(val.upstreamBody);
+						// Spring style { detail }
+						if (typeof val.detail === "string") return val.detail;
+						// Fallback stringify
+						try { return JSON.stringify(val); } catch { return ""; }
+					}
+					return "";
+				};
+
+				let rawMsg = extractText(data) || String(error?.message || "");
+				let lc = rawMsg.toLowerCase();
+
+				// Special-case common upstream payloads without a clear message
+				if (lc.includes("data is not valid") || lc.includes("bad_request") || lc.includes("\"status\":\"bad_request\"")) {
+					return "Sai tài khoản hoặc mật khẩu";
+				}
+			})();
+
+			if (localized && typeof localized === "string") {
+				// Preserve original error under a property
+				error.userMessage = localized;
+				try { error.message = localized; } catch {}
+			}
+		} catch {}
 		return Promise.reject(error);
 	}
 );

@@ -423,7 +423,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
                 p={20}
               >
                 <Text fontWeight={700} opacity={0.3}>
-                  No Comments Yet
+                  Chưa có bình luận nào
                 </Text>
               </Flex>
             )}

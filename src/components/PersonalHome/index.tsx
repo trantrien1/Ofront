@@ -200,9 +200,9 @@ const PersonalHome: React.FC = () => {
         <Stack align="center" spacing={4}>
           <ChakraImage src="/images/logo.png" alt="logo" boxSize="60px" borderRadius="full" />
           <Text fontSize="lg" color={loginPromptColor}>
-            Please login to view your profile
+            Vui lòng đăng nhập để xem hồ sơ của bạn
           </Text>
-          <Button colorScheme="brand">Login</Button>
+          <Button colorScheme="brand">Đăng nhập</Button>
         </Stack>
       </Center>
     );
@@ -210,7 +210,7 @@ const PersonalHome: React.FC = () => {
 
   const handleEditProfile = () => {
     setIsEditing(true);
-    toast({ title: "Edit Profile", description: "Profile editing feature coming soon!", status: "info", duration: 3000, isClosable: true });
+    toast({ title: "Chỉnh sửa hồ sơ", description: "Tính năng chỉnh sửa hồ sơ sẽ sớm ra mắt!", status: "info", duration: 3000, isClosable: true });
   };
 
   // tokens already declared above
@@ -391,12 +391,12 @@ const PersonalHome: React.FC = () => {
 
                   {/* Joined communities */}
                   <Box>
-                    <Text fontWeight="bold" mb={3}>Joined communities</Text>
+                    <Text fontWeight="bold" mb={3}>Các cộng đồng đã tham gia</Text>
                     {allGroups.filter(g => {
                       const r = String(g.userRole || "").toLowerCase();
                       return !(r === "owner" || r === "admin" || r === "moderator");
                     }).length === 0 ? (
-                      <Text color={subText} fontSize="sm">You haven&#39;t joined any communities yet.</Text>
+                      <Text color={subText} fontSize="sm">Bạn chưa tham gia cộng đồng nào.</Text>
                     ) : (
                       <Stack spacing={3}>
                         {allGroups.filter(g => {

@@ -223,7 +223,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 						[cidKey]: (prev.postsCache?.[cidKey] || []).filter((p) => !String(p.id).startsWith("temp_")),
 					},
 				}));
-				setError("Error creating post");
+				setError("Lỗi khi tạo bài viết. Vui lòng thử lại.");
 			} finally {
 				setLoading(false);
 			}

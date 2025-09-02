@@ -49,7 +49,7 @@ const CommunityRules: React.FC<CommunityRulesProps> = ({ communityData, loading 
         borderRadius="4px 4px 0px 0px"
       >
         <Text fontSize="10pt" fontWeight={700}>
-          Community Rules
+          Nội quy cộng đồng
         </Text>
         <Icon as={HiOutlineDotsHorizontal} cursor="pointer" />
       </Flex>

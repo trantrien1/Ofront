@@ -309,7 +309,7 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
         borderRadius="4px 4px 0px 0px"
       >
         <Text fontSize="10pt" fontWeight={700}>
-          Community Management
+          Quản lí cộng đồng
         </Text>
         <Icon as={HiOutlineDotsHorizontal} cursor="pointer" />
       </Flex>
@@ -319,17 +319,17 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
           {/* Description Management */}
           <Box>
             <Text fontSize="10pt" fontWeight={600} mb={2}>
-              Community Description
+              Mô tả cộng đồng
             </Text>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a description for your community..."
+              placeholder="Thêm mô tả cho cộng đồng của bạn..."
               size="sm"
               mb={2}
             />
             <Button size="sm" onClick={handleUpdateDescription}>
-              Update Description
+              Cập nhật mô tả
             </Button>
           </Box>
           
@@ -343,7 +343,7 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
               size="sm"
               onClick={onRulesOpen}
             >
-              Manage Rules
+              Quản lý quy tắc
             </Button>
             
             <Button
@@ -352,7 +352,7 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
               size="sm"
               onClick={onMembersOpen}
             >
-              Manage Members
+              Quản lý thành viên
             </Button>
             
             {canBanUsers && (
@@ -362,7 +362,7 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
                 size="sm"
                 onClick={onBannedOpen}
               >
-                Banned Users
+                Người dùng bị cấm
               </Button>
             )}
           </Stack>
@@ -373,27 +373,27 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
       <Modal isOpen={isRulesOpen} onClose={onRulesClose} size="xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Community Rules</ModalHeader>
+          <ModalHeader>Quy tắc cộng đồng</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
               {/* Add New Rule */}
               <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md">
-                <Text fontWeight={600} mb={2}>Add New Rule</Text>
+                <Text fontWeight={600} mb={2}>Thêm quy tắc mới</Text>
                 <Input
-                  placeholder="Rule title"
+                  placeholder="Tiêu đề quy tắc"
                   value={newRule.title}
                   onChange={(e) => setNewRule(prev => ({ ...prev, title: e.target.value }))}
                   mb={2}
                 />
                 <Textarea
-                  placeholder="Rule description"
+                  placeholder="Mô tả quy tắc"
                   value={newRule.description}
                   onChange={(e) => setNewRule(prev => ({ ...prev, description: e.target.value }))}
                   mb={2}
                 />
                 <Button size="sm" onClick={handleAddRule}>
-                  Add Rule
+                  Thêm quy tắc
                 </Button>
               </Box>
 
@@ -421,13 +421,13 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
                         <Text fontWeight={600}>{rule.title}</Text>
                         <HStack>
                           <IconButton
-                            aria-label="Edit rule"
+                            aria-label="Sửa quy tắc"
                             icon={<FaEdit />}
                             size="sm"
                             onClick={() => setEditingRule(rule)}
                           />
                           <IconButton
-                            aria-label="Delete rule"
+                            aria-label="Xóa quy tắc"
                             icon={<FaTrash />}
                             size="sm"
                             onClick={() => handleDeleteRule(rule.id)}
@@ -448,7 +448,7 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
       <Modal isOpen={isMembersOpen} onClose={onMembersClose} size="xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Community Members</ModalHeader>
+          <ModalHeader>Thành viên cộng đồng</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
@@ -458,20 +458,20 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
                   <HStack>
                     <Avatar size="sm" name="Owner" />
                     <VStack align="start" spacing={0}>
-                      <Text fontWeight={600}>Community Owner</Text>
+                      <Text fontWeight={600}>Chủ sở hữu cộng đồng</Text>
                       <Text fontSize="xs" color="gray.500">
-                        Creator of this community
+                        Người tạo ra cộng đồng này
                       </Text>
                     </VStack>
                   </HStack>
                   <Badge colorScheme="yellow">
                     <Icon as={FaCrown} mr={1} />
-                    Owner
+                    Chủ sở hữu
                   </Badge>
                 </HStack>
               </Box>
 
-                             {/* Members List */}
+              {/* Members List */}
                {communityData.members && Array.isArray(communityData.members) && communityData.members.length > 0 ? (
                  communityData.members.map((member) => (
                   <HStack key={member.userId} justify="space-between" p={3} border="1px solid" borderColor="gray.200" borderRadius="md">
@@ -479,9 +479,9 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
                       <Avatar size="sm" src={member.imageURL} name={member.displayName} />
                       <VStack align="start" spacing={0}>
                         <Text fontWeight={600}>{member.displayName || member.userId}</Text>
-                                                 <Text fontSize="xs" color="gray.500">
-                           Joined {formatTimestamp(member.joinedAt)}
-                         </Text>
+                        <Text fontSize="xs" color="gray.500">
+                          Tham gia {formatTimestamp(member.joinedAt)}
+                        </Text>
                       </VStack>
                     </HStack>
                     <HStack>
@@ -496,10 +496,9 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
                           onChange={(e) => handleUpdateRole(member.userId, e.target.value as CommunityRole)}
                           width="120px"
                         >
-                          <option value="member">Member</option>
-                          <option value="moderator">Moderator</option>
-                          <option value="admin">Admin</option>
-                          {isOwner && <option value="owner">Owner</option>}
+                          <option value="member">Thành viên</option>
+                          <option value="admin">Quản trị viên</option>
+                          {isOwner && <option value="owner">Chủ sở hữu</option>}
                         </Select>
                       )}
                     </HStack>
@@ -508,13 +507,10 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
               ) : (
                                  <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md" textAlign="center">
                    <Text color="gray.500" fontSize="sm">
-                     No members found. Members will appear here when they join the community.
+                     Không tìm thấy thành viên. Thành viên sẽ xuất hiện ở đây khi họ tham gia cộng đồng.
                    </Text>
                    <Text color="gray.400" fontSize="xs" mt={2}>
-                     Total members: {communityData.numberOfMembers || 0}
-                   </Text>
-                   <Text color="gray.400" fontSize="xs" mt={1}>
-                     Members array: {communityData.members ? `${communityData.members.length} items` : 'Not initialized'}
+                     Tổng số thành viên: {communityData.numberOfMembers || 0}
                    </Text>
                  </Box>
               )}
@@ -523,11 +519,11 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
               {canManageRoles && (
                 <Box p={4} border="1px solid" borderColor="blue.200" borderRadius="md" bg="blue.50">
                   <Text fontWeight={600} mb={2} color="blue.700">
-                    Add Member by User ID
+                    Thêm thành viên mới
                   </Text>
                   <HStack>
                     <Input
-                      placeholder="Enter user ID"
+                      placeholder="Nhập ID người dùng"
                       size="sm"
                       flex={1}
                       value={newMember.userId}
@@ -549,7 +545,7 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
                       onClick={handleAddMember}
                       isDisabled={!newMember.userId.trim()}
                     >
-                      Add
+                      Thêm
                     </Button>
                   </HStack>
                 </Box>
@@ -563,27 +559,27 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
       <Modal isOpen={isBannedOpen} onClose={onBannedClose} size="xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Banned Users</ModalHeader>
+          <ModalHeader>Người dùng bị cấm</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
               {/* Ban New User */}
               <Box p={4} border="1px solid" borderColor="gray.200" borderRadius="md">
-                <Text fontWeight={600} mb={2}>Ban User</Text>
+                <Text fontWeight={600} mb={2}>Cấm người dùng</Text>
                 <Input
-                  placeholder="User ID"
+                  placeholder="ID người dùng"
                   value={banUser.userId}
                   onChange={(e) => setBanUser(prev => ({ ...prev, userId: e.target.value }))}
                   mb={2}
                 />
                 <Textarea
-                  placeholder="Reason for ban"
+                  placeholder="Lý do cấm"
                   value={banUser.reason}
                   onChange={(e) => setBanUser(prev => ({ ...prev, reason: e.target.value }))}
                   mb={2}
                 />
                 <Button size="sm" colorScheme="red" onClick={handleBanUser}>
-                  Ban User
+                  Cấm người dùng
                 </Button>
               </Box>
 
@@ -592,15 +588,15 @@ const CommunityManagement: React.FC<CommunityManagementProps> = ({ communityData
                 <HStack key={bannedUser.userId} justify="space-between" p={3} border="1px solid" borderColor="gray.200" borderRadius="md">
                   <VStack align="start" spacing={0}>
                     <Text fontWeight={600}>{bannedUser.displayName || bannedUser.userId}</Text>
-                                         <Text fontSize="xs" color="gray.500">
-                       Banned on {formatTimestamp(bannedUser.bannedAt)}
-                     </Text>
+                    <Text fontSize="xs" color="gray.500">
+                      Bị cấm vào {formatTimestamp(bannedUser.bannedAt)}
+                    </Text>
                     <Text fontSize="sm" color="red.500">
-                      Reason: {bannedUser.reason}
+                      Lý do: {bannedUser.reason}
                     </Text>
                   </VStack>
                   <Button size="sm" variant="outline" onClick={() => handleUnbanUser(bannedUser.userId)}>
-                    Unban
+                    Gỡ cấm
                   </Button>
                 </HStack>
               ))}

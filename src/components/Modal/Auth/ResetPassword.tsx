@@ -26,15 +26,14 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ toggleView }) => {
     <Flex direction="column" alignItems="center" width="100%">
       <Icon as={BsReddit} color="brand.100" fontSize={40} mb={2} />
       <Text fontWeight={700} mb={2}>
-        Reset your password
+        Khôi phục mật khẩu
       </Text>
       {success ? (
-        <Text mb={4}>Check your email :)</Text>
+        <Text mb={4}>Kiểm tra email của bạn :)</Text>
       ) : (
         <>
           <Text fontSize="sm" textAlign="center" mb={2}>
-            Enter the email associated with your account and we will send you a
-            reset link
+            Nhập email liên kết với tài khoản của bạn và chúng tôi sẽ gửi cho bạn một liên kết đặt lại mật khẩu
           </Text>
           <form onSubmit={onSubmit} style={{ width: "100%" }}>
             <Input
@@ -70,7 +69,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ toggleView }) => {
               type="submit"
               isLoading={sending}
             >
-              Reset Password
+              Đặt lại mật khẩu
             </Button>
           </form>
         </>
@@ -90,7 +89,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ toggleView }) => {
             }))
           }
         >
-          LOGIN
+          ĐĂNG NHẬP
         </Text>
         <Icon as={BsDot} />
         <Text
@@ -101,7 +100,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ toggleView }) => {
             }))
           }
         >
-          SIGN UP
+          ĐĂNG KÝ
         </Text>
       </Flex>
     </Flex>

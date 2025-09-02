@@ -43,7 +43,7 @@ const RecommendationsBox = () => (
       bgGradient="linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75)),
       url('images/recCommsArt.png')"
     >
-      Top Communities
+      Cộng đồng hàng đầu
     </Flex>
     <Stack mt={2} p={3}>
       <Flex justify="space-between" align="center">
@@ -106,7 +106,7 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
         bgGradient="linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75)),
         url('images/recCommsArt.png')"
       >
-        Top Communities
+        Cộng đồng hàng đầu
       </Flex>
       <Flex direction="column">
         {loading ? (
@@ -182,7 +182,7 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
             })}
             <Box p="10px 20px">
               <Button height="30px" width="100%">
-                View All
+                Xem tất cả
               </Button>
             </Box>
           </>

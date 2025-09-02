@@ -39,7 +39,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
           <Textarea
             value={comment}
             onChange={(event) => setComment(event.target.value)}
-            placeholder="What are your thoughts?"
+            placeholder="Bạn nghĩ gì?"
             fontSize="10pt"
             borderRadius={4}
             minHeight="160px"
@@ -81,7 +81,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
                 onCreateComment(comment);
               }}
             >
-              Comment
+              Bình luận
             </Button>
           </Flex>
         </>

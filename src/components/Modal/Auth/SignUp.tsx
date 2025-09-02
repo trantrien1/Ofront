@@ -28,11 +28,11 @@ const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
     event.preventDefault();
     if (formError) setFormError("");
     if (!form.email.includes("@")) {
-      return setFormError("Please enter a valid email");
+  return setFormError("Vui lòng nhập email hợp lệ");
     }
 
     if (form.password !== form.confirmPassword) {
-      return setFormError("Passwords do not match");
+  return setFormError("Mật khẩu nhập lại không khớp");
     }
 
     (async () => {
@@ -42,12 +42,13 @@ const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
 
   // Registration succeeded — prompt user to log in.
   // Open the auth modal and switch to the login view so the user can authenticate.
-  setFormError("Registration successful. Please log in.");
+  setFormError("Đăng ký thành công. Vui lòng đăng nhập.");
   setModal((s) => ({ ...s, open: true, view: "login" }));
   // also call toggleView to update the modal's internal view if needed
   toggleView("login");
       } catch (err: any) {
-        setFormError(err?.message || "Signup failed");
+        const msg = err?.userMessage || err?.message;
+        setFormError(msg || "Đăng ký thất bại");
       }
     })();
   };
@@ -101,17 +102,17 @@ const SignUp: React.FC<SignUpProps> = ({ toggleView }) => {
         type="submit"
         isLoading={loading}
       >
-        Sign Up
+        Đăng kí
       </Button>
       <Flex fontSize="9pt" justifyContent="center">
-        <Text mr={1}>Have an account?</Text>
+        <Text mr={1}>Bạn đã có tài khoản?</Text>
         <Text
           color="blue.500"
           fontWeight={700}
           cursor="pointer"
           onClick={() => toggleView("login")}
         >
-          LOG IN
+          ĐĂNG NHẬP
         </Text>
       </Flex>
     </form>

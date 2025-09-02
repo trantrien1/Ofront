@@ -33,7 +33,7 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
     event.preventDefault();
     if (formError) setFormError("");
     if (!form.username) {
-      return setFormError("Please enter your username");
+  return setFormError("Vui lòng nhập tên đăng nhập");
     }
 
     (async () => {
@@ -61,7 +61,7 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
 
 
   if (!token) {
-          setFormError("Login succeeded but no token returned");
+          setFormError("Đăng nhập thành công nhưng không nhận được token");
           return;
         }
 
@@ -196,7 +196,8 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
         // navigate to main inside page
         router.push("/");
       } catch (err: any) {
-        setFormError(err?.message || "Login failed");
+        const msg = err?.userMessage || err?.message;
+        setFormError(msg || "Đăng nhập thất bại");
       }
     })();
   };
@@ -236,11 +237,11 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
         type="submit"
         isLoading={loading}
       >
-        Log In
+        Đăng nhập
       </Button>
       <Flex justifyContent="center" mb={2}>
         <Text fontSize="9pt" mr={1}>
-          Forgot your password?
+          Quên mật khẩu đăng nhập?
         </Text>
         <Text
           fontSize="9pt"
@@ -248,18 +249,18 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
           cursor="pointer"
           onClick={() => toggleView("resetPassword")}
         >
-          Reset
+          Đặt lại
         </Text>
       </Flex>
       <Flex fontSize="9pt" justifyContent="center">
-        <Text mr={1}>New here?</Text>
+        <Text mr={1}>Người mới?</Text>
         <Text
           color="blue.500"
           fontWeight={700}
           cursor="pointer"
           onClick={() => toggleView("signup")}
         >
-          SIGN UP
+          ĐĂNG KÝ
         </Text>
       </Flex>
     </form>

@@ -78,7 +78,7 @@ const UserList: React.FC<UserListProps> = () => {
       >
         <Flex alignItems="center">
           <Icon fontSize={20} mr={2} as={CgProfile} />
-          Profile
+          Hồ sơ
         </Flex>
       </MenuItem>
       <MenuDivider />
@@ -90,7 +90,7 @@ const UserList: React.FC<UserListProps> = () => {
       >
         <Flex alignItems="center">
           <Icon fontSize={20} mr={2} as={CgProfile} />
-          Settings
+          Cài đặt
         </Flex>
       </MenuItem>
       <MenuDivider />
@@ -102,7 +102,7 @@ const UserList: React.FC<UserListProps> = () => {
       >
         <Flex alignItems="center">
           <Icon fontSize={20} mr={2} as={MdOutlineLogin} />
-          Log Out
+          Đăng xuất
         </Flex>
       </MenuItem>
     </>

@@ -70,7 +70,7 @@ const CommunityHighlights: React.FC<CommunityHighlightsProps> = ({ pinnedPosts, 
       <Flex align="center" mb={4}>
         <Icon as={MdPushPin} color="orange.500" mr={2} boxSize={5} />
         <Text fontSize="lg" fontWeight="bold" color={textColor}>
-          Community Highlights
+          Điểm nổi bật của cộng đồng
         </Text>
       </Flex>
 
@@ -141,7 +141,7 @@ const CommunityHighlights: React.FC<CommunityHighlightsProps> = ({ pinnedPosts, 
                 color={subtitleColor}
                 noOfLines={2}
               >
-                {post.body || "No description available."}
+                {post.body || "Không có mô tả nào."}
               </Text>
               <Text fontSize="xs" mt={2} color={subtitleColor}>
                 {formatDate(post.createdAt)}

@@ -114,7 +114,7 @@ const AboutComponent: React.FC<AboutProps> = ({
         borderRadius="4px 4px 0px 0px"
       >
         <Text fontSize="10pt" fontWeight={700}>
-          About Community
+          Giới thiệu về cộng đồng
         </Text>
         <Icon as={HiOutlineDotsHorizontal} cursor="pointer" />
       </Flex>
@@ -154,7 +154,7 @@ const AboutComponent: React.FC<AboutProps> = ({
                 cursor="pointer"
               >
                 <Text fontSize="9pt" fontWeight={700} color="blue.500">
-                  Add description
+                  Thêm mô tả
                 </Text>
               </Box>
             )}
@@ -164,11 +164,7 @@ const AboutComponent: React.FC<AboutProps> = ({
                   <Text>
                     {communityData?.numberOfMembers?.toLocaleString()}
                   </Text>
-                  <Text>Members</Text>
-                </Flex>
-                <Flex direction="column" flexGrow={1}>
-                  <Text>1</Text>
-                  <Text>Online</Text>
+                  <Text>Thành viên</Text>
                 </Flex>
               </Flex>
               <Divider />
@@ -194,7 +190,7 @@ const AboutComponent: React.FC<AboutProps> = ({
               {!onCreatePage && (
                 <Link href={`/community/${router.query.community}/submit`}>
                   <Button mt={3} height="30px">
-                    Create Post
+                    Tạo bài viết
                   </Button>
                 </Link>
               )}
@@ -229,7 +225,7 @@ const AboutComponent: React.FC<AboutProps> = ({
                         <Spinner />
                       ) : (
                         <Text cursor="pointer" onClick={updateImage}>
-                          Save Changes
+                          Lưu thay đổi
                         </Text>
                       ))}
                     <input

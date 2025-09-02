@@ -25,7 +25,7 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
     <Box ml={8} mt={2} borderLeft="2px solid" borderColor="gray.200" pl={4}>
         {parentCommentText && (
         <Text fontSize="8pt" color="gray.500" mb={2}>
-          Replying to: &quot;{parentCommentText.length > 50 ? parentCommentText.substring(0, 50) + '...' : parentCommentText}&quot;
+          Phản hồi tới: &quot;{parentCommentText.length > 50 ? parentCommentText.substring(0, 50) + '...' : parentCommentText}&quot;
         </Text>
       )}
       <Flex direction="column" position="relative">
@@ -34,7 +34,7 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
             <Flex align="center" mb={2}>
               <Avatar size="xs" src={user.photoURL || undefined} mr={2} />
               <Text fontSize="9pt">
-                Reply as{" "}
+                Trả lời với tư cách{" "}
                 <span style={{ color: "#3182CE" }}>
                   {user?.email?.split("@")[0]}
                 </span>
@@ -72,7 +72,7 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
                 onClick={onCancel}
                 disabled={loading}
               >
-                Cancel
+                Hủy
               </Button>
               <Button
                 size="sm"
@@ -81,13 +81,13 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
                 isLoading={loading}
                 onClick={() => onReply(comment)}
               >
-                Reply
+                Trả lời
               </Button>
             </Flex>
           </>
         ) : (
           <Text fontSize="9pt" color="gray.500">
-            Please log in to reply
+            Vui lòng đăng nhập để trả lời
           </Text>
         )}
       </Flex>

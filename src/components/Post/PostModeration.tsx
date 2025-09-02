@@ -74,7 +74,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
       const svc = await import("../../services/posts.service");
       await (svc as any).deletePost({ postId });
       toast({
-        title: "Post deleted",
+        title: "Đã xóa bài viết",
         status: "success",
         duration: 3000,
       });
@@ -82,7 +82,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
       onDeleteClose();
     } catch (error) {
       toast({
-        title: "Error deleting post",
+        title: "Lỗi khi xóa bài viết",
         status: "error",
         duration: 3000,
       });
@@ -99,10 +99,10 @@ const PostModeration: React.FC<PostModerationProps> = ({
     try {
       const svc = await import("../../services/posts.service");
       await (svc as any).updatePost({ postId, title: editTitle, content: editBody });
-      toast({ title: "Post updated", status: "success", duration: 3000 });
+      toast({ title: "Bài viết đã được cập nhật", status: "success", duration: 3000 });
       onEditClose();
     } catch (e) {
-      toast({ title: "Error updating post", status: "error", duration: 3000 });
+      toast({ title: "Lỗi khi cập nhật bài viết", status: "error", duration: 3000 });
     } finally {
       setSavingEdit(false);
     }
@@ -122,7 +122,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
       // TODO: call API to ban user
       
       toast({
-        title: "User banned",
+        title: "Người dùng đã bị cấm",
         status: "success",
         duration: 3000,
       });
@@ -130,7 +130,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
       onBanClose();
     } catch (error) {
       toast({
-        title: "Error banning user",
+        title: "Lỗi khi cấm người dùng",
         status: "error",
         duration: 3000,
       });
@@ -142,7 +142,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
       <Flex align="center" gap={2} mt={2}>
         <Badge colorScheme="blue" fontSize="xs">
           <Icon as={FaShieldAlt} mr={1} />
-          Mod Actions
+          Hành động của mod
         </Badge>
         
         {canDeletePosts(communityId) && (
@@ -153,7 +153,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
             leftIcon={<FaTrash />}
             onClick={onDeleteOpen}
           >
-            Delete
+            Xóa
           </Button>
         )}
         {canDeletePosts(communityId) && (
@@ -167,7 +167,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
               onEditOpen();
             }}
           >
-            Edit
+            Chỉnh sửa
           </Button>
         )}
         
@@ -191,7 +191,7 @@ const PostModeration: React.FC<PostModerationProps> = ({
             leftIcon={<FaBan />}
             onClick={onBanOpen}
           >
-            Ban User
+            Cấm người dùng
           </Button>
         )}
       </Flex>
@@ -205,15 +205,15 @@ const PostModeration: React.FC<PostModerationProps> = ({
           <ModalBody>
             <Flex align="center" gap={2} mb={4}>
               <Icon as={FaExclamationTriangle} color="red.500" />
-              <Text>Are you sure you want to delete this post? This action cannot be undone.</Text>
+              <Text>Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.</Text>
             </Flex>
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onDeleteClose}>
-              Cancel
+              Hủy
             </Button>
             <Button colorScheme="red" onClick={handleDeletePost}>
-              Delete Post
+              Xóa bài viết
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -223,21 +223,21 @@ const PostModeration: React.FC<PostModerationProps> = ({
       <Modal isOpen={isBanOpen} onClose={onBanClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Ban User</ModalHeader>
+          <ModalHeader>Cấm người dùng</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <Stack spacing={4}>
               <Text>
-                Ban <strong>{authorName || authorId}</strong> from this community?
+                Cấm <strong>{authorName || authorId}</strong> khỏi cộng đồng này?
               </Text>
               <Box>
                 <Text fontSize="sm" fontWeight={600} mb={2}>
-                  Reason for ban:
+                  Lý do cấm:
                 </Text>
                 <Textarea
                   value={banReason}
                   onChange={(e) => setBanReason(e.target.value)}
-                  placeholder="Enter reason for banning this user..."
+                  placeholder="Nhập lý do cấm người dùng này..."
                   size="sm"
                 />
               </Box>
@@ -245,14 +245,14 @@ const PostModeration: React.FC<PostModerationProps> = ({
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onBanClose}>
-              Cancel
+              Hủy
             </Button>
             <Button 
               colorScheme="red" 
               onClick={handleBanUser}
               isDisabled={!banReason.trim()}
             >
-              Ban User
+              Cấm người dùng
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -262,14 +262,14 @@ const PostModeration: React.FC<PostModerationProps> = ({
       <Modal isOpen={isEditOpen} onClose={onEditClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Edit Post</ModalHeader>
+          <ModalHeader>Chỉnh sửa bài viết</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <Stack spacing={3}>
               <Box>
-                <Text fontSize="sm" fontWeight={600} mb={1}>Title</Text>
+                <Text fontSize="sm" fontWeight={600} mb={1}>Tiêu đề</Text>
                 <Textarea
-                  placeholder="Update title..."
+                  placeholder="Cập nhật tiêu đề..."
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   size="sm"
@@ -289,10 +289,10 @@ const PostModeration: React.FC<PostModerationProps> = ({
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onEditClose}>
-              Cancel
+              Hủy
             </Button>
             <Button colorScheme="blue" onClick={handleEditPost} isLoading={savingEdit}>
-              Save
+              Lưu
             </Button>
           </ModalFooter>
         </ModalContent>

@@ -448,27 +448,6 @@ const Sidebar: React.FC = () => {
                 </Collapse>
               </VStack>
             )}
-
-            {/* Example Community - VietNamNation */}
-            <VStack spacing={1} align="stretch" mt={4}>
-              {!isCollapsed && (
-                <Text
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  color={sectionMuted}
-                  mx={3}
-                  mb={2}
-                >
-                  Featured Communities
-                </Text>
-              )}
-              <CommunityItem
-                name="VietNamNation"
-                icon="/images/logo.png"
-                memberCount={15420}
-                path="/community/VietNamNation"
-              />
-            </VStack> 
           </Collapse>
         </Box>
 
@@ -501,7 +480,10 @@ const Sidebar: React.FC = () => {
                             {user.displayName || user.uid || "User"}
                           </Text>
                       <Text fontSize="xs" color="gray.500">
-                        View Profile
+                        
+                        
+
+
                       </Text>
                     </Box>
                   )}

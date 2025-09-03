@@ -67,7 +67,15 @@ export function useStompNotifications(enabled: boolean = true) {
   const socketLike: any = (() => {
     if (transportPref === 'native') {
       try {
-        const nativeUrl = wsUrlWithToken.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+        let nativeUrl = wsUrlWithToken;
+        // Convert http/https -> ws/wss if needed
+        if (/^https?:/i.test(nativeUrl)) {
+          nativeUrl = nativeUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+        }
+        // If the path looks like SockJS base '/ws' without explicit '/websocket', append it to match server
+        if (!/\/websocket(\?|$)/i.test(nativeUrl) && /\/ws(\?|$)/i.test(nativeUrl)) {
+          nativeUrl = nativeUrl.replace(/\/ws(\?|$)/i, '/ws/websocket$1');
+        }
         try { console.log('[WS] using native WebSocket', { nativeUrl }); } catch {}
         return new (window as any).WebSocket(nativeUrl);
       } catch (e) {
@@ -129,9 +137,9 @@ export function useStompNotifications(enabled: boolean = true) {
         const typeRaw = (parsed?.type || parsed?.event || '').toString().toLowerCase();
         const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
         const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
-        const postTitle = parsed?.postTitle || parsed?.title;
-        const community = parsed?.communityName || parsed?.community;
-        const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${postTitle ? `: "${postTitle}"` : ''}''}`;
+  const postTitle = parsed?.postTitle || parsed?.title;
+  const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
+  const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${community ? ` trong nhóm ${community}` : ''}${postTitle ? `: "${postTitle}"` : ''}`;
         const body = (role === 'admin' && isPostEvent) ? adminMessage : (parsed?.message || message?.body || '');
         const n: Notification = {
           id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
@@ -166,8 +174,8 @@ export function useStompNotifications(enabled: boolean = true) {
           const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
           const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
           const postTitle = parsed?.postTitle || parsed?.title;
-          const community = parsed?.communityName || parsed?.community;
-          const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${postTitle ? `: "${postTitle}"` : ''}''}`;
+          const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
+          const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${community ? ` trong nhóm ${community}` : ''}${postTitle ? `: "${postTitle}"` : ''}`;
           const body = isPostEvent ? adminMessage : (parsed?.message || message?.body || '');
           const n: Notification = {
             id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,

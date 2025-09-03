@@ -31,8 +31,8 @@ export const useNotifications = (requestInitialFetch?: boolean) => {
     const abort = new AbortController();
   const load = async () => {
       try {
-        const { NotificationsService } = await import("../services");
-  const data = await NotificationsService.getUserNotifications((currentUser as any).uid);
+  const { NotificationsService } = await import("../services");
+  const data = await NotificationsService.getUserNotifications();
         const sorted = (data || []).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const mapped = sorted.map((n: any) => ({
           id: n.id?.toString?.() || n.id,
@@ -91,7 +91,10 @@ export const useNotifications = (requestInitialFetch?: boolean) => {
   try {
       const { NotificationsService } = await import("../services");
       const unreadNotifications = notificationsStateValue.notifications.filter(n => !n.read);
-      await NotificationsService.markManyNotificationsAsRead(unreadNotifications.map(n => n.id));
+      // Backend doesn't support batch read; fall back to sequential marks
+      for (const n of unreadNotifications) {
+        try { await NotificationsService.markNotificationAsRead(n.id); } catch {}
+      }
       setNotificationsStateValue(prev => ({
         ...prev,
         notifications: prev.notifications.map(n => ({ ...n, read: true })),

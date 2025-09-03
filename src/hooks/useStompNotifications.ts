@@ -255,7 +255,7 @@ export function useStompNotifications(enabled: boolean = true) {
       const fetchAndMerge = async () => {
         try {
           const { NotificationsService } = await import('../services');
-          const data: any[] = await NotificationsService.getUserNotifications('me' as any);
+          const data: any[] = await NotificationsService.getUserNotifications();
           const mapped = (Array.isArray(data) ? data : []).map((n: any) => {
             const when = n.createdAt ? new Date(n.createdAt) : new Date();
             return {

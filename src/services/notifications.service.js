@@ -1,8 +1,11 @@
 import request from "./request";
 
-export const getUserNotifications = async (userId) => {
+// Backend endpoints per NotificationController:
+// GET  notifications/get
+// PUT  notifications/{id}/read
+export const getUserNotifications = async () => {
 	try {
-		const response = await request.get("notifications", { params: { userId } });
+		const response = await request.get("notifications/get");
 		return response.data;
 	} catch (e) {
 		try { console.warn("getUserNotifications failed:", e?.response?.status, e?.message); } catch {}
@@ -11,7 +14,7 @@ export const getUserNotifications = async (userId) => {
 };
 
 export const markNotificationAsRead = async (id) => {
-	const response = await request.patch("notifications", { id, read: true });
+	const response = await request.put(`notifications/${id}/read`);
 	return response.data;
 };
 

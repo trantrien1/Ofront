@@ -141,6 +141,19 @@ export function useStompNotifications(enabled: boolean = true) {
   const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
   const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${community ? ` trong nhóm ${community}` : ''}${postTitle ? `: "${postTitle}"` : ''}`;
         const body = (role === 'admin' && isPostEvent) ? adminMessage : (parsed?.message || message?.body || '');
+        // Debug log to ensure correct mapping for user queue
+        try {
+          const logForDebug = {
+            src: '/user/queue/notifications',
+            rawBodyFirst200: bodyStr.slice(0, 200),
+            parsedKeys: parsed ? Object.keys(parsed).slice(0, 10) : [],
+            typeRaw,
+            isPostEvent,
+            actor,
+            finalMessage: body,
+          };
+          console.log('[WS][MAP] user-queue mapped =>', logForDebug);
+        } catch {}
         const n: Notification = {
           id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
           type: parsed?.type || 'post',
@@ -187,6 +200,17 @@ export function useStompNotifications(enabled: boolean = true) {
           const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
           const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${community ? ` trong nhóm ${community}` : ''}${postTitle ? `: "${postTitle}"` : ''}`;
           const body = isPostEvent ? adminMessage : (parsed?.message || message?.body || '');
+          // Debug log to ensure correct mapping for admin topic
+          try {
+            console.log('[WS][MAP] admin-topic mapped =>', {
+              rawBodyFirst200: bodyStr.slice(0, 200),
+              parsedType: parsed?.type,
+              event: parsed?.event,
+              actor,
+              isPostEvent,
+              finalMessage: body,
+            });
+          } catch {}
           const n: Notification = {
             id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
             type: parsed?.type || 'post',
@@ -196,7 +220,7 @@ export function useStompNotifications(enabled: boolean = true) {
             postId: parsed?.postId,
             postTitle: parsed?.postTitle,
             communityName: parsed?.communityName,
-            pending: parsed?.pending ?? true,
+            pending: Boolean(parsed?.pending), // hoặc parsed?.pending ?? false
             timestamp: { toDate: () => now } as any,
             read: false,
           } as Notification;

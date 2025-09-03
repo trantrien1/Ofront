@@ -37,8 +37,18 @@ export function useStompNotifications(enabled: boolean = true) {
       return undefined;
     };
     const token = getToken();
-    // Resolve role: prefer persisted, else try to decode from JWT
-    const persistedRole = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || '') : '').toLowerCase();
+    // Resolve role: prefer persisted (cookie/localStorage), else try to decode from JWT
+    const readCookie = (name: string) => {
+      try {
+        const cookie = document.cookie || '';
+        const m = cookie.match(new RegExp('(?:^|; )' + name + '=([^;]+)'));
+        if (m && m[1]) return decodeURIComponent(m[1]);
+      } catch {}
+      return '';
+    };
+    const cookieRole = (readCookie('role') || readCookie('ROLE') || readCookie('userRole') || readCookie('USER_ROLE') || '').toLowerCase();
+    const lsRole = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || '') : '').toLowerCase();
+    const persistedRole = cookieRole || lsRole;
     const decodeRoleFromJwt = (t?: string): string | '' => {
       if (!t) return '';
       try {
@@ -212,11 +222,60 @@ export function useStompNotifications(enabled: boolean = true) {
 
     client.activate();
     (window as any).__wsActive = true;
+
+    // Admin polling fallback: periodically fetch notifications from REST and merge
+    let poller: any = null;
+    const startPolling = () => {
+      if (poller || role !== 'admin') return;
+      const intervalMs = 20000; // 20s
+      const fetchAndMerge = async () => {
+        try {
+          const { NotificationsService } = await import('../services');
+          const data: any[] = await NotificationsService.getUserNotifications('me' as any);
+          const mapped = (Array.isArray(data) ? data : []).map((n: any) => {
+            const when = n.createdAt ? new Date(n.createdAt) : new Date();
+            return {
+              id: n.id?.toString?.() || String(n.id || Math.random()),
+              type: (n.type || 'post') as any,
+              message: n.content || n.message || n.title || '',
+              userId: n.userId || n.actorId || '',
+              targetUserId: n.targetUserId || n.userId || '',
+              postId: n.postId,
+              commentId: n.commentId,
+              postTitle: n.postTitle,
+              communityName: n.communityName,
+              pending: !!n.pending,
+              timestamp: { toDate: () => when } as any,
+              read: !!n.isRead,
+            } as Notification;
+          });
+          setNotifState(prev => {
+            // Merge by id and keep newest first
+            const byId = new Map<string, Notification>();
+            [...prev.notifications, ...mapped].forEach(item => { if (item?.id) byId.set(item.id, item); });
+            const merged = Array.from(byId.values()).sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
+            const unreadCount = merged.filter(x => !x.read).length;
+            return { ...prev, notifications: merged, unreadCount };
+          });
+        } catch (e) {
+          // Silent fail; keep polling
+        }
+      };
+      // Kick off immediately then interval
+      fetchAndMerge();
+      poller = setInterval(fetchAndMerge, intervalMs);
+      try { console.log('[WS] admin polling fallback started'); } catch {}
+    };
+    startPolling();
     return () => {
       try { console.log('[WS] deactivate'); } catch {}
       client.deactivate();
       clientRef.current = null;
       (window as any).__wsActive = false;
+      if (poller) {
+        try { clearInterval(poller); } catch {}
+        poller = null;
+      }
     };
   }, [enabled]);
 }

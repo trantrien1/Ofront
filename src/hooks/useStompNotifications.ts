@@ -37,6 +37,16 @@ export function useStompNotifications(enabled: boolean = true) {
       return undefined;
     };
     const token = getToken();
+    const decodeNameFromJwt = (t?: string): { username?: string; sub?: string; name?: string } => {
+      if (!t) return {};
+      try {
+        const part = t.split('.')[1];
+        const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'));
+        const payload = JSON.parse(json);
+        return { username: payload?.username, sub: payload?.sub, name: payload?.name };
+      } catch { return {}; }
+    };
+    const principalGuess = decodeNameFromJwt(token);
     // Resolve role: prefer persisted (cookie/localStorage), else try to decode from JWT
     const readCookie = (name: string) => {
       try {
@@ -62,6 +72,7 @@ export function useStompNotifications(enabled: boolean = true) {
     const role = persistedRole || decodeRoleFromJwt(token) || '';
     try {
       console.log('[WS] init', { wsUrl, hasToken: !!token, tokenLen: token ? token.length : 0, role });
+      console.log('[WS] principal guess', principalGuess);
       console.log('[WS] Đang chuẩn bị kết nối tới WebSocket...', wsUrl);
     } catch {}
 
@@ -87,7 +98,13 @@ export function useStompNotifications(enabled: boolean = true) {
           nativeUrl = nativeUrl.replace(/\/ws(\?|$)/i, '/ws/websocket$1');
         }
         try { console.log('[WS] using native WebSocket', { nativeUrl }); } catch {}
-        return new (window as any).WebSocket(nativeUrl);
+        const ws = new (window as any).WebSocket(nativeUrl);
+        try {
+          ws.onopen = (ev: any) => { try { console.log('[WS] native onopen'); } catch {} };
+          ws.onerror = (ev: any) => { try { console.log('[WS] native onerror', ev?.message || ev); } catch {} };
+          ws.onclose = (ev: any) => { try { console.log('[WS] native onclose', { code: ev?.code, reason: ev?.reason }); } catch {} };
+        } catch {}
+        return ws;
       } catch (e) {
         try { console.warn('[WS] native WebSocket failed, falling back to SockJS', e); } catch {}
       }
@@ -100,7 +117,13 @@ export function useStompNotifications(enabled: boolean = true) {
       },
       timeout: 10000,
     };
-    return new SockJS(wsUrlWithToken, undefined as any, options);
+    const sj = new SockJS(wsUrlWithToken, undefined as any, options);
+    try {
+      sj.onopen = () => { try { console.log('[WS] sockjs onopen'); } catch {} };
+      sj.onerror = (e: any) => { try { console.log('[WS] sockjs onerror', e); } catch {} };
+      sj.onclose = (e: any) => { try { console.log('[WS] sockjs onclose', e); } catch {} };
+    } catch {}
+    return sj;
   })();
     const client = new Client({
       webSocketFactory: () => socketLike as any,
@@ -110,18 +133,36 @@ export function useStompNotifications(enabled: boolean = true) {
     });
     clientRef.current = client;
 
-    client.onConnect = () => {
+    // Catch anything not matched by a subscription
+    (client as any).onUnhandledMessage = (message: IMessage) => {
+      try { console.warn('[WS] onUnhandledMessage', { headers: message?.headers, bodyFirst200: message?.body?.slice?.(0,200) }); } catch {}
+    };
+    (client as any).onUnhandledFrame = (frame: any) => {
+      try { console.warn('[WS] onUnhandledFrame', { command: frame?.command, headers: frame?.headers }); } catch {}
+    };
+    (client as any).onUnhandledReceipt = (frame: any) => {
+      try { console.warn('[WS] onUnhandledReceipt', { headers: frame?.headers }); } catch {}
+    };
+
+  let userQueueCount = 0;
+  let adminTopicCount = 0;
+
+  client.onConnect = (frame: any) => {
       try {
         console.log('[WS] connected');
         console.log('ĐÃ KẾT NỐI TỚI WEBSOCKET ✅', { at: new Date().toISOString(), url: wsUrlWithToken });
+        console.log('[WS] connect frame', { headers: frame?.headers });
       } catch {}
   // No local notification for WS connect to avoid confusion in the UI
   // Subscribe to user notifications queue
-      client.subscribe('/user/queue/notifications', (message: IMessage) => {
+      const subUser = client.subscribe('/user/queue/notifications', (message: IMessage) => {
         try { console.log('[WS] /user/queue/notifications message', { body: message?.body?.slice?.(0, 200) }); } catch {}
+        try { console.log('[WS] /user/queue/notifications headers', { headers: (message as any)?.headers }); } catch {}
         const now = new Date();
         let parsed: any = undefined;
-        try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch {}
+        try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch (e) {
+          try { console.warn('[WS] JSON parse error (user queue)', { err: (e as any)?.message, bodyFirst200: message?.body?.slice?.(0,200) }); } catch {}
+        }
         const bodyStr = (typeof message?.body === 'string') ? message.body : '';
         const extractActor = (s: string): string | undefined => {
           try {
@@ -168,20 +209,33 @@ export function useStompNotifications(enabled: boolean = true) {
           read: false,
         } as Notification;
         try { console.log('[WS] mapped notification', { type: n.type, postId: n.postId, pending: n.pending }); } catch {}
-        setNotifState(prev => {
+  userQueueCount++;
+  setNotifState(prev => {
           const notifications = [n, ...prev.notifications];
           const unreadCount = notifications.filter(x => !x.read).length;
           return { ...prev, notifications, unreadCount };
         });
       });
+      try { console.log('[WS] subscribed to user queue', { id: (subUser as any)?.id || (subUser as any) }); } catch {}
+
+      // Also listen to shared queue for diagnostics (in case backend sends there)
+      try { console.log('[WS] subscribing /queue/notifications (shared) for diagnostics'); } catch {}
+      const subShared = client.subscribe('/queue/notifications', (message: IMessage) => {
+        try { console.log('[WS][DIAG] /queue/notifications message', { body: message?.body?.slice?.(0, 200) }); } catch {}
+        try { console.log('[WS][DIAG] /queue/notifications headers', { headers: (message as any)?.headers }); } catch {}
+      });
+      try { console.log('[WS] subscribed to shared queue', { id: (subShared as any)?.id || (subShared as any) }); } catch {}
       // Fallback/broadcast topic for admins
       if (role === 'admin') {
         try { console.log('[WS] subscribing /topic/admin-notifications'); } catch {}
-        client.subscribe('/topic/admin-notifications', (message: IMessage) => {
+        const subAdmin = client.subscribe('/topic/admin-notifications', (message: IMessage) => {
           try { console.log('[WS] /topic/admin-notifications message', { body: message?.body?.slice?.(0, 200) }); } catch {}
+          try { console.log('[WS] /topic/admin-notifications headers', { headers: (message as any)?.headers }); } catch {}
           const now = new Date();
           let parsed: any = undefined;
-          try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch {}
+          try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch (e) {
+            try { console.warn('[WS] JSON parse error (admin topic)', { err: (e as any)?.message, bodyFirst200: message?.body?.slice?.(0,200) }); } catch {}
+          }
           const bodyStr = (typeof message?.body === 'string') ? message.body : '';
           const extractActor = (s: string): string | undefined => {
             try {
@@ -225,13 +279,23 @@ export function useStompNotifications(enabled: boolean = true) {
             read: false,
           } as Notification;
           try { console.log('[WS] mapped admin notification', { type: n.type, postId: n.postId, pending: n.pending }); } catch {}
+          adminTopicCount++;
           setNotifState(prev => {
             const notifications = [n, ...prev.notifications];
             const unreadCount = notifications.filter(x => !x.read).length;
             return { ...prev, notifications, unreadCount };
           });
-        });
+  });
+  try { console.log('[WS] subscribed to admin topic', { id: (subAdmin as any)?.id || (subAdmin as any) }); } catch {}
       }
+      // Watchdog: warn if no messages arrive soon
+      setTimeout(() => {
+        try {
+          if (userQueueCount === 0 && adminTopicCount === 0) {
+            console.warn('[WS][WATCH] no messages received yet', { role, principalGuess, hint: 'If backend uses convertAndSendToUser(username,...), ensure Principal.name equals username' });
+          }
+        } catch {}
+      }, 15000);
     };
 
   client.onStompError = (frame: any) => {
@@ -252,10 +316,11 @@ export function useStompNotifications(enabled: boolean = true) {
     const startPolling = () => {
       if (poller || role !== 'admin') return;
       const intervalMs = 20000; // 20s
-      const fetchAndMerge = async () => {
+    const fetchAndMerge = async () => {
         try {
           const { NotificationsService } = await import('../services');
           const data: any[] = await NotificationsService.getUserNotifications();
+      try { console.log('[WS] polling fetched', { count: Array.isArray(data) ? data.length : 0 }); } catch {}
           const mapped = (Array.isArray(data) ? data : []).map((n: any) => {
             const when = n.createdAt ? new Date(n.createdAt) : new Date();
             return {
@@ -273,6 +338,7 @@ export function useStompNotifications(enabled: boolean = true) {
               read: !!n.isRead,
             } as Notification;
           });
+      try { if (mapped.length) console.log('[WS] polling mapped sample', mapped[0]); } catch {}
           setNotifState(prev => {
             // Merge by id and keep newest first
             const byId = new Map<string, Notification>();
@@ -283,6 +349,7 @@ export function useStompNotifications(enabled: boolean = true) {
           });
         } catch (e) {
           // Silent fail; keep polling
+      try { console.warn('[WS] polling error', e); } catch {}
         }
       };
       // Kick off immediately then interval

@@ -115,38 +115,28 @@ export function useStompNotifications(enabled: boolean = true) {
         console.log('[WS] connected');
         console.log('ĐÃ KẾT NỐI TỚI WEBSOCKET ✅', { at: new Date().toISOString(), url: wsUrlWithToken });
       } catch {}
-      // For admin accounts, write a local notification about successful WS connection (once per session)
-      try {
-        if (role === 'admin' && typeof window !== 'undefined' && !(window as any).__wsAdminConnectNotified) {
-          const now = new Date();
-          const n: Notification = {
-            id: `ws_connected_${now.getTime()}`,
-            type: 'post' as any,
-            message: 'ĐÃ KẾT NỐI TỚI WEBSOCKET ✅',
-            userId: '',
-            targetUserId: '',
-            pending: false,
-            timestamp: { toDate: () => now } as any,
-            read: false,
-          } as Notification;
-          setNotifState(prev => {
-            const notifications = [n, ...prev.notifications];
-            const unreadCount = notifications.filter(x => !x.read).length;
-            return { ...prev, notifications, unreadCount };
-          });
-          (window as any).__wsAdminConnectNotified = true;
-        }
-      } catch {}
+  // No local notification for WS connect to avoid confusion in the UI
   // Subscribe to user notifications queue
       client.subscribe('/user/queue/notifications', (message: IMessage) => {
         try { console.log('[WS] /user/queue/notifications message', { body: message?.body?.slice?.(0, 200) }); } catch {}
         const now = new Date();
         let parsed: any = undefined;
         try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch {}
+        const bodyStr = (typeof message?.body === 'string') ? message.body : '';
+        const extractActor = (s: string): string | undefined => {
+          try {
+            // Vietnamese patterns sent by backend
+            let m = s.match(/Người dùng\s+([^:\n]+?)\s+(?:mới đăng|đã đăng)/i);
+            if (m && m[1]) return m[1].trim();
+            m = s.match(/^\s*([^:\n]+?)\s+đã đăng/i);
+            if (m && m[1]) return m[1].trim();
+          } catch {}
+          return undefined;
+        };
         // Build a clear message for admins: "<username> đã đăng một bài mới ..."
         const typeRaw = (parsed?.type || parsed?.event || '').toString().toLowerCase();
         const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
-        const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
+        const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId || extractActor(bodyStr);
   const postTitle = parsed?.postTitle || parsed?.title;
   const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
   const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${community ? ` trong nhóm ${community}` : ''}${postTitle ? `: "${postTitle}"` : ''}`;
@@ -155,7 +145,7 @@ export function useStompNotifications(enabled: boolean = true) {
           id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
           type: parsed?.type || 'post',
           message: body,
-          userId: parsed?.userId || '',
+          userId: (actor as any) || parsed?.userId || '',
           targetUserId: parsed?.targetUserId || '',
           postId: parsed?.postId,
           postTitle: parsed?.postTitle,
@@ -179,10 +169,20 @@ export function useStompNotifications(enabled: boolean = true) {
           const now = new Date();
           let parsed: any = undefined;
           try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch {}
+          const bodyStr = (typeof message?.body === 'string') ? message.body : '';
+          const extractActor = (s: string): string | undefined => {
+            try {
+              let m = s.match(/Người dùng\s+([^:\n]+?)\s+(?:mới đăng|đã đăng)/i);
+              if (m && m[1]) return m[1].trim();
+              m = s.match(/^\s*([^:\n]+?)\s+đã đăng/i);
+              if (m && m[1]) return m[1].trim();
+            } catch {}
+            return undefined;
+          };
           // Build a clear message for admins: "<username> đã đăng một bài mới ..."
           const typeRaw = (parsed?.type || parsed?.event || '').toString().toLowerCase();
           const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
-          const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
+          const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId || extractActor(bodyStr);
           const postTitle = parsed?.postTitle || parsed?.title;
           const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
           const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${community ? ` trong nhóm ${community}` : ''}${postTitle ? `: "${postTitle}"` : ''}`;
@@ -191,7 +191,7 @@ export function useStompNotifications(enabled: boolean = true) {
             id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
             type: parsed?.type || 'post',
             message: body,
-            userId: parsed?.userId || '',
+            userId: (actor as any) || parsed?.userId || '',
             targetUserId: parsed?.targetUserId || '',
             postId: parsed?.postId,
             postTitle: parsed?.postTitle,

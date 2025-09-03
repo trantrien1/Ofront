@@ -71,13 +71,22 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 	const muted = useColorModeValue("gray.500", "gray.400");
 
 	// Fetch user data - For now, derive from notification (no Firebase)
-	useEffect(() => {
-		setUserData({
-			displayName: notification.userId || "Unknown User",
-			photoURL: "",
-		});
-		setLoading(false);
-	}, [notification.userId]);
+		useEffect(() => {
+			const deriveName = () => {
+				if (notification.userId && String(notification.userId).trim()) return String(notification.userId);
+				const msg = notification.message || '';
+				// Try to extract name from Vietnamese server message
+				try {
+					let m = msg.match(/Người dùng\s+([^:\n]+?)\s+(?:mới đăng|đã đăng)/i);
+					if (m && m[1]) return m[1].trim();
+					m = msg.match(/^\s*([^:\n]+?)\s+đã đăng/i);
+					if (m && m[1]) return m[1].trim();
+				} catch {}
+				return 'Unknown User';
+			};
+			setUserData({ displayName: deriveName(), photoURL: '' });
+			setLoading(false);
+		}, [notification.userId, notification.message]);
 
 	const formatTimeAgoLocal = (timestamp: any) => {
 		if (!timestamp) return "Just now";

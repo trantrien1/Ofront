@@ -76,19 +76,14 @@ export function useStompNotifications(enabled: boolean = true) {
       console.log('[WS] Đang chuẩn bị kết nối tới WebSocket...', wsUrl);
     } catch {}
 
-  let wsUrlWithToken = wsUrl;
-  if (token) {
-    const sep = wsUrl.includes('?') ? '&' : '?';
-    // Send both param names for compatibility with various backends, plus role if available
-    const roleParam = role ? `&role=${encodeURIComponent(role)}` : '';
-    wsUrlWithToken = `${wsUrl}${sep}token=${encodeURIComponent(token)}&access_token=${encodeURIComponent(token)}${roleParam}`;
-  }
-  try { console.log('[WS] connecting', { wsUrlWithToken, transportPref: transportPref || 'sockjs' }); } catch {}
+  // Do NOT append token/role as query params for SockJS; it breaks endpoint matching.
+  const wsUrlFinal = wsUrl;
+  try { console.log('[WS] connecting', { url: wsUrlFinal, transportPref: transportPref || 'sockjs' }); } catch {}
   // Prefer native WebSocket when requested, otherwise SockJS with sensible fallbacks
   const socketLike: any = (() => {
     if (transportPref === 'native') {
       try {
-        let nativeUrl = wsUrlWithToken;
+  let nativeUrl = wsUrlFinal;
         // Convert http/https -> ws/wss if needed
         if (/^https?:/i.test(nativeUrl)) {
           nativeUrl = nativeUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
@@ -117,7 +112,7 @@ export function useStompNotifications(enabled: boolean = true) {
       },
       timeout: 10000,
     };
-    const sj = new SockJS(wsUrlWithToken, undefined as any, options);
+  const sj = new SockJS(wsUrlFinal, undefined as any, options);
     try {
       sj.onopen = () => { try { console.log('[WS] sockjs onopen'); } catch {} };
       sj.onerror = (e: any) => { try { console.log('[WS] sockjs onerror', e); } catch {} };
@@ -150,7 +145,7 @@ export function useStompNotifications(enabled: boolean = true) {
   client.onConnect = (frame: any) => {
       try {
         console.log('[WS] connected');
-        console.log('ĐÃ KẾT NỐI TỚI WEBSOCKET ✅', { at: new Date().toISOString(), url: wsUrlWithToken });
+  console.log('ĐÃ KẾT NỐI TỚI WEBSOCKET ✅', { at: new Date().toISOString(), url: wsUrlFinal });
         console.log('[WS] connect frame', { headers: frame?.headers });
       } catch {}
   // No local notification for WS connect to avoid confusion in the UI

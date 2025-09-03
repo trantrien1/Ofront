@@ -3,7 +3,6 @@ import { Client, IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { useRecoilState } from "recoil";
 import { notificationsState, Notification } from "../atoms/notificationsAtom";
-import { getClientRole } from "../helpers/role";
 
 /**
  * WebSocket/STOMP notifications bridge.
@@ -27,28 +26,19 @@ export function useStompNotifications(enabled: boolean = true) {
     const getToken = () => {
       try {
         const cookie = document.cookie || '';
-        const names = ['token','authToken','accessToken'];
-        for (const name of names) {
-          const m = cookie.match(new RegExp(`(?:^|; )${name}=([^;]+)`));
-          if (m && m[1]) {
-            let v = decodeURIComponent(m[1]);
-            try { const p = JSON.parse(v); if (p && p.token) return String(p.token); } catch {}
-            return v;
-          }
+        const m = cookie.match(/(?:^|; )token=([^;]+)/);
+        if (m && m[1]) {
+          let v = decodeURIComponent(m[1]);
+          try { const p = JSON.parse(v); if (p && p.token) return String(p.token); } catch {}
+          return v;
         }
       } catch {}
-      try {
-        const keys = ['authToken','token','accessToken'];
-        for (const k of keys) {
-          const ls = window.localStorage.getItem(k);
-          if (ls) { try { const p = JSON.parse(ls); if (p && p.token) return String(p.token); } catch {} return ls; }
-        }
-      } catch {}
+      try { const ls = window.localStorage.getItem('authToken'); if (ls) { try { const p = JSON.parse(ls); if (p && p.token) return String(p.token); } catch {} return ls; } } catch {}
       return undefined;
     };
     const token = getToken();
     // Resolve role: prefer persisted, else try to decode from JWT
-  const persistedRole = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || window.localStorage.getItem('userRole') || '') : '').toLowerCase();
+    const persistedRole = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || '') : '').toLowerCase();
     const decodeRoleFromJwt = (t?: string): string | '' => {
       if (!t) return '';
       try {
@@ -59,8 +49,7 @@ export function useStompNotifications(enabled: boolean = true) {
         return r ? String(r).toLowerCase() : '';
       } catch { return ''; }
     };
-  const roleFromHelper = (() => { try { const r = getClientRole(); return r ? String(r).toLowerCase() : ''; } catch { return ''; } })();
-  const role = roleFromHelper || persistedRole || decodeRoleFromJwt(token) || '';
+    const role = persistedRole || decodeRoleFromJwt(token) || '';
     try {
       console.log('[WS] init', { wsUrl, hasToken: !!token, tokenLen: token ? token.length : 0, role });
       console.log('[WS] Đang chuẩn bị kết nối tới WebSocket...', wsUrl);
@@ -72,9 +61,6 @@ export function useStompNotifications(enabled: boolean = true) {
     // Send both param names for compatibility with various backends, plus role if available
     const roleParam = role ? `&role=${encodeURIComponent(role)}` : '';
     wsUrlWithToken = `${wsUrl}${sep}token=${encodeURIComponent(token)}&access_token=${encodeURIComponent(token)}${roleParam}`;
-  } else if (role) {
-    const sep = wsUrl.includes('?') ? '&' : '?';
-    wsUrlWithToken = `${wsUrl}${sep}role=${encodeURIComponent(role)}`;
   }
   try { console.log('[WS] connecting', { wsUrlWithToken, transportPref: transportPref || 'sockjs' }); } catch {}
   // Prefer native WebSocket when requested, otherwise SockJS with sensible fallbacks
@@ -143,9 +129,9 @@ export function useStompNotifications(enabled: boolean = true) {
         const typeRaw = (parsed?.type || parsed?.event || '').toString().toLowerCase();
         const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
         const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
-  const postTitle = parsed?.postTitle || parsed?.title;
-  const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
-  const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${community ? ` trong nhóm ${community}` : ''}${postTitle ? `: "${postTitle}"` : ''}`;
+        const postTitle = parsed?.postTitle || parsed?.title;
+        const community = parsed?.communityName || parsed?.community;
+        const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${postTitle ? `: "${postTitle}"` : ''}''}`;
         const body = (role === 'admin' && isPostEvent) ? adminMessage : (parsed?.message || message?.body || '');
         const n: Notification = {
           id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
@@ -180,8 +166,8 @@ export function useStompNotifications(enabled: boolean = true) {
           const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
           const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
           const postTitle = parsed?.postTitle || parsed?.title;
-          const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
-          const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${community ? ` trong nhóm ${community}` : ''}${postTitle ? `: "${postTitle}"` : ''}`;
+          const community = parsed?.communityName || parsed?.community;
+          const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${postTitle ? `: "${postTitle}"` : ''}''}`;
           const body = isPostEvent ? adminMessage : (parsed?.message || message?.body || '');
           const n: Notification = {
             id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,

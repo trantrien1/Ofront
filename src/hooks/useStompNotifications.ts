@@ -3,6 +3,7 @@ import { Client, IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { useRecoilState } from "recoil";
 import { notificationsState, Notification } from "../atoms/notificationsAtom";
+import { getClientRole } from "../helpers/role";
 
 /**
  * WebSocket/STOMP notifications bridge.
@@ -38,7 +39,7 @@ export function useStompNotifications(enabled: boolean = true) {
     };
     const token = getToken();
     // Resolve role: prefer persisted, else try to decode from JWT
-    const persistedRole = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || '') : '').toLowerCase();
+  const persistedRole = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || '') : '').toLowerCase();
     const decodeRoleFromJwt = (t?: string): string | '' => {
       if (!t) return '';
       try {
@@ -49,7 +50,8 @@ export function useStompNotifications(enabled: boolean = true) {
         return r ? String(r).toLowerCase() : '';
       } catch { return ''; }
     };
-    const role = persistedRole || decodeRoleFromJwt(token) || '';
+  const roleFromHelper = (() => { try { const r = getClientRole(); return r ? String(r).toLowerCase() : ''; } catch { return ''; } })();
+  const role = roleFromHelper || persistedRole || decodeRoleFromJwt(token) || '';
     try {
       console.log('[WS] init', { wsUrl, hasToken: !!token, tokenLen: token ? token.length : 0, role });
       console.log('[WS] Đang chuẩn bị kết nối tới WebSocket...', wsUrl);

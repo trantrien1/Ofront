@@ -3,6 +3,7 @@ import { Client, IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { useRecoilState } from "recoil";
 import { notificationsState, Notification } from "../atoms/notificationsAtom";
+import { getGroupsByUser, type Group } from "../services/groups.service";
 
 /**
  * WebSocket/STOMP notifications bridge.
@@ -12,6 +13,8 @@ import { notificationsState, Notification } from "../atoms/notificationsAtom";
 export function useStompNotifications(enabled: boolean = true) {
   const [notifState, setNotifState] = useRecoilState(notificationsState);
   const clientRef = useRef<Client | null>(null);
+  const subsRef = useRef<{ unsubscribe: () => void; id: string }[]>([]);
+  const destSetRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!enabled) return;
@@ -20,7 +23,7 @@ export function useStompNotifications(enabled: boolean = true) {
       try { console.log('[WS] already active, skipping re-init'); } catch {}
       return;
     }
-  const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'https://rehearten-production.up.railway.app/ws';
+  const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'https://rehearten-production.up.railway.app/ws/websocket';
   const transportPref = (process.env.NEXT_PUBLIC_WS_TRANSPORT || '').toLowerCase(); // 'sockjs' | 'native'
     // Resolve token and role client-side
     const getToken = () => {
@@ -92,6 +95,42 @@ export function useStompNotifications(enabled: boolean = true) {
     });
     clientRef.current = client;
 
+    const subscribeOnce = (dest: string, handler: (message: IMessage) => void) => {
+      if (!dest || destSetRef.current.has(dest)) return;
+      try { console.log('[WS] subscribing', dest); } catch {}
+      const sub = client.subscribe(dest, handler);
+      subsRef.current.push({ unsubscribe: () => sub.unsubscribe(), id: dest });
+      destSetRef.current.add(dest);
+    };
+
+    const mapIncomingToNotification = (message: IMessage, role: string): Notification => {
+      const now = new Date();
+      let parsed: any = undefined;
+      try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch {}
+      const typeRaw = (parsed?.type || parsed?.event || '').toString().toLowerCase();
+      const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
+      const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
+      const postTitle = parsed?.postTitle || parsed?.title;
+      const community = parsed?.communityName || parsed?.community || parsed?.groupName || parsed?.group;
+      const inGroupSuffix = community ? ` trong nhóm ${community}` : '';
+      const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${inGroupSuffix}${postTitle ? `: "${postTitle}"` : ''}`;
+      const body = (role === 'admin' && isPostEvent) ? adminMessage : (parsed?.message || message?.body || '');
+      const n: Notification = {
+        id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
+        type: (parsed?.type || (isPostEvent ? 'post' : 'post')) as any,
+        message: body,
+        userId: parsed?.userId || '',
+        targetUserId: parsed?.targetUserId || '',
+        postId: parsed?.postId,
+        postTitle: parsed?.postTitle || parsed?.title,
+        communityName: community,
+        pending: parsed?.pending ?? true,
+        timestamp: { toDate: () => now } as any,
+        read: false,
+      } as Notification;
+      return n;
+    };
+
     client.onConnect = () => {
       try {
         console.log('[WS] connected');
@@ -120,33 +159,9 @@ export function useStompNotifications(enabled: boolean = true) {
         }
       } catch {}
   // Subscribe to user notifications queue
-      client.subscribe('/user/queue/notifications', (message: IMessage) => {
+      subscribeOnce('/user/queue/notifications', (message: IMessage) => {
         try { console.log('[WS] /user/queue/notifications message', { body: message?.body?.slice?.(0, 200) }); } catch {}
-        const now = new Date();
-        let parsed: any = undefined;
-        try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch {}
-        // Build a clear message for admins: "<username> đã đăng một bài mới ..."
-        const typeRaw = (parsed?.type || parsed?.event || '').toString().toLowerCase();
-        const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
-        const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
-        const postTitle = parsed?.postTitle || parsed?.title;
-        const community = parsed?.communityName || parsed?.community;
-        const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${postTitle ? `: "${postTitle}"` : ''}''}`;
-        const body = (role === 'admin' && isPostEvent) ? adminMessage : (parsed?.message || message?.body || '');
-        const n: Notification = {
-          id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
-          type: parsed?.type || 'post',
-          message: body,
-          userId: parsed?.userId || '',
-          targetUserId: parsed?.targetUserId || '',
-          postId: parsed?.postId,
-          postTitle: parsed?.postTitle,
-          communityName: parsed?.communityName,
-          pending: parsed?.pending ?? true,
-          timestamp: { toDate: () => now } as any,
-          read: false,
-        } as Notification;
-        try { console.log('[WS] mapped notification', { type: n.type, postId: n.postId, pending: n.pending }); } catch {}
+        const n = mapIncomingToNotification(message, role);
         setNotifState(prev => {
           const notifications = [n, ...prev.notifications];
           const unreadCount = notifications.filter(x => !x.read).length;
@@ -156,39 +171,47 @@ export function useStompNotifications(enabled: boolean = true) {
       // Fallback/broadcast topic for admins
       if (role === 'admin') {
         try { console.log('[WS] subscribing /topic/admin-notifications'); } catch {}
-        client.subscribe('/topic/admin-notifications', (message: IMessage) => {
+        subscribeOnce('/topic/admin-notifications', (message: IMessage) => {
           try { console.log('[WS] /topic/admin-notifications message', { body: message?.body?.slice?.(0, 200) }); } catch {}
-          const now = new Date();
-          let parsed: any = undefined;
-          try { parsed = message?.body ? JSON.parse(message.body) : undefined; } catch {}
-          // Build a clear message for admins: "<username> đã đăng một bài mới ..."
-          const typeRaw = (parsed?.type || parsed?.event || '').toString().toLowerCase();
-          const isPostEvent = ['post', 'post_created', 'new_post', 'create_post'].includes(typeRaw);
-          const actor = parsed?.userName || parsed?.username || parsed?.authorName || parsed?.createdByName || parsed?.createdBy || parsed?.displayName || parsed?.email || parsed?.userId;
-          const postTitle = parsed?.postTitle || parsed?.title;
-          const community = parsed?.communityName || parsed?.community;
-          const adminMessage = `${actor || 'Người dùng'} đã đăng một bài mới${postTitle ? `: "${postTitle}"` : ''}''}`;
-          const body = isPostEvent ? adminMessage : (parsed?.message || message?.body || '');
-          const n: Notification = {
-            id: `${now.getTime()}_${Math.random().toString(36).slice(2)}`,
-            type: parsed?.type || 'post',
-            message: body,
-            userId: parsed?.userId || '',
-            targetUserId: parsed?.targetUserId || '',
-            postId: parsed?.postId,
-            postTitle: parsed?.postTitle,
-            communityName: parsed?.communityName,
-            pending: parsed?.pending ?? true,
-            timestamp: { toDate: () => now } as any,
-            read: false,
-          } as Notification;
-          try { console.log('[WS] mapped admin notification', { type: n.type, postId: n.postId, pending: n.pending }); } catch {}
+          const n = mapIncomingToNotification(message, role);
           setNotifState(prev => {
             const notifications = [n, ...prev.notifications];
             const unreadCount = notifications.filter(x => !x.read).length;
             return { ...prev, notifications, unreadCount };
           });
         });
+
+        // Subscribe to per-group admin topics for groups user moderates/admins/owns
+        (async () => {
+          try {
+            const list = await getGroupsByUser({ ttlMs: 30000 });
+            const managed = (Array.isArray(list) ? list : []).filter((g: Group) => {
+              const r = (g.userRole || '').toLowerCase();
+              return r.includes('admin') || r.includes('owner') || r.includes('moderator') || r.includes('mod');
+            });
+            const tmplRaw = (process.env.NEXT_PUBLIC_WS_GROUP_TOPIC_TEMPLATES || '/topic/group/{id}/admin-notifications,/topic/group/{id}/notifications').split(',');
+            const templates = tmplRaw.map(s => s.trim()).filter(Boolean);
+            for (const g of managed) {
+              const gid = String(g.id);
+              for (const t of templates) {
+                const dest = t.replace('{id}', gid);
+                subscribeOnce(dest, (message: IMessage) => {
+                  try { console.log('[WS] group message', { dest, body: message?.body?.slice?.(0, 200) }); } catch {}
+                  const n = mapIncomingToNotification(message, role);
+                  // Ensure communityName present if missing
+                  if (!n.communityName && g?.name) (n as any).communityName = g.name;
+                  setNotifState(prev => {
+                    const notifications = [n, ...prev.notifications];
+                    const unreadCount = notifications.filter(x => !x.read).length;
+                    return { ...prev, notifications, unreadCount };
+                  });
+                });
+              }
+            }
+          } catch (e) {
+            try { console.warn('[WS] failed to subscribe group topics', e); } catch {}
+          }
+        })();
       }
     };
 
@@ -206,6 +229,14 @@ export function useStompNotifications(enabled: boolean = true) {
     (window as any).__wsActive = true;
     return () => {
       try { console.log('[WS] deactivate'); } catch {}
+      try {
+        // Unsubscribe all custom subscriptions
+        for (const s of subsRef.current) {
+          try { s.unsubscribe(); } catch {}
+        }
+        subsRef.current = [];
+        destSetRef.current.clear();
+      } catch {}
       client.deactivate();
       clientRef.current = null;
       (window as any).__wsActive = false;

@@ -3,24 +3,9 @@ import { useRecoilState } from "recoil";
 import { userState, UserData } from "../atoms/userAtom";
 import nookies from "nookies";
 import request from "../services/request";
-import { updateRequestToken } from "../services/request";
 
-// lightweight JWT payload decode (no verification) - works on server and client
-const decodeJwt = (token: string) => {
-  try {
-    const parts = token.split(".");
-    if (parts.length < 2) return null;
-    const payload = parts[1];
-    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const decoded =
-      typeof window !== "undefined" && typeof window.atob === "function"
-        ? window.atob(b64)
-        : Buffer.from(b64, "base64").toString("binary");
-    return JSON.parse(decoded);
-  } catch (e) {
-    return null;
-  }
-};
+// With HttpOnly cookies, we cannot read the token on the client.
+// We infer minimal auth state from non-sensitive values (role/username) stored client-side at login.
 
 const useAuth = () => {
   const isClient = typeof window !== 'undefined';
@@ -28,78 +13,31 @@ const useAuth = () => {
   const [currentUser, setCurrentUser] = useRecoilState(userState);
 
   const checkAuth = () => {
-    const cookies = nookies.get(undefined);
-    let token = cookies?.token as string | undefined;
-
-    // Fallback to localStorage token for environments where cookies are unreliable (e.g., VS Code Simple Browser)
-    if (!token && typeof window !== "undefined") {
-      try {
-        const lsToken = window.localStorage.getItem("authToken") || undefined;
-        if (lsToken) token = lsToken;
-      } catch {}
-    }
-
-    if (!token) {
-      // No token anywhere -> clear user and auth header
-      setCurrentUser(null);
-      updateRequestToken("");
-      // Clear any persisted role on logout/missing token
-      try { if (typeof window !== "undefined") window.localStorage.removeItem("role"); } catch {}
-      return;
-    }
-
-    const payload = decodeJwt(token);
-    if (!payload) {
-      setCurrentUser(null);
-      // Clear invalid token
-      try { nookies.destroy(undefined, "token"); } catch {}
-      updateRequestToken("");
-      try { if (typeof window !== "undefined") window.localStorage.removeItem("role"); } catch {}
-      return;
-    }
-
-    // Check if token is expired
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
-      setCurrentUser(null);
-      // Clear expired token
-      try { nookies.destroy(undefined, "token"); } catch {}
-      updateRequestToken("");
-      try { if (typeof window !== "undefined") window.localStorage.removeItem("role"); } catch {}
-      return;
-    }
-
-    // Set auth header for future requests
-    updateRequestToken(token);
-
-    // Map payload to UserData shape where possible
-    // Extract a role-like field from JWT if available
-    const rawRole = (payload as any)?.role
-      || (Array.isArray((payload as any)?.roles) ? (payload as any).roles[0] : undefined)
-      || ((payload as any)?.isAdmin ? 'admin' : undefined);
-    // Normalize to lowercase for consistency across app
-    const role = rawRole ? String(rawRole).toLowerCase() : undefined;
-
-    const user = {
-      uid: payload.sub || payload.uid || payload.username || "",
-      email: payload.email || null,
-      displayName: payload.name || payload.username || null,
-      photoURL: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      // Include role on the user object for convenience (avoid rendering it by default)
-      role,
-    } as any;
-
-    setCurrentUser(user);
-
-    // Persist role for client-side guards (e.g., admin dashboard)
+    // If server session exists (HttpOnly cookie), our API calls will work.
+    // For UI state, use role and username stored locally at login.
+    let role: string | null = null;
+    let username: string | null = null;
     try {
       if (typeof window !== 'undefined') {
-  if (role) window.localStorage.setItem('role', role);
-        else window.localStorage.removeItem('role');
+        role = window.localStorage.getItem('role');
+        username = window.localStorage.getItem('username');
       }
     } catch {}
+
+    if (role) {
+      const user = {
+        uid: username || '',
+        email: null,
+        displayName: username || null,
+        photoURL: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        role,
+      } as any;
+      setCurrentUser(user);
+    } else {
+      setCurrentUser(null);
+    }
   };
 
   useEffect(() => {

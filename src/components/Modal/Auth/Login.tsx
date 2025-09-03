@@ -3,8 +3,7 @@ import { Button, Flex, Text } from "@chakra-ui/react";
 import { ModalView } from "../../../atoms/authModalAtom";
 // Firebase removed
 import InputItem from "../../Layout/InputItem";
-import { UsersService, request } from "../../../services";
-import { updateRequestToken } from "../../../services/request";
+import { UsersService } from "../../../services";
 import nookies from "nookies";
 import { useSetRecoilState } from "recoil";
 import { userState } from "../../../atoms/userAtom";
@@ -43,115 +42,17 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
   const data: any = await UsersService.login(requestBody);
   try { console.log("[login] response typeof=", typeof data, "keys=", data && typeof data === 'object' ? Object.keys(data) : []); } catch {}
 
-        // data could be a string or object. Try to extract token
-        let token: string | undefined;
-        if (!data) throw new Error("Empty response from server");
-        if (typeof data === "string") {
-          // try parse
-          try {
-            const parsed = JSON.parse(data);
-            token = parsed?.token || parsed?.accessToken || parsed?.data?.token;
-          } catch (e) {
-            // maybe backend returns token as raw string
-            token = data;
-          }
-        } else if (typeof data === "object") {
-          token = data?.token || data?.accessToken || data?.data?.token;
-        }
-
-
-  if (!token) {
-          setFormError("Đăng nhập thành công nhưng không nhận được token");
-          return;
-        }
-
-        // normalize token: strip surrounding quotes and whitespace
-        const normalize = (t?: string) => {
-          if (!t) return t;
-          let s = t.trim();
-          if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1, -1);
-          if (s.startsWith("'") && s.endsWith("'")) s = s.slice(1, -1);
-          return s;
-        };
-        token = normalize(token);
-
-        // Some backends wrap token and role inside a JSON string: {"token":"<jwt>","role":"admin"}
-        // If detected, extract inner token and capture role hint from wrapper.
-        let roleFromTokenWrapper: string | null = null;
-        if (typeof token === 'string') {
-          const s = token.trim();
-          if (s.startsWith('{') && s.endsWith('}')) {
-            try {
-              const obj = JSON.parse(s);
-              if (obj && typeof obj.token === 'string' && obj.token) {
-                token = normalize(obj.token) as string;
-              }
-              if (obj && typeof obj.role === 'string' && obj.role) {
-                roleFromTokenWrapper = obj.role;
-              }
-            } catch {}
-          }
-        }
-
-  // store cookie with long expiration (explicit SameSite/path to ensure browser sends it to local API)
-  // Token is checked above; assert it's a string for TypeScript
-        // only set cookie if token is a string (TypeScript guard)
-        if (typeof token === "string") {
-          try {
-            // Primary method: use nookies
-            nookies.set(undefined, "token", token, { 
-              path: "/", 
-              sameSite: "lax",
-              maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
-              httpOnly: false, // allow client-side access
-              secure: false // set to true in production with HTTPS
-            });
-          } catch (e) {
-            // Fallback method: direct document.cookie for environments like VS Code Simple Browser
-            const expires = new Date();
-            expires.setDate(expires.getDate() + 30); // 30 days
-            document.cookie = `token=${token}; path=/; SameSite=Lax; expires=${expires.toUTCString()}`;
-          }
-          
-          // BACKUP: Also store in localStorage for VS Code Simple Browser compatibility
-          try {
-            localStorage.setItem("authToken", token);
-          } catch (e) {
-            // ignore
-          }
-        }
-
-        // set default header for axios instance used across services
-        updateRequestToken(token);
-
-        // decode token payload and set current user in Recoil (lightweight decode)
-        let jwtPayload: any = null;
-        if (token) {
-          try {
-            const part = (token as string).split(".")[1];
-            const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
-            jwtPayload = JSON.parse(json);
-          } catch (e) {
-            jwtPayload = null;
-          }
-        }
-
-  // IMPORTANT: Prefer backend-provided role or wrapper role; fallback to a single 'role' claim in JWT.
-  let wrapperRoleFromData: string | null = null;
-  if (typeof data === 'object' && data && typeof (data as any).token === 'string') {
-    const tStr = ((data as any).token as string).trim();
-    if (tStr.startsWith('{') && tStr.endsWith('}')) {
-      try { const obj = JSON.parse(tStr); if (obj && typeof obj.role === 'string') wrapperRoleFromData = obj.role; } catch {}
-    }
-  }
-  const backendRole: any = (typeof data === "object" && data) ? ((data as any).role || (data as any)?.user?.role || (data as any)?.data?.role || wrapperRoleFromData || roleFromTokenWrapper) : (roleFromTokenWrapper || null);
-  const tokenRole: any = jwtPayload && typeof jwtPayload.role === "string" ? jwtPayload.role : null;
-  const role: string | null = (backendRole ?? tokenRole) ? String(backendRole ?? tokenRole) : null;
+              if (!data) throw new Error("Empty response from server");
+              // Do not set token on client; rely on HttpOnly cookie set by server via /api/login proxy
+              // Extract role from response (backend returns role)
+              const role: string | null = (typeof data === 'object' && data)
+                ? (String((data as any)?.role || (data as any)?.data?.role || '').toLowerCase() || null)
+                : null;
 
         const user = {
-          uid: jwtPayload?.sub || jwtPayload?.uid || jwtPayload?.username || "",
-          email: jwtPayload?.email || null,
-          displayName: jwtPayload?.name || jwtPayload?.username || null,
+          uid: form.username, // minimal until a /me endpoint is available
+          email: null,
+          displayName: form.username,
           photoURL: null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -164,8 +65,8 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
           const cookieRole = cookies?.role || cookies?.ROLE || cookies?.userRole || cookies?.USER_ROLE || null;
           const cookieUser = cookies?.username || cookies?.user || null;
           if (typeof window !== "undefined") {
-            // Print in the requested format with the actual JWT string and resolved role
-            console.log("Định dạng response khi login\n" + JSON.stringify({ token, role: role ?? undefined }, null, 4));
+            // Print resolved role (token is HttpOnly and not exposed)
+            console.log("Định dạng response khi login\n" + JSON.stringify({ role: role ?? undefined }, null, 4));
             console.log(
               "Login result (core fields):",
               JSON.stringify({ uid: user.uid, email: user.email, role: user.role ?? null }, null, 2)
@@ -174,7 +75,7 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
           }
         } catch {}
 
-        // Persist role cookie so client-side guards can read it
+    // Persist role cookie/localStorage so client-side guards can read it (non-sensitive)
         try {
           if (role) {
             const roleStr = String(role).toLowerCase();
@@ -185,6 +86,10 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
               httpOnly: false,
               secure: false,
             });
+            try {
+              localStorage.setItem('role', roleStr);
+              localStorage.setItem('username', form.username);
+            } catch {}
           }
         } catch {}
 

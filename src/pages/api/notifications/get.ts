@@ -23,10 +23,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Forward auth: read Bearer from cookie token or Authorization header
+    // Forward auth: prefer cookie token, also add as Authorization and Cookie for upstream compatibility
     const token = cleanToken(req.cookies?.token as any) || (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7) : "");
     const headers: Record<string, string> = { Accept: "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      headers["Cookie"] = `token=${encodeURIComponent(token)}`;
+    }
 
     const upstream = `${UPSTREAM}/notifications/get`;
     const r = await fetch(upstream, { method: "GET", headers });

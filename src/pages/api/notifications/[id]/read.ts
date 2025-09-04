@@ -27,7 +27,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const token = cleanToken(req.cookies?.token as any) || (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.substring(7) : "");
     const headers: Record<string, string> = { Accept: "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      headers["Cookie"] = `token=${encodeURIComponent(token)}`;
+    }
 
     const upstream = `${UPSTREAM}/notifications/${encodeURIComponent(String(id))}/read`;
     const r = await fetch(upstream, { method: "PUT", headers });

@@ -301,6 +301,14 @@ const Sidebar: React.FC = () => {
               path="/anime"
               isActive={isActivePage("/anime")}
             />
+            {user?.role === 'admin' && (
+              <NavItem
+                icon={FaCode}
+                label="Admin dashboard"
+                path="/admin"
+                isActive={router.pathname.startsWith("/admin")}
+              />
+            )}
           </VStack>
         </Box>
 

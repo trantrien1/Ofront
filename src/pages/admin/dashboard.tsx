@@ -35,6 +35,7 @@ import {
   MenuList,
   MenuItem,
   IconButton,
+  Spinner,
 } from '@chakra-ui/react';
 import {
   FiUsers,
@@ -49,6 +50,7 @@ import {
 } from 'react-icons/fi';
 import { useRouter } from 'next/router';
 import nookies from 'nookies';
+import { getPendingPosts, approvePostById, type PendingPost } from '../../services/admin-approvals.service';
 
 // Mock data - replace with real API calls
 const mockStats = {
@@ -150,6 +152,9 @@ const AdminDashboard: React.FC = () => {
   const [recentPosts, setRecentPosts] = useState(mockRecentPosts);
   const [recentUsers, setRecentUsers] = useState(mockRecentUsers);
   const [reports, setReports] = useState(mockReports);
+  const [pendingPosts, setPendingPosts] = useState<PendingPost[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [pendingError, setPendingError] = useState<any>(null);
   const toast = useToast();
   const router = useRouter();
   const [loadingGuard, setLoadingGuard] = useState(true);
@@ -196,7 +201,22 @@ const AdminDashboard: React.FC = () => {
     // fetchRecentPosts();
     // fetchRecentUsers();
     // fetchReports();
-  }, []);
+    // Load pending posts when authorized
+    const load = async () => {
+      if (!isAuthorized) return;
+      setLoadingPending(true);
+      setPendingError(null);
+      try {
+        const list = await getPendingPosts();
+        setPendingPosts(Array.isArray(list) ? list : []);
+      } catch (e: any) {
+        setPendingError(e?.response?.data || e?.message || String(e));
+      } finally {
+        setLoadingPending(false);
+      }
+    };
+    load();
+  }, [isAuthorized]);
 
   if (loadingGuard) {
     return (
@@ -373,6 +393,7 @@ const AdminDashboard: React.FC = () => {
             <Tab>Recent Posts</Tab>
             <Tab>Recent Users</Tab>
             <Tab>Reports</Tab>
+            <Tab>Duyệt bài</Tab>
           </TabList>
 
           <TabPanels>
@@ -609,6 +630,95 @@ const AdminDashboard: React.FC = () => {
                           </Td>
                         </Tr>
                       ))}
+                    </Tbody>
+                  </Table>
+                </Box>
+              </Box>
+            </TabPanel>
+
+            {/* Pending Posts (Approval) Tab */}
+            <TabPanel px={0}>
+              <Box
+                border="1px"
+                borderColor="gray.200"
+                borderRadius="md"
+                bg="white"
+                shadow="sm"
+              >
+                <Box p={4} borderBottom="1px" borderColor="gray.200">
+                  <HStack justify="space-between">
+                    <Heading size="md">Bài viết chờ duyệt</Heading>
+                    <Button size="sm" onClick={async () => {
+                      setLoadingPending(true);
+                      setPendingError(null);
+                      try {
+                        const list = await getPendingPosts();
+                        setPendingPosts(Array.isArray(list) ? list : []);
+                      } catch (e: any) {
+                        setPendingError(e?.response?.data || e?.message || String(e));
+                      } finally {
+                        setLoadingPending(false);
+                      }
+                    }} isLoading={loadingPending}>
+                      Làm mới
+                    </Button>
+                  </HStack>
+                </Box>
+                {pendingError && (
+                  <Box m={4} p={3} borderWidth="1px" borderRadius="md" bg="red.50" borderColor="red.200">
+                    <Text fontWeight="bold" mb={1}>Không tải được danh sách</Text>
+                    <Text fontSize="sm" whiteSpace="pre-wrap">{typeof pendingError === 'string' ? pendingError : JSON.stringify(pendingError, null, 2)}</Text>
+                  </Box>
+                )}
+                <Box>
+                  <Table variant="simple">
+                    <Thead>
+                      <Tr>
+                        <Th>ID</Th>
+                        <Th>Tiêu đề</Th>
+                        <Th>Tác giả</Th>
+                        <Th>Nhóm</Th>
+                        <Th>Trạng thái</Th>
+                        <Th>Hành động</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {(!pendingPosts || pendingPosts.length === 0) && (
+                        <Tr>
+                          <Td colSpan={6}>
+                            <VStack py={8}>
+                              {loadingPending ? <Spinner /> : <Text>Không có bài chờ duyệt.</Text>}
+                            </VStack>
+                          </Td>
+                        </Tr>
+                      )}
+                      {pendingPosts && pendingPosts.map((p: any) => {
+                        const author = p?.userOfPost?.username;
+                        const group = p?.groupOfPost?.name || 'Cộng đồng';
+                        const title = p?.title || '(Không có tiêu đề)';
+                        return (
+                          <Tr key={String(p.id)}>
+                            <Td>{String(p.id)}</Td>
+                            <Td maxW="360px"><Text noOfLines={2}>{title}</Text></Td>
+                            <Td>{author}</Td>
+                            <Td>{group}</Td>
+                            <Td><Badge colorScheme="yellow">Chờ duyệt</Badge></Td>
+                            <Td>
+                              <Button size="sm" colorScheme="green" onClick={async () => {
+                                try {
+                                  await approvePostById(p.id);
+                                  setPendingPosts(prev => prev.filter(x => String(x.id) !== String(p.id)));
+                                  toast({ title: 'Đã duyệt bài', description: `ID ${p.id}`, status: 'success', duration: 2500, isClosable: true });
+                                } catch (e: any) {
+                                  console.error('approve failed', e);
+                                  const msg = e?.response?.data ? JSON.stringify(e.response.data) : (e?.message || 'Lỗi không xác định');
+                                  toast({ title: 'Duyệt thất bại', description: msg, status: 'error', duration: 3500, isClosable: true });
+                                }
+                              }}>Duyệt</Button>
+                            </Td>
+                          </Tr>
+                        );
+                      })}
                     </Tbody>
                   </Table>
                 </Box>

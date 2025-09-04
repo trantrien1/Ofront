@@ -22,32 +22,7 @@ export function useStompNotifications(enabled: boolean = true) {
     }
   const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'https://rehearten-production.up.railway.app/ws';
   const transportPref = (process.env.NEXT_PUBLIC_WS_TRANSPORT || '').toLowerCase(); // 'sockjs' | 'native'
-    // Resolve token and role client-side
-    const getToken = () => {
-      try {
-        const cookie = document.cookie || '';
-        const m = cookie.match(/(?:^|; )token=([^;]+)/);
-        if (m && m[1]) {
-          let v = decodeURIComponent(m[1]);
-          try { const p = JSON.parse(v); if (p && p.token) return String(p.token); } catch {}
-          return v;
-        }
-      } catch {}
-      try { const ls = window.localStorage.getItem('authToken'); if (ls) { try { const p = JSON.parse(ls); if (p && p.token) return String(p.token); } catch {} return ls; } } catch {}
-      return undefined;
-    };
-    const token = getToken();
-    const decodeNameFromJwt = (t?: string): { username?: string; sub?: string; name?: string } => {
-      if (!t) return {};
-      try {
-        const part = t.split('.')[1];
-        const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'));
-        const payload = JSON.parse(json);
-        return { username: payload?.username, sub: payload?.sub, name: payload?.name };
-      } catch { return {}; }
-    };
-    const principalGuess = decodeNameFromJwt(token);
-    // Resolve role: prefer persisted (cookie/localStorage), else try to decode from JWT
+    // Resolve role: prefer persisted (cookie/localStorage). Token is HttpOnly; don't try to read/parse it on client.
     const readCookie = (name: string) => {
       try {
         const cookie = document.cookie || '';
@@ -59,20 +34,9 @@ export function useStompNotifications(enabled: boolean = true) {
     const cookieRole = (readCookie('role') || readCookie('ROLE') || readCookie('userRole') || readCookie('USER_ROLE') || '').toLowerCase();
     const lsRole = (typeof window !== 'undefined' ? String(window.localStorage.getItem('role') || '') : '').toLowerCase();
     const persistedRole = cookieRole || lsRole;
-    const decodeRoleFromJwt = (t?: string): string | '' => {
-      if (!t) return '';
-      try {
-        const part = t.split('.')[1];
-        const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'));
-        const payload = JSON.parse(json);
-        const r = payload?.role || (Array.isArray(payload?.roles) ? payload.roles[0] : undefined) || (payload?.isAdmin ? 'admin' : undefined);
-        return r ? String(r).toLowerCase() : '';
-      } catch { return ''; }
-    };
-    const role = persistedRole || decodeRoleFromJwt(token) || '';
+    const role = persistedRole || '';
     try {
-      console.log('[WS] init', { wsUrl, hasToken: !!token, tokenLen: token ? token.length : 0, role });
-      console.log('[WS] principal guess', principalGuess);
+      console.log('[WS] init', { wsUrl, role });
       console.log('[WS] Đang chuẩn bị kết nối tới WebSocket...', wsUrl);
     } catch {}
 
@@ -124,7 +88,8 @@ export function useStompNotifications(enabled: boolean = true) {
       webSocketFactory: () => socketLike as any,
       debug: (str: string) => { if (process.env.NODE_ENV !== 'production') console.log('[STOMP]', str); },
       reconnectDelay: 3000,
-  connectHeaders: token ? ({ Authorization: `Bearer ${token}`, ...(role ? { 'X-User-Role': role } : {}) } as any) : (role ? ({ 'X-User-Role': role } as any) : undefined),
+  // With HttpOnly cookies, auth is handled by the SockJS/WebSocket handshake. Send only non-sensitive role hint if available.
+  connectHeaders: role ? ({ 'X-User-Role': role } as any) : undefined,
     });
     clientRef.current = client;
 
@@ -287,7 +252,7 @@ export function useStompNotifications(enabled: boolean = true) {
       setTimeout(() => {
         try {
           if (userQueueCount === 0 && adminTopicCount === 0) {
-            console.warn('[WS][WATCH] no messages received yet', { role, principalGuess, hint: 'If backend uses convertAndSendToUser(username,...), ensure Principal.name equals username' });
+            console.warn('[WS][WATCH] no messages received yet', { role, hint: 'If backend uses convertAndSendToUser(username,...), ensure Principal.name equals username' });
           }
         } catch {}
       }, 15000);

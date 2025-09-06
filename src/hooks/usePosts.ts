@@ -5,7 +5,7 @@ import { Community, communityState } from "../atoms/communitiesAtom";
 import { Post, postState, PostVote } from "../atoms/postsAtom";
 import { useRouter } from "next/router";
 import { userState } from "../atoms/userAtom";
-import { likePost } from "../services/posts.service";
+import { likePost, deletePost as deletePostSvc } from "../services/posts.service";
 
 const usePosts = (communityData?: Community) => {
   const user = useRecoilValue(userState) as any;
@@ -145,7 +145,26 @@ const usePosts = (communityData?: Community) => {
 
   const onDeletePost = async (post: Post): Promise<boolean> => {
     try {
-      setPostStateValue((prev) => ({
+      const currentUser = (user as any) || {};
+      const currentUid = currentUser?.uid ? String(currentUser.uid).toLowerCase() : null;
+      const candidates: string[] = [];
+      try {
+        if ((post as any).creatorId) candidates.push(String((post as any).creatorId));
+        if ((post as any).userUID) candidates.push(String((post as any).userUID));
+        if (post.userDisplayText) candidates.push(String(post.userDisplayText));
+        if ((post as any).userOfPost?.username) candidates.push(String((post as any).userOfPost.username));
+        if ((post as any).userOfPost?.userUID) candidates.push(String((post as any).userOfPost.userUID));
+      } catch {}
+      const normalized = candidates.filter(Boolean).map(v => v.trim().toLowerCase());
+      const isOwner = !!currentUid && normalized.includes(currentUid);
+      const isAdmin = currentUser?.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        console.warn("User attempted to delete post without permission");
+        return false;
+      }
+      await deletePostSvc({ postId: post.id });
+
+  setPostStateValue((prev) => ({
         ...prev,
         posts: prev.posts.filter((item) => item.id !== post.id),
         postsCache: {
@@ -153,7 +172,6 @@ const usePosts = (communityData?: Community) => {
           [post.communityId]: prev.postsCache[post.communityId]?.filter((item) => item.id !== post.id),
         },
       }));
-
       return true;
     } catch (error) {
       console.error("onDeletePost error", error);

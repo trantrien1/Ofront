@@ -198,7 +198,7 @@ const CoursesPage: React.FC = () => {
     <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} py={6}>
       <Text fontSize="2xl" fontWeight="bold" mb={2}>Courses</Text>
   <Text fontSize="sm" color={descCol} mb={4}>
-        Khóa học giúp bạn giảm strees
+        Khóa học được sưu tầm từ một số nguồn trên youtube.
       </Text>
 
   <Flex justify="space-between" align="center" mb={4} gap={4} wrap="wrap">

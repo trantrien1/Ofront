@@ -8,7 +8,7 @@ import { useSetRecoilState, useRecoilValue } from "recoil";
 import { authModalState } from "../../../atoms/authModalAtom";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
 import dynamic from "next/dynamic";
-
+import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
 // Disable SSR for this component to prevent hydration issues
 const Comments = dynamic(() => Promise.resolve(CommentsComponent), {
   ssr: false,
@@ -287,7 +287,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         postId: node.postId?.toString?.() || selectedPost?.id || "",
         postTitle: selectedPost?.title || "",
         text: node.content,
-        createdAt: node.createdAt ? { seconds: Math.floor(new Date(node.createdAt).getTime() / 1000) } as any : { seconds: Date.now() / 1000 } as any,
+        createdAt: node.createdAt ? ({ seconds: Math.floor(new Date(node.createdAt).getTime() / 1000) } as any) : undefined,
         parentId: node.parentId ? (node.parentId.toString?.() || node.parentId) : null,
         replies: Array.isArray(node.commentsChildren) ? node.commentsChildren.map(mapNode) : [],
         replyCount: Array.isArray(node.commentsChildren) ? node.commentsChildren.length : (node.replyCount || 0),

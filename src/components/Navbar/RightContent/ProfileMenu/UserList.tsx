@@ -6,10 +6,9 @@ import { MdOutlineLogin } from "react-icons/md";
 import { useResetRecoilState, useSetRecoilState } from "recoil";
 import { communityState } from "../../../../atoms/communitiesAtom";
 import { useRouter } from "next/router";
-import nookies from "nookies";
-import { request } from "../../../../services";
-import { updateRequestToken } from "../../../../services/request";
+import { updateRequestToken } from "../../../../services/request"; // still used in extra just in case
 import { clearGroupsCache } from "../../../../services/groups.service";
+import { performLogout } from "../../../../helpers/logout";
 import { userState } from "../../../../atoms/userAtom";
 
 type UserListProps = {};
@@ -21,44 +20,44 @@ const UserList: React.FC<UserListProps> = () => {
   const setCurrentUser = useSetRecoilState(userState);
 
   const logout = async () => {
-    // Clear token cookie with proper options
-    try {
-      nookies.destroy(undefined, "token", { path: "/" });
-      nookies.destroy(undefined, "role", { path: "/" });
-      // Also try to clear with different path options to be sure
-      nookies.set(undefined, "token", "", { 
-        path: "/", 
-        maxAge: -1, // immediately expire
-        sameSite: "lax"
-      });
-      nookies.set(undefined, "role", "", { 
-        path: "/", 
-        maxAge: -1, // immediately expire
-        sameSite: "lax"
-      });
-      // remove any NextAuth-like or fallback storage
-      if (typeof window !== "undefined") {
-        try { window.localStorage.removeItem("authToken"); } catch {}
-        try { window.localStorage.removeItem("userState"); } catch {}
-        try { window.localStorage.removeItem("managedGroups"); } catch {}
+    await performLogout({
+      redirect: (p) => router.push(p),
+      targetPath: "/app",
+      extra: async () => {
+        try { updateRequestToken(""); } catch {}
+        try { localStorage.removeItem("access_token"); } catch {}
+        try { localStorage.removeItem("refresh_token"); } catch {}
+        try { sessionStorage.removeItem("access_token"); } catch {}
+
+        // Recoil resets
+        try { resetCommunityState(); } catch {}
+        try { setCurrentUser(null); } catch {}
+
+        // Clear groups cache
+        try { clearGroupsCache(); } catch {}
+
+        // Placeholder: clear other states if exist (notifications, posts, etc.)
+        // try { resetNotificationsState(); } catch {}
+        // try { resetPostsState(); } catch {}
+
+        // Placeholder: deactivate websocket/stomp if integrated
+        // try { await stompClient?.deactivate(); } catch {}
+
+        // Clear Cache Storage (Service Worker) & optional IndexedDB
+        if (typeof window !== 'undefined' && 'caches' in window) {
+          try {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+          } catch {}
+        }
+        // Optional IndexedDB clear example:
+        // try { indexedDB.deleteDatabase('app-db'); } catch {}
+
+        // Analytics/monitoring placeholder
+        // posthog?.reset?.();
+        // Sentry?.setUser?.(null);
       }
-    } catch (e) {
-      // ignore
-    }
-
-    // Remove default Authorization header
-    try {
-      updateRequestToken("");
-    } catch (e) {}
-
-    // Invalidate any in-memory caches that depend on the user
-    try { clearGroupsCache(); } catch {}
-
-    // Reset application state and user
-    resetCommunityState();
-    setCurrentUser(null);
-    // Navigate and force a soft reload to ensure all hooks/components re-evaluate quickly
-    router.push("/");
+    });
   };
 
   const handleProfileClick = () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 // Firebase removed
 import { useRouter } from "next/router";
 import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
@@ -9,10 +9,11 @@ import {
   communityState,
   defaultCommunity,
   CommunityRole,
+  defaultCommunityState,
 } from "../atoms/communitiesAtom";
 // Firebase removed
 // import { getMySnippets } from "../helpers/firestore";
-import { getGroupsByUser, getGroupById } from "../services/groups.service";
+import { getGroupsByUser, getGroupById, clearGroupsCache } from "../services/groups.service";
 import { userState } from "../atoms/userAtom";
 import { useCommunityPermissions } from "./useCommunityPermissions";
 import { joinGroup } from "../services/groups.service";
@@ -28,6 +29,7 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
+  const prevUidRef = useRef<string | undefined>(undefined);
   // Hàm cập nhật role cho cả members và mySnippets
   const handleUpdateRole = (userId: string, newRole: CommunityRole) => {
     // Cập nhật role trong members
@@ -59,18 +61,20 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
   }, []);
 
   useEffect(() => {
-    // Fetch membership snapshot once after mount. Do NOT depend on user state
-    // because it may hydrate later and we can still call the API using cookies.
+    // Fetch membership snapshot once after mount (bypass cache first time)
     if (communityStateValue.initSnippetsFetched || !mounted) return;
-    getSnippets();
+    getSnippets(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, communityStateValue.initSnippetsFetched]);
 
-  const getSnippets = async () => {
+  const getSnippets = async (force?: boolean) => {
     setLoading(true);
     try {
-      // Use real API to get all groups the current user belongs to
-      const groups = await getGroupsByUser().catch(() => [] as any[]);
+      if (force) {
+        try { clearGroupsCache(); } catch {}
+      }
+      // Use real API to get all groups the current user belongs to (optionally bypass cache)
+      const groups = await getGroupsByUser(force ? { force: true, ttlMs: 0 } : undefined).catch(() => [] as any[]);
       const uid = user?.uid?.toString?.() || "";
       const snippets: CommunitySnippet[] = (Array.isArray(groups) ? groups : []).map((g: any) => {
         const communityId = String(g.id ?? g.groupId ?? g.code ?? "");
@@ -139,6 +143,34 @@ const useCommunityData = (ssrCommunityData?: boolean) => {
       setLoading(false);
     }
   };
+
+  // Reset all community management state when user logs out to avoid showing previous user's data
+  useEffect(() => {
+    if (!user) {
+      setCommunityStateValue((prev) => ({
+        ...prev,
+        mySnippets: [],
+        visitedCommunities: {},
+        currentCommunity: defaultCommunity,
+        initSnippetsFetched: false, // allow re-fetch after next login
+      }));
+  try { if (typeof window !== 'undefined') window.localStorage.removeItem('managedGroups'); } catch {}
+    }
+  }, [user, setCommunityStateValue]);
+
+  // Detect switching between two logged-in users (not just logout) and hard reset state then refetch
+  useEffect(() => {
+    const currentUid = user?.uid ? String(user.uid) : undefined;
+    if (currentUid && prevUidRef.current && prevUidRef.current !== currentUid) {
+      // User switched accounts: clear caches & reset community state fully
+      try { clearGroupsCache(); } catch {}
+      setCommunityStateValue({ ...defaultCommunityState });
+      try { if (typeof window !== 'undefined') window.localStorage.removeItem('managedGroups'); } catch {}
+  // Force re-fetch of snippets (bypass cache to avoid stale roles)
+  getSnippets(true);
+    }
+    prevUidRef.current = currentUid;
+  }, [user?.uid]);
 
   const onJoinLeaveCommunity = (community: Community, isJoined?: boolean) => {
     // If not logged in, prompt login

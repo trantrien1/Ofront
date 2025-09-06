@@ -11,7 +11,7 @@ const CommunityNotFound: React.FC = () => {
       minHeight="60vh"
     >
       Rất tiếc, cộng đồng đó không tồn tại hoặc đã bị cấm.
-      <Link href="/">
+  <Link href="/app">
         <Button mt={4}>VỀ TRANG CHỦ</Button>
       </Link>
     </Flex>

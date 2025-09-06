@@ -11,7 +11,7 @@ import RightContent from "./RightContent";
 import SearchInput from "./SearchInput";
 import router from "next/router";
 import useDirectory from "../../hooks/useDirectory";
-
+import { normalizeTimestamp } from "../../helpers/timestampHelpers";
 const Navbar: React.FC = () => {
   const user = useRecoilValue(userState) as any;
 
@@ -32,7 +32,7 @@ const Navbar: React.FC = () => {
         width={{ base: "auto", md: "auto" }}
         mr={{ base: 0, md: 2 }}
         cursor="pointer"
-        onClick={() => onSelectMenuItem(defaultMenuItem)}
+        onClick={() => router.push('/')}
       >
         <Image
           src="/images/logo.png"

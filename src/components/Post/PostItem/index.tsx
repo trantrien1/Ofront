@@ -28,7 +28,7 @@ import { FiShare2 } from "react-icons/fi";
 import { ChatIcon } from "@chakra-ui/icons";
 import { Post } from "../../../atoms/postsAtom";
 import Link from "next/link";
-import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
+import { normalizeTimestamp, useRelativeTime } from "../../../helpers/timestampHelpers";
 import dynamic from "next/dynamic";
 import PostModeration from "../PostModeration";
 import { useRecoilValue, useSetRecoilState } from "recoil";
@@ -37,6 +37,14 @@ import { useToast } from "@chakra-ui/react";
 import { joinGroup } from "../../../services/groups.service";
 import { userState } from "../../../atoms/userAtom";
 import * as Svc from "../../../services/posts.service";
+
+
+// function normalizeTimestamp(ts: string) {
+//   const d = new Date(ts)
+//   // cộng thêm 7 giờ
+//   d.setHours(d.getHours() + 7)
+//   return d
+// }
 
 // Disable SSR for this component to prevent hydration issues
 const PostItem = dynamic(() => Promise.resolve(PostItemComponent), {
@@ -98,6 +106,22 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const currentUser = useRecoilValue(userState) as any;
   const toast = useToast();
   const communityData = communityStateValue.currentCommunity;
+  // Determine ownership (case-insensitive) with multiple fallbacks because upstream may not always provide consistent IDs
+  const currentUid = currentUser?.uid ? String(currentUser.uid).toLowerCase() : null;
+  const possibleOwnerIds: string[] = [];
+  try {
+    if ((post as any).creatorId) possibleOwnerIds.push(String((post as any).creatorId));
+    if ((post as any).userUID) possibleOwnerIds.push(String((post as any).userUID));
+    if (post.userDisplayText) possibleOwnerIds.push(String(post.userDisplayText));
+    if ((post as any).userOfPost?.username) possibleOwnerIds.push(String((post as any).userOfPost.username));
+    if ((post as any).userOfPost?.userUID) possibleOwnerIds.push(String((post as any).userOfPost.userUID));
+  } catch {}
+  const normalizedOwners = possibleOwnerIds
+    .filter(Boolean)
+    .map(v => v.trim().toLowerCase())
+    .filter((v, i, arr) => arr.indexOf(v) === i);
+  const isOwner = !!currentUid && normalizedOwners.includes(currentUid);
+  const canDelete = !!currentUser && (currentUser?.role === 'admin' || isOwner);
 
   // Color mode values
   const cardBg = useColorModeValue("white", "gray.800");
@@ -120,12 +144,16 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
     event: React.MouseEvent<HTMLButtonElement | HTMLDivElement, MouseEvent>
   ) => {
     event.stopPropagation();
+    if (!canDelete) return;
+    const confirmed = typeof window === 'undefined' ? true : window.confirm('Bạn có chắc chắn muốn xóa bài viết này?');
+    if (!confirmed) return;
     setLoadingDelete(true);
     try {
       const success = await onDeletePost(post);
       if (!success) throw new Error("Failed to delete post");
 
   // Post successfully deleted
+      toast({ status: 'success', title: 'Đã xóa bài viết' });
 
       // Could proably move this logic to onDeletePost function
       if (router) router.back();
@@ -148,7 +176,6 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       setLoadingPin(false);
     }
   };
-
   const isPinned = communityData?.pinnedPosts?.includes(post.id) || false;
   return (
     <Box
@@ -169,7 +196,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   <Avatar size="xs" name={post.userDisplayText} src={(post as any).authorAvatarURL || post.communityImageURL} />
         <Text>Posted by</Text>
         <Text fontWeight="semibold">{post.userDisplayText}</Text>
-        <Text>  {formatTimeAgo(normalizeTimestamp(post.createdAt))}</Text>
+  <Text>{useRelativeTime(normalizeTimestamp(post.createdAt))}</Text>
         
         {typeof post.status === 'number' && post.status === 0 && (
           <Badge colorScheme="yellow" variant="subtle">Pending approval</Badge>
@@ -330,7 +357,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         </HStack>
 
         {/* Moderation buttons */}
-        {canModerate && (
+  {canModerate && (
           <HStack
             px={3}
             py={2}
@@ -359,6 +386,38 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             )}
             <Text color={iconMuted} fontSize="sm" fontWeight="medium">
               {loadingPin ? "Processing..." : (isPinned ? "Unpin" : "Pin")}
+            </Text>
+          </HStack>
+        )}
+
+        {canDelete && (
+          <HStack
+            px={3}
+            py={2}
+            rounded="full"
+            borderColor={borderCol}
+            bg={chipBg}
+            _hover={{
+              bg: chipHoverBg,
+              borderColor: borderCol,
+              transform: "scale(1.05)",
+              color: "red.500"
+            }}
+            transition="all 0.2s ease"
+            cursor={loadingDelete ? "not-allowed" : "pointer"}
+            opacity={loadingDelete ? 0.6 : 1}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!loadingDelete) handleDelete(e as any);
+            }}
+          >
+            {loadingDelete ? (
+              <Spinner size="sm" color={iconMuted} />
+            ) : (
+              <Icon as={AiOutlineDelete} color="red.400" />
+            )}
+            <Text color={iconMuted} fontSize="sm" fontWeight="medium">
+              {loadingDelete ? "Đang xóa..." : "Xóa"}
             </Text>
           </HStack>
         )}

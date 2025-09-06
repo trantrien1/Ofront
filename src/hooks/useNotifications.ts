@@ -2,7 +2,30 @@ import { useEffect, useState } from "react";
 import { useRecoilState } from "recoil";
 import { notificationsState, Notification } from "../atoms/notificationsAtom";
 import useAuth from "./useAuth";
+import { normalizeTimestamp } from "../helpers/timestampHelpers";
 
+// Helper: detect if a date string lacks timezone then treat as UTC and shift to VN (UTC+7)
+function normalizeServerUtc(input: any): Date {
+  // If backend already sends ISO with Z or offset, let normalizeTimestamp handle timezone projection
+  try {
+    if (typeof input === 'string') {
+      const s = input.trim();
+      const hasOffset = /Z$/i.test(s) || /[+\-]\d{2}:?\d{2}$/.test(s);
+      if (!hasOffset) {
+        // Interpret as UTC naive then add 7h
+        const d = new Date(s + 'Z'); // force treat as UTC
+        if (!isNaN(d.getTime())) {
+          d.setHours(d.getHours() + 7);
+          return d;
+        }
+      }
+    }
+    // Fallback: just use existing normalizer (which applies Asia/Ho_Chi_Minh)
+    return normalizeTimestamp(input, 'Asia/Ho_Chi_Minh');
+  } catch {
+    return new Date();
+  }
+}
 // Optional param: requestInitialFetch indicates the UI has opened the dropdown for the first time
 export const useNotifications = (requestInitialFetch?: boolean) => {
   const [notificationsStateValue, setNotificationsStateValue] = useRecoilState(notificationsState);
@@ -34,19 +57,24 @@ export const useNotifications = (requestInitialFetch?: boolean) => {
   const { NotificationsService } = await import("../services");
   const data = await NotificationsService.getUserNotifications();
         const sorted = (data || []).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        const mapped = sorted.map((n: any) => ({
-          id: n.id?.toString?.() || n.id,
-          type: n.type || "comment",
-          message: n.content || n.message || n.title || "",
-          userId: n.userId || n.actorId || "",
-          targetUserId: n.targetUserId || n.userId,
-          postId: n.postId,
-          commentId: n.commentId,
-          postTitle: n.postTitle,
-          communityName: n.communityName,
-          timestamp: { toDate: () => new Date(n.createdAt) } as any,
-          read: !!n.isRead,
-        })) as Notification[];
+        const mapped = sorted.map((n: any) => {
+          // First adjust naive UTC -> VN, then rely on TimeCell / relative formatting later
+          const normalizedDate = normalizeServerUtc(n.createdAt);
+          return {
+            id: n.id?.toString?.() || n.id,
+            type: n.type || "comment",
+            message: n.content || n.message || n.title || "",
+            userId: n.userId || n.actorId || "",
+            targetUserId: n.targetUserId || n.userId,
+            postId: n.postId,
+            commentId: n.commentId,
+            postTitle: n.postTitle,
+            communityName: n.communityName,
+            // Store both raw date accessor and cached normalizedDate if needed elsewhere
+            timestamp: { toDate: () => normalizedDate } as any,
+            read: !!n.isRead,
+          } as Notification;
+        }) as Notification[];
 
         const unreadCount = mapped.filter(n => !n.read).length;
          setNotificationsStateValue(prev => ({

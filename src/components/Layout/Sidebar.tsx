@@ -75,7 +75,14 @@ const Sidebar: React.FC = () => {
   };
 
   const handleManageCommunities = () => {
-    router.push("/my-community");
+    const base = "/my-community";
+    if (router.pathname === base) {
+      if (typeof window !== 'undefined') {
+        try { window.dispatchEvent(new CustomEvent('myCommunity:refresh')); } catch {}
+      }
+    } else {
+      router.push(`${base}?refresh=1`);
+    }
   };
   const handleFindCommunities = () => {
     router.push("/community/find");
@@ -120,10 +127,9 @@ const Sidebar: React.FC = () => {
   }, [groups]);
   
   const handleHomeClick = async () => {
-    // Clear any community-scoped posts and force a refresh fetch on Home
-  setPostState((prev) => ({ ...prev, posts: [], postUpdateRequired: true }));
-    const href = "?refresh=1";
-  router.push(`/${href}`);
+    // Mark that posts should be refreshed; keep existing list until new fetch completes
+    setPostState((prev) => ({ ...prev, postUpdateRequired: true }));
+    router.push("/app?refresh=1");
   };
 
 
@@ -283,9 +289,9 @@ const Sidebar: React.FC = () => {
           <VStack spacing={1} align="stretch">
             <NavItem
               icon={FaHome}
-              label="Trang chủ"
+              label="Diễn đàn"
               onClick={handleHomeClick}
-              isActive={isActivePage("/")}
+              isActive={isActivePage("/app")}
             />
             
             <NavItem

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Avatar,
   Badge,
@@ -32,6 +32,7 @@ import { userState } from "../atoms/userAtom";
 import { communityState, CommunitySnippet } from "../atoms/communitiesAtom";
 import { SearchIcon } from "@chakra-ui/icons";
 import { BsPeople } from "react-icons/bs";
+import { useRouter } from "next/router";
 
 const MyCommunityPage: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -42,10 +43,12 @@ const MyCommunityPage: React.FC = () => {
   const community = useRecoilValue(communityState);
   const setCommunityState = useSetRecoilState(communityState);
 
-  const load = async () => {
+  const router = useRouter();
+
+  const load = async (force?: boolean) => {
     setLoading(true);
     try {
-      const list = await getGroupsByUser();
+  const list = await getGroupsByUser(force ? { force: true, ttlMs: 0 } : undefined as any);
       setGroups(Array.isArray(list) ? list : []);
     } catch (e: any) {
       toast({ status: "error", title: "Thất bại khi tải nhóm", description: e?.message || "" });
@@ -54,42 +57,115 @@ const MyCommunityPage: React.FC = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
-
-  // Mirror loaded groups into global mySnippets so other pages know join state immediately
+  // Handle refresh=1: clear current groups + remove param to keep URL clean
   useEffect(() => {
-    if (!Array.isArray(groups) || groups.length === 0) return;
+    if (!router.isReady) return;
+    const q = router.query || {};
+    if (q.refresh === '1') {
+      setGroups([]);
+      // Optionally could also clear any managedGroups localStorage (already cleared on logout elsewhere)
+      try {
+        router.replace({ pathname: router.pathname, query: {} }, undefined, { shallow: true });
+      } catch {}
+      // Force reload groups (user might have switched or state stale)
+      load(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query?.refresh]);
+
+  // Listen for manual refresh event triggered by re-clicking menu item
+  useEffect(() => {
+    const handler = () => {
+      setGroups([]);
+      load(true);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('myCommunity:refresh', handler);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('myCommunity:refresh', handler);
+      }
+    };
+  }, []);
+
+  // Reload groups whenever user changes (login switch) or first mount
+  useEffect(() => {
+    if (!user) {
+      setGroups([]);
+      return;
+    }
+    load(true);
+  }, [user?.uid]);
+
+  // Previous user tracking to detect account switch for hard replace
+  const prevUserRef = useRef<string | undefined>(undefined);
+
+  // Mirror loaded groups into global mySnippets – now ALWAYS replace to avoid ghost roles
+  useEffect(() => {
+    if (!user) return; // do not carry over previous data
+    if (!Array.isArray(groups)) return;
     try {
       const uid = user?.uid?.toString?.() || "";
       const incoming: CommunitySnippet[] = groups
         .map((g) => {
           const ownerMatch = uid && (g.ownerId != null && String(g.ownerId) === uid);
-          const role = (g.userRole || (ownerMatch ? "owner" : "member")).toLowerCase();
+          const roleRaw = (g.userRole || (ownerMatch ? "owner" : "member")).toLowerCase();
+          const role = (roleRaw === 'owner' ? 'admin' : roleRaw) as any; // normalize owner->admin for UI consistency
           return {
             communityId: String(g.id),
             imageURL: g.imageURL || undefined,
-            role: (role as any),
+            role,
           } as CommunitySnippet;
         })
         .filter((s) => !!s.communityId);
-      setCommunityState((prev) => {
-        const existing = new Map(prev.mySnippets.map((s) => [s.communityId, s] as const));
-        for (const s of incoming) {
-          if (!existing.has(s.communityId)) existing.set(s.communityId, s);
-          else {
-            // Update role if we now have a stronger (non-member) role
-            const cur = existing.get(s.communityId)!;
-            const curRole = (cur.role || "member").toLowerCase();
-            const newRole = (s.role || "member").toLowerCase();
-            const rank = (r: string) => (r === "owner" ? 3 : r === "admin" ? 2 : r === "moderator" ? 1 : 0);
-            if (rank(newRole) > rank(curRole)) existing.set(s.communityId, s);
-          }
-        }
-        return { ...prev, mySnippets: Array.from(existing.values()), initSnippetsFetched: true };
-      });
+      setCommunityState((prev) => ({
+        ...prev,
+        mySnippets: incoming,
+        initSnippetsFetched: true,
+      }));
     } catch {}
+    prevUserRef.current = user?.uid ? String(user.uid) : undefined;
   }, [groups, setCommunityState, user]);
 
+  // When mySnippets change (join/leave/create) ensure groups list reflects it without infinite refetch loops
+  useEffect(() => {
+    if (!user) return;
+    const snippets = community.mySnippets || [];
+    const snippetIds = new Set(snippets.map(s => s.communityId));
+    const groupIds = new Set(groups.map(g => String(g.id)));
+    const missingIds: string[] = [];
+    snippetIds.forEach(id => { if (!groupIds.has(id)) missingIds.push(id); });
+
+    // Track attempts for each missing set key to avoid endless refetch if backend not yet updated
+    const attemptsRef = (attemptsMapRef.current ||= new Map<string, number>());
+    const key = missingIds.sort().join(',');
+    const now = Date.now();
+
+    // Throttle: only attempt refetch if (a) there are missing ids, (b) not loading, (c) attempts < 2 in 8s window
+    if (missingIds.length > 0 && !loading) {
+      const prev = attemptsRef.get(key) || 0;
+      if (prev < 2) {
+        attemptsRef.set(key, prev + 1);
+        load(true);
+        return; // avoid extra logic this cycle
+      }
+    }
+
+    // Detect possible leave: groups contains ids not in snippets (excluding ones we might still be processing)
+    const extraIds = groups.filter(g => !snippetIds.has(String(g.id))).map(g => String(g.id));
+    if (extraIds.length > 0 && !loading) {
+      const leaveKey = 'leave:' + extraIds.sort().join(',');
+      const prev = attemptsRef.get(leaveKey) || 0;
+      if (prev < 1) { // one corrective fetch is enough
+        attemptsRef.set(leaveKey, prev + 1);
+        load(true);
+      }
+    }
+  }, [community.mySnippets, user, groups, loading]);
+
+  // Ref to store attempts map
+  const attemptsMapRef = useRef<Map<string, number>>();
   const { managed, joined } = useMemo(() => {
     const uid = user?.uid?.toString?.() || user?.displayName || user?.email || "";
     // Build a set of communityIds where user has elevated role via snippets (fallback)

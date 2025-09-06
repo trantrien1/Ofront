@@ -8,7 +8,7 @@ const NoAccessPage: React.FC = () => {
       <VStack spacing={4} textAlign="center">
         <Heading size="lg">Access Denied</Heading>
   <Text color="gray.600">You can&#39;t view this page.</Text>
-        <Button as={NextLink} href="/" colorScheme="blue">Go Home</Button>
+  <Button as={NextLink} href="/app" colorScheme="blue">Đi tới ứng dụng</Button>
       </VStack>
     </Container>
   );

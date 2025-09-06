@@ -11,13 +11,14 @@ import {
 	useColorModeValue,
 } from "@chakra-ui/react";
 import { Notification } from "../../atoms/notificationsAtom";
-import { normalizeTimestamp, formatTimeAgo } from "../../helpers/timestampHelpers";
+// Replaced hook-based relative time with SSR-safe TimeCell component
+import TimeCell from "../Common/TimeCell";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useSetRecoilState } from "recoil";
 import { postState } from "../../atoms/postsAtom";
-
 // Disable SSR for this component to prevent hydration issues
+
 const NotificationItem = dynamic(() => Promise.resolve(NotificationItemComponent), {
 	ssr: false,
 	loading: () => <NotificationItemSkeleton />
@@ -58,6 +59,9 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 		const toast = useToast();
 	const setPostState = useSetRecoilState(postState);
 
+	// Base date (already normalized when mapped in useNotifications)
+	const baseDate = notification?.timestamp?.toDate ? notification.timestamp.toDate() : new Date();
+
 	// Precompute all theme-dependent styles up front (hooks cannot be used conditionally)
 	const borderCol = useColorModeValue("gray.100", "gray.700");
 	const bgRead = useColorModeValue("white", "gray.800");
@@ -88,31 +92,21 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 			setLoading(false);
 		}, [notification.userId, notification.message]);
 
-	const formatTimeAgoLocal = (timestamp: any) => {
-		if (!timestamp) return "Just now";
-		try {
-			return formatTimeAgo(normalizeTimestamp(timestamp));
-		} catch (error) {
-			console.error("Error formatting timestamp:", error);
-			return "Just now";
-		}
-	};
+	
 
 	const getTypeEmoji = () => {
+		// Extra heuristic: if message indicates a new post ("mới đăng bài viết"), use a pencil
+		const msg = (notification.message || "").toLowerCase();
+		if (msg.includes("mới đăng bài viết") || msg.includes("đăng bài")) return "📝";
 		switch (notification.type) {
-			case "comment":
-				return "💬";
-			case "like":
-				return "❤️";
-			case "follow":
-				return "👥";
-			case "mention":
-				return "📢";
-			default:
-				return "📌";
+			case "comment": return "💬";
+			case "like": return "❤️";
+			case "follow": return "👥";
+			case "mention": return "📢";
+			default: return "�"; // fallback to chat bubble for consistency
 		}
 	};
-
+	console.log("đây là notification", notification.timestamp);
 	const handleNotificationClick = () => {
 		// Mark notification as read
 		onMarkAsRead(notification.id);
@@ -212,9 +206,9 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 										{notification.communityName}
 									</Text>
 								)}
-					<Text fontSize="xs" color={timeColor} mt={1}>
-						{formatTimeAgoLocal(notification.timestamp)}
-					</Text>
+						<Text fontSize="xs" color={timeColor} mt={1}>
+							<TimeCell createdAt={baseDate} />
+						</Text>
 				</Box>
 			</Flex>
 		</Box>

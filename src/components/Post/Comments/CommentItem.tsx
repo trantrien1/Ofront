@@ -13,7 +13,7 @@ import {
 type Timestamp = any;
 import { FaReddit, FaThumbsUp } from "react-icons/fa";
 import { Image } from "@chakra-ui/react";
-import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
+import { normalizeTimestamp, useRelativeTime } from "../../../helpers/timestampHelpers";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import ReplyInput from "./ReplyInput";
@@ -91,7 +91,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   const likeCountColor = useColorModeValue("gray.500", "gray.400");
   const hoverLinkColor = useColorModeValue("blue.600", "blue.300");
   const likedLabelColor = useColorModeValue("blue.600", "blue.300");
-
+  console.log("đây là giờ comment", comment.createdAt);
   // Check if this comment should be highlighted based on URL hash
   useEffect(() => {
     // Only run on client side after component mounts
@@ -200,10 +200,12 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             >
               {comment.creatorDisplayText}
             </Text>
-            {comment.createdAt && (
+            {comment.createdAt ? (
               <Text color={timestampColor}>
-                {formatTimeAgo(normalizeTimestamp(comment.createdAt))}
+                {useRelativeTime(normalizeTimestamp(comment.createdAt))}
               </Text>
+            ) : (
+              <Text color={timestampColor}>sai thoi gian</Text>
             )}
             {isLoading && <Spinner size="sm" />}
           </Stack>

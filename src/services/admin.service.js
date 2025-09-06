@@ -52,11 +52,13 @@ export const updatePostStatus = async (postId, status) => {
 };
 
 export const deletePost = async (postId) => {
+  // Backend only exposes /post/delete/{id}; reuse it here so existing admin UI code still works.
   try {
-    const response = await request.delete(`admin/posts/${postId}`);
+    if (postId == null) throw new Error('postId required');
+    const response = await request.delete(`post/delete/${postId}`);
     return response.data;
   } catch (error) {
-    console.error("AdminService.deletePost: error=", error);
+    console.error("AdminService.deletePost (mapped to /post/delete/{id}) error=", error);
     throw error;
   }
 };

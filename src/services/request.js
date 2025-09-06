@@ -99,16 +99,19 @@ request.interceptors.response.use(
 		try {
 			const status = error?.response?.status;
 			if (status === 401) {
-				try {
-					nookies.destroy(undefined, "token");
-				} catch (e) {}
+				try { nookies.destroy(undefined, "token", { path: "/" }); } catch (e) {}
+				try { nookies.destroy(undefined, "role", { path: "/" }); } catch (e) {}
 				try {
 					if (request && request.defaults && request.defaults.headers) {
 						delete request.defaults.headers.common["Authorization"];
 					}
 				} catch (e) {}
 				if (typeof window !== "undefined") {
-					// redirect to home or login
+					try { window.localStorage.removeItem("authToken"); } catch {}
+					try { window.localStorage.removeItem("userState"); } catch {}
+					try { window.localStorage.removeItem("managedGroups"); } catch {}
+					try { window.localStorage.removeItem("role"); } catch {}
+					try { window.localStorage.removeItem("username"); } catch {}
 					window.location.href = "/";
 				}
 			}

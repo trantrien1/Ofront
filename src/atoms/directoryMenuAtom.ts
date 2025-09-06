@@ -17,7 +17,7 @@ interface DirectoryMenuState {
 
 export const defaultMenuItem = {
   displayText: "Home",
-  link: "/",
+  link: "/app",
   icon: TiHome,
   iconColor: "black",
 };

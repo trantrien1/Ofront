@@ -9,16 +9,20 @@ import ToastProvider from "../components/Notifications/ToastProvider";
 import { useStompNotifications } from "../hooks/useStompNotifications";
 // Firebase removed
 import "../styles/globals.css";
-
-
+import { useRouter } from "next/router"; // ✅ NEW
 
 function AppWithAuth(props: AppProps) {
   useAuthRestore();
   // Enable real-time notifications (requires NEXT_PUBLIC_WS_URL)
   useStompNotifications(true);
+
   const Comp: any = props.Component as any;
-  const noLayout = !!Comp?.noLayout;
-  
+  const router = useRouter(); // ✅ NEW
+
+  // ✅ No layout for landing-like routes
+  const noLayout =
+    !!Comp?.noLayout || router.pathname === "/" || router.pathname === "/landing" || router.pathname === "/intro";
+
   if (noLayout) {
     return (
       <ClientOnlyWrapper>
@@ -27,6 +31,7 @@ function AppWithAuth(props: AppProps) {
       </ClientOnlyWrapper>
     );
   }
+
   return (
     <Layout>
       <ToastProvider />
@@ -38,7 +43,7 @@ function AppWithAuth(props: AppProps) {
 function MyApp(props: AppProps) {
   // TEMPORARILY DISABLE AUTH RESTORE FOR DEBUGGING
   // useAuthRestore();
-  
+
   return (
     <RecoilRoot>
       <ChakraProvider theme={theme}>

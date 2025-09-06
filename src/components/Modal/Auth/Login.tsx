@@ -98,8 +98,8 @@ const Login: React.FC<LoginProps> = ({ toggleView }) => {
         // close modal
         setModal((s) => ({ ...s, open: false }));
 
-        // navigate to main inside page
-        router.push("/");
+  // navigate to main application area
+  router.push("/app");
       } catch (err: any) {
         const msg = err?.userMessage || err?.message;
         setFormError(msg || "Đăng nhập thất bại");

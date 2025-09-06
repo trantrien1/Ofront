@@ -29,7 +29,7 @@ import { IoMdTrophy } from "react-icons/io";
 import { Post } from "../../atoms/postsAtom";
 import PostItem from "../Post/PostItem";
 import usePosts from "../../hooks/usePosts";
-import { timestampToISO } from "../../helpers/timestampHelpers";
+import { } from "../../helpers/timestampHelpers";
 import useAuth from "../../hooks/useAuth";
 import { getPosts as fetchAllPosts } from "../../services/posts.service";
 import nookies from "nookies";
@@ -229,7 +229,7 @@ const PersonalHome: React.FC = () => {
               {userProfile?.createdAt && (
                 <Flex align="center" mt={1} color={subText} fontSize="sm">
                   <Icon as={FaBirthdayCake} mr={1} />
-                  <Text>Joined {new Date(timestampToISO(userProfile.createdAt)).toLocaleDateString()}</Text>
+                  {/* <Text>Joined {new Date(timestampToISO(userProfile.createdAt)).toLocaleDateString()}</Text> */}
                 </Flex>
               )}
             </Flex>

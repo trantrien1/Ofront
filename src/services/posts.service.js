@@ -248,7 +248,14 @@ export const updatePost = async ({ postId, title, content } = {}) => {
 };
 
 export const deletePost = async ({ postId } = {}) => {
-	const response = await request.post("post/delete", { postId });
+	if (!postId) throw new Error('postId required');
+	let idPart = postId;
+	// Try numeric coercion if possible
+	try {
+		const n = typeof postId === 'string' ? Number(postId) : postId;
+		if (Number.isFinite(n)) idPart = n;
+	} catch {}
+	const response = await request.delete(`post/delete/${idPart}`);
 	return response.data;
 };
 

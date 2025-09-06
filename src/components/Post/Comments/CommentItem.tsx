@@ -92,6 +92,8 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   const hoverLinkColor = useColorModeValue("blue.600", "blue.300");
   const likedLabelColor = useColorModeValue("blue.600", "blue.300");
   console.log("đây là giờ comment", comment.createdAt);
+  // Precompute relative time label to avoid calling hook inside conditional directly in JSX
+  const commentTimeLabel = useRelativeTime(comment.createdAt ? normalizeTimestamp(comment.createdAt) : undefined);
   // Check if this comment should be highlighted based on URL hash
   useEffect(() => {
     // Only run on client side after component mounts
@@ -201,9 +203,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
               {comment.creatorDisplayText}
             </Text>
             {comment.createdAt ? (
-              <Text color={timestampColor}>
-                {useRelativeTime(normalizeTimestamp(comment.createdAt))}
-              </Text>
+              <Text color={timestampColor}>{commentTimeLabel}</Text>
             ) : (
               <Text color={timestampColor}>sai thoi gian</Text>
             )}

@@ -139,6 +139,8 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const iconMuted = useColorModeValue("gray.600", "gray.300");
   // Determine liked state from prop or post state for immediate UI feedback
   const isLiked = ((userVoteValue ?? post.currentUserVoteStatus?.voteValue) === 1);
+  // Relative time label (must call hook at stable position)
+  const createdAtLabel = useRelativeTime(normalizeTimestamp(post.createdAt));
 
   const handleDelete = async (
     event: React.MouseEvent<HTMLButtonElement | HTMLDivElement, MouseEvent>
@@ -196,7 +198,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   <Avatar size="xs" name={post.userDisplayText} src={(post as any).authorAvatarURL || post.communityImageURL} />
         <Text>Posted by</Text>
         <Text fontWeight="semibold">{post.userDisplayText}</Text>
-  <Text>{useRelativeTime(normalizeTimestamp(post.createdAt))}</Text>
+  <Text>{createdAtLabel}</Text>
         
         {typeof post.status === 'number' && post.status === 0 && (
           <Badge colorScheme="yellow" variant="subtle">Pending approval</Badge>

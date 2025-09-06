@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Flex,
   Icon,
@@ -14,6 +14,12 @@ import {
   HStack,
   Button,
   useColorModeValue,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from "@chakra-ui/react";
 import { NextRouter } from "next/router";
 import { AiOutlineDelete } from "react-icons/ai";
@@ -142,33 +148,27 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   // Relative time label (must call hook at stable position)
   const createdAtLabel = useRelativeTime(normalizeTimestamp(post.createdAt));
 
-  const handleDelete = async (
-    event: React.MouseEvent<HTMLButtonElement | HTMLDivElement, MouseEvent>
-  ) => {
-    event.stopPropagation();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const cancelRef = useRef<any>();
+  const requestDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!canDelete) return;
-    const confirmed = typeof window === 'undefined' ? true : window.confirm('Bạn có chắc chắn muốn xóa bài viết này?');
-    if (!confirmed) return;
+    setConfirmOpen(true);
+  };
+  const onConfirmDelete = async () => {
+    setConfirmOpen(false);
     setLoadingDelete(true);
     try {
       const success = await onDeletePost(post);
       if (!success) throw new Error("Failed to delete post");
-
-  // Post successfully deleted
       toast({ status: 'success', title: 'Đã xóa bài viết' });
-
-      // Could proably move this logic to onDeletePost function
       if (router) router.back();
     } catch (error: any) {
-  console.error("Error deleting post", error?.message || error);
-      /**
-       * Don't need to setLoading false if no error
-       * as item will be removed from DOM
-       */
+      console.error("Error deleting post", error?.message || error);
       setLoadingDelete(false);
-      // setError
     }
   };
+  const onCancelDelete = () => setConfirmOpen(false);
 
   const handlePinPost = async () => {
     setLoadingPin(true);
@@ -392,7 +392,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           </HStack>
         )}
 
-        {canDelete && (
+    {canDelete && (
           <HStack
             px={3}
             py={2}
@@ -408,10 +408,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
             transition="all 0.2s ease"
             cursor={loadingDelete ? "not-allowed" : "pointer"}
             opacity={loadingDelete ? 0.6 : 1}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!loadingDelete) handleDelete(e as any);
-            }}
+      onClick={requestDelete}
           >
             {loadingDelete ? (
               <Spinner size="sm" color={iconMuted} />
@@ -426,6 +423,25 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
 
   {/* Approve/Delete controls removed per request */}
       </Flex>
+      <AlertDialog
+        isOpen={confirmOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onCancelDelete}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize='lg' fontWeight='bold'>Xóa bài viết</AlertDialogHeader>
+            <AlertDialogBody>
+              Bạn có chắc muốn xóa bài viết này? Hành động không thể hoàn tác.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onCancelDelete} variant='ghost'>Hủy</Button>
+              <Button colorScheme='red' ml={3} onClick={onConfirmDelete} isLoading={loadingDelete}>Xóa</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };

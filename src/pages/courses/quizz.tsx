@@ -1,129 +1,145 @@
-import React, { useEffect, useMemo, useState } from "react";
+// pages/quiz/index.tsx
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Box, Button, Checkbox, CheckboxGroup, Flex, Heading, HStack,
-  Radio, RadioGroup, Spacer, Stack, Text, useColorModeValue,
-  useToast, Spinner
+  Badge, Box, Button, Checkbox, CheckboxGroup, Container, Divider, Flex,
+  Heading, HStack, Icon, IconButton, Progress, Radio, RadioGroup, SimpleGrid,
+  Skeleton, Spacer, Stack, Text, Tooltip, useBoolean, useColorModeValue,
+  useDisclosure, useToast, Spinner, Alert, AlertIcon, Kbd, useBreakpointValue,
 } from "@chakra-ui/react";
 import Link from "next/link";
-import { getClientRole, isAdminRole } from "../../helpers/role";
-import { QuizService } from "../../services";
-
+import { AnimatePresence, motion } from "framer-motion";
+import { FaUserGraduate, FaUserTie, FaChalkboardTeacher, FaUsers, FaRandom, FaListOl, FaTrash, FaChevronLeft, FaChevronRight, FaFlagCheckered, FaInfoCircle, FaSyncAlt } from "react-icons/fa";
+import { MdOutlineManageSearch, MdOutlineRestartAlt } from "react-icons/md";
+import {
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+} from "@chakra-ui/react";
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
 type Answer = { id?: string | number; content: string };
-type Question = { id: string | number; content?: string; text?: string; type?: string; answers?: Answer[] };
-
+type Question = {
+  id: string | number;
+  content?: string;
+  text?: string;
+  type?: string; // 'student' | 'worker' | 'teacher' | 'other' | custom
+  answers?: Answer[];
+  multi?: boolean; // optional override
+};
 type AnswersSingle = Record<string | number, string | number | string[]>;
 
-const STORAGE_KEY = "ofront_quiz_answers_dyn_v1";
+type DassScore = {
+  raw: number;
+  score: number;
+  level: "Bình thường" | "Nhẹ" | "Vừa" | "Nặng" | "Rất nặng";
+};
 
-// DASS-21 index groups (1-based order)
+type DassPartial = {
+  raw: number;
+  answered: number;
+  zeros: number;
+  scaled: number;
+};
+
+type DassResult =
+  | null
+  | {
+      depression: DassScore;
+      anxiety: DassScore;
+      stress: DassScore;
+    };
+
+type DassPartialResult =
+  | null
+  | {
+      depression: DassPartial;
+      anxiety: DassPartial;
+      stress: DassPartial;
+      totalAnswered: number;
+    };
+
+// -----------------------------------------------------------------------------
+// Constants
+// -----------------------------------------------------------------------------
+const STORAGE_KEY = "ofront_quiz_answers_dyn_v2";
+const STORAGE_AUDIENCE_KEY = "ofront_quiz_audience_v2";
+const STORAGE_SHUFFLE_KEY = "ofront_quiz_shuffle_v2";
+
+// DASS-21 index groups (1-based)
 const D_IDX = [3, 5, 10, 13, 16, 17, 21];
 const A_IDX = [2, 4, 7, 9, 15, 19, 20];
 const S_IDX = [1, 6, 8, 11, 12, 14, 18];
 
-// ------- Utilities -------
+const AUDIENCES = [
+  { id: "student", label: "Sinh viên", icon: FaUserGraduate, desc: "Đang theo học", gradient: "linear(to-br, teal.500, green.400)" },
+  { id: "worker",  label: "Người đi làm", icon: FaUserTie,     desc: "Đang/đã đi làm", gradient: "linear(to-br, blue.500, cyan.400)" },
+  { id: "teacher", label: "Giảng viên", icon: FaChalkboardTeacher, desc: "Đứng lớp / hướng dẫn", gradient: "linear(to-br, purple.500, pink.400)" },
+  { id: "other",   label: "Khác", icon: FaUsers, desc: "Nhóm khác", gradient: "linear(to-br, orange.500, yellow.400)" },
+];
 
-// bỏ dấu + thường hóa để so cụm từ tiếng Việt robust hơn
-const normalize = (s: string) =>
-  s
-    .normalize?.("NFD")
-    .toLowerCase()
-    .trim();
+const MotionBox = motion(Box);
 
-// map cụm từ → điểm (không phân biệt hoa/thường, có thể bỏ dấu)
+// -----------------------------------------------------------------------------
+// Utils
+// -----------------------------------------------------------------------------
+const normalize = (s: string) => s?.normalize?.("NFD").toLowerCase().trim();
+
 const phraseToScore = (raw: string): number | null => {
   const l = normalize(raw);
-
-  // Nhóm 0
-  if (
-    l.includes("khong bao gio") ||
-    l.includes("khong dung") && (l.includes("chut nao") || !l.includes("phan nao")) // "không đúng (chút nào)"
-  ) return 0;
-
-  // Nhóm 1
-  if (
-    l.includes("thinh thoang") ||
-    (l.includes("dung") && l.includes("phan nao")) || // "đúng phần nào"
-    l.includes("doi khi")
-  ) return 1;
-
-  // Nhóm 2
-  if (
-    l.includes("thuong xuyen") ||
-    (l.includes("kha dung") || l.includes("phan lon thoi gian"))
-  ) return 2;
-
-  // Nhóm 3
-  if (
-    l.includes("hau nhu luon luon") ||
-    (l.includes("rat dung") || l.includes("hau het thoi gian"))
-  ) return 3;
-
+  if (!l) return null;
+  if (l.includes("khong bao gio") || (l.includes("khong dung") && (l.includes("chut nao") || !l.includes("phan nao")))) return 0;
+  if (l.includes("thinh thoang") || (l.includes("dung") && l.includes("phan nao")) || l.includes("doi khi")) return 1;
+  if (l.includes("thuong xuyen") || l.includes("kha dung") || l.includes("phan lon thoi gian")) return 2;
+  if (l.includes("hau nhu luon luon") || l.includes("rat dung") || l.includes("hau het thoi gian")) return 3;
   return null;
 };
 
-// cố gắng lấy số 0..3 nếu chuỗi có chứa con số độc lập
 const extractDigit03 = (raw: string): number | null => {
-  // ưu tiên dạng "[0-3]" độc lập hoặc trước dấu cách/ký tự không chữ-số
-  const m = raw.match(/(?:^|\D)([0-3])(?:\D|$)/);
-  if (m) return parseInt(m[1], 10);
-  return null;
+  const m = raw?.match?.(/(?:^|\D)([0-3])(?:\D|$)/);
+  return m ? parseInt(m[1], 10) : null;
 };
 
-// parse chuỗi/number thành 0..3 nếu có thể
 const parseNumeric03 = (v: any): number | null => {
   if (v == null) return null;
   const s = String(v).trim();
   if (/^\d+$/.test(s)) {
     const n = parseInt(s, 10);
     if (n >= 0 && n <= 3) return n;
-    // nếu dùng thang 1..4 → quy về 0..3
-    if (n >= 1 && n <= 4) return n - 1;
-    return null;
+    if (n >= 1 && n <= 4) return n - 1; // allow 1..4 scale
   }
   return null;
 };
 
-// Tính điểm 0..3 cho một câu hỏi dựa trên giá trị chọn
 const scoreAnswer = (q: Question, val: any): number => {
   if (!q || val == null) return 0;
   const options = Array.isArray(q.answers) ? q.answers : [];
-
-  // 1) Nếu value là số 0..3 / hoặc 1..4
   const numeric = parseNumeric03(val);
   if (numeric != null) return numeric;
 
   const vStr = String(val);
 
-  // 2) Nếu value trùng id của option → dùng vị trí option (index 0..3)
   const idxById = options.findIndex(opt => String(opt.id ?? opt.content) === vStr);
   if (idxById >= 0) {
-    // ưu tiên map index nếu danh sách có 4 lựa chọn chuẩn
     if (options.length === 4) return Math.max(0, Math.min(3, idxById));
-
-    // nếu không đủ 4, thử đọc nội dung của option
     const content = options[idxById]?.content ?? "";
     const byPhrase = phraseToScore(content);
     if (byPhrase != null) return byPhrase;
-
     const byDigit = extractDigit03(content);
     if (byDigit != null) return byDigit;
-
-    // fallback index
     return Math.max(0, Math.min(3, idxById));
   }
 
-  // 3) Nếu value chính là content (một số form gửi thẳng content)
   const byPhrase = phraseToScore(vStr);
   if (byPhrase != null) return byPhrase;
-
   const byDigit = extractDigit03(vStr);
   if (byDigit != null) return byDigit;
-
-  // 4) Bất khả kháng → 0
   return 0;
 };
 
-// Phân loại theo DASS-21 (điểm đã nhân đôi)
 const classifyDepression = (score: number) =>
   score <= 9 ? "Bình thường" : score <= 13 ? "Nhẹ" : score <= 20 ? "Vừa" : score <= 27 ? "Nặng" : "Rất nặng";
 const classifyAnxiety = (score: number) =>
@@ -131,69 +147,134 @@ const classifyAnxiety = (score: number) =>
 const classifyStress = (score: number) =>
   score <= 14 ? "Bình thường" : score <= 18 ? "Nhẹ" : score <= 25 ? "Vừa" : score <= 33 ? "Nặng" : "Rất nặng";
 
+const levelColor = (level: string) => {
+  switch (level) {
+    case "Bình thường": return "green";
+    case "Nhẹ":         return "yellow";
+    case "Vừa":         return "orange";
+    case "Nặng":        return "red";
+    case "Rất nặng":    return "purple";
+    default:            return "gray";
+  }
+};
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+const percent = (n: number) => Math.round(clamp01(n) * 100);
+const progressPercent = (score: number) => Math.min(100, Math.round((score / 42) * 100));
+
+const pickAnswerLabel = (q: Question, val: any) => {
+  const v = String(val);
+  const opts = Array.isArray(q.answers) ? q.answers : [];
+  const found = opts.find((opt) => String(opt.id ?? opt.content) === v);
+  return found?.content ?? v;
+};
+
+const shuffle = <T,>(arr: T[]) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+// Dùng dịch vụ thật
+import { QuizService } from "../../services";
+
+// -----------------------------------------------------------------------------
+// Main Component
+// -----------------------------------------------------------------------------
 export default function QuizPage() {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const toast = useToast();
+  const [audience, setAudience] = useState<string>("");
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [audience, setAudience] = useState<string>(""); // 'student' | 'worker' | 'teacher' | 'other'
   const [answers, setAnswers] = useState<AnswersSingle>({});
+  const [loading, setLoading] = useBoolean(true);
+  const [error, setError] = useState<string>("");
+
   const [submitted, setSubmitted] = useState(false);
   const [advice, setAdvice] = useState<string>("");
-  const [adviceLoading, setAdviceLoading] = useState(false);
-  const toast = useToast();
+  const [adviceLoading, setAdviceLoading] = useBoolean(false);
+
+  const [shuffleOn, setShuffleOn] = useState<boolean>(true);
+  const [qIndex, setQIndex] = useState<number>(0); // navigator focus
+  const confirmSubmit = useDisclosure();
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   const cardBg = useColorModeValue("white", "gray.800");
   const borderCol = useColorModeValue("gray.200", "gray.700");
   const adviceColor = useColorModeValue("gray.700", "gray.200");
+  const accent = useColorModeValue("teal.500", "teal.300");
+  const muted = useColorModeValue("gray.500", "gray.400");
 
-  useEffect(() => {
-    const r = getClientRole();
-    setIsAdmin(isAdminRole(r));
-  }, []);
+  const isDesktop = useBreakpointValue({ base: false, lg: true });
 
+  // Load questions
   useEffect(() => {
     (async () => {
       try {
+        setLoading.on();
+        setError("");
         const data = await QuizService.getQuestions();
-        const arr: any[] = Array.isArray(data)
+        const arr = Array.isArray(data)
           ? data
           : Array.isArray((data as any)?.data)
-          ? (data as any).data
-          : Array.isArray((data as any)?.content)
-          ? (data as any).content
-          : [];
+            ? (data as any).data
+            : Array.isArray((data as any)?.content)
+              ? (data as any).content
+              : [];
         setQuestions(arr as Question[]);
       } catch (e: any) {
-        toast({ status: "error", title: "Không tải được câu hỏi", description: e?.message || String(e) });
+        setError(e?.message || "Không tải được câu hỏi");
+      } finally {
+        setLoading.off();
       }
     })();
-  }, [toast]);
+  }, [setLoading]);
 
+  // Restore persisted audience/answers/shuffle
   useEffect(() => {
     try {
+      const a = localStorage.getItem(STORAGE_AUDIENCE_KEY);
+      if (a) setAudience(a);
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setAnswers(JSON.parse(raw));
+      const sh = localStorage.getItem(STORAGE_SHUFFLE_KEY);
+      if (sh) setShuffleOn(sh === "1");
     } catch {}
   }, []);
+
+  // Autosave
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(answers));
     } catch {}
   }, [answers]);
+  useEffect(() => {
+    try {
+      if (audience) localStorage.setItem(STORAGE_AUDIENCE_KEY, audience);
+    } catch {}
+  }, [audience]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_SHUFFLE_KEY, shuffleOn ? "1" : "0");
+    } catch {}
+  }, [shuffleOn]);
 
-  const handleChangeSingle = (qid: string | number, v: string) =>
-    setAnswers((a) => ({ ...a, [qid]: v }));
-  const handleChangeMulti = (qid: string | number, vals: string[]) =>
-    setAnswers((a) => ({ ...a, [qid]: vals }));
+  // Derived: filtered & (optionally) shuffled list
+  const filteredQuestions = useMemo(() => {
+    const base = questions.filter((q) => (q.type || "student") === audience);
+    return shuffleOn ? shuffle(base) : base;
+  }, [questions, audience, shuffleOn]);
 
-  const filteredQuestions = useMemo(
-    () => questions.filter((q) => (q.type || "student") === audience),
-    [questions, audience]
+  // Count answered in current set
+  const selectedCount = useMemo(
+    () => filteredQuestions.filter((q) => answers[q.id as any] !== undefined).length,
+    [filteredQuestions, answers]
   );
 
-  // Tính DASS-21 khi đủ 21 câu
-  const dass = useMemo(() => {
-    if (filteredQuestions.length !== 21) return null as null | any;
-
+  // DASS result (only when exactly 21)
+  const dass: DassResult = useMemo(() => {
+    if (filteredQuestions.length !== 21) return null;
     const sumFor = (idxArr: number[]) =>
       idxArr.reduce((acc, idx) => {
         const q = filteredQuestions[idx - 1];
@@ -201,12 +282,11 @@ export default function QuizPage() {
         const v = answers[q.id as any];
         const n = scoreAnswer(q, v);
         return acc + n;
-        }, 0);
+      }, 0);
 
     const dRaw = sumFor(D_IDX);
     const aRaw = sumFor(A_IDX);
     const sRaw = sumFor(S_IDX);
-
     const d = dRaw * 2, a = aRaw * 2, s = sRaw * 2;
 
     return {
@@ -216,10 +296,9 @@ export default function QuizPage() {
     };
   }, [filteredQuestions, answers]);
 
-  // Tính tạm khi chưa đủ câu
-  const partialDass = useMemo(() => {
-    if (filteredQuestions.length === 0) return null as null | any;
-
+  // Partial DASS if not 21 but some answered
+  const partialDass: DassPartialResult = useMemo(() => {
+    if (filteredQuestions.length === 0) return null;
     const calc = (idxArr: number[]) =>
       idxArr.reduce(
         (acc, idx) => {
@@ -228,19 +307,14 @@ export default function QuizPage() {
           const has = Object.prototype.hasOwnProperty.call(answers, q.id as any);
           if (!has) return acc;
           const n = scoreAnswer(q, answers[q.id as any]);
-          return {
-            sum: acc.sum + n,
-            count: acc.count + 1,
-            zeros: acc.zeros + (n === 0 ? 1 : 0),
-          };
+          return { sum: acc.sum + n, count: acc.count + 1, zeros: acc.zeros + (n === 0 ? 1 : 0) };
         },
         { sum: 0, count: 0, zeros: 0 }
       );
 
     const D = calc(D_IDX), A = calc(A_IDX), S = calc(S_IDX);
-    const anyAnswered = D.count + A.count + S.count > 0;
-    if (!anyAnswered) return null;
-
+    const any = D.count + A.count + S.count > 0;
+    if (!any) return null;
     return {
       depression: { raw: D.sum, answered: D.count, zeros: D.zeros, scaled: D.sum * 2 },
       anxiety:    { raw: A.sum, answered: A.count, zeros: A.zeros, scaled: A.sum * 2 },
@@ -249,54 +323,57 @@ export default function QuizPage() {
     };
   }, [filteredQuestions, answers]);
 
-  const handleSubmit = async () => {
+  // Handlers
+  const changeSingle = useCallback((qid: string | number, v: string) => {
+    setAnswers((a) => ({ ...a, [qid]: v }));
+  }, []);
+  const changeMulti = useCallback((qid: string | number, vals: string[]) => {
+    setAnswers((a) => ({ ...a, [qid]: vals }));
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setAnswers({});
+    setSubmitted(false);
+    setAdvice("");
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    toast({ status: "info", title: "Đã xóa lựa chọn" });
+  }, [toast]);
+
+  const handleSubmit = useCallback(async () => {
     setSubmitted(true);
     setAdvice("");
-    setAdviceLoading(true);
+    setAdviceLoading.on();
     try {
       const itemsBase = filteredQuestions;
       const answeredCountLocal = itemsBase.filter((q) => answers[q.id as any] !== undefined).length;
+
       if (answeredCountLocal === 0) {
         setSubmitted(false);
-        setAdviceLoading(false);
+        setAdviceLoading.off();
         toast({ status: "warning", title: "Hãy trả lời ít nhất 1 câu trước khi nộp." });
         return;
       }
+
       if (filteredQuestions.length === 21) {
         const allAnswered = itemsBase.every((q) => answers[q.id as any] !== undefined);
         if (!allAnswered) {
           setSubmitted(false);
-          setAdviceLoading(false);
+          setAdviceLoading.off();
           toast({ status: "warning", title: "Hãy trả lời đầy đủ 21 câu để tính điểm DASS-21." });
           return;
         }
       }
 
-      // Lấy label hiển thị của lựa chọn
-      const getAnswerLabel = (q: Question, val: any) => {
-        const v = String(val);
-        const opts = Array.isArray(q.answers) ? q.answers : [];
-        const found = opts.find((opt) => String(opt.id ?? opt.content) === v);
-        return found?.content ?? v;
-      };
-
       const items = filteredQuestions.map((q, idx) => {
         const val = answers[q.id as any];
         const score = scoreAnswer(q, val);
-        const answerText = val !== undefined ? getAnswerLabel(q, val) : "";
-        return {
-          order: idx + 1,
-          id: q.id,
-          question: q.content || q.text || String(q.id),
-          answer: val ?? "",
-          answerText,
-          score,
-        };
+        const answerText = val !== undefined ? pickAnswerLabel(q, val) : "";
+        return { order: idx + 1, id: q.id, question: q.content || q.text || String(q.id), answer: val ?? "", answerText, score };
       });
 
-      const r = await fetch("/api/quiz/advice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/quiz/advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           audience,
           items,
@@ -306,170 +383,374 @@ export default function QuizPage() {
           answeredCount: answeredCountLocal,
         }),
       });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
-      setAdvice(String(data?.advice || ""));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Gemini error');
+      setAdvice(String(data?.advice || '').trim());
     } catch (e: any) {
       setAdvice("");
       toast({ status: "error", title: "Không tạo được lời khuyên", description: e?.message || "Failed" });
     } finally {
-      setAdviceLoading(false);
+      setAdviceLoading.off();
     }
-  };
+  }, [answers, filteredQuestions, setAdviceLoading, toast, setAdvice]);
 
-  const handleReset = () => {
-    setAnswers({});
-    setSubmitted(false);
-    setAdvice("");
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
-  };
+  // Navigator focus helpers
+  const goto = (i: number) => setQIndex(Math.max(0, Math.min(filteredQuestions.length - 1, i)));
+  const prev = () => goto(qIndex - 1);
+  const next = () => goto(qIndex + 1);
 
-  // Đếm số câu đã trả lời trong bộ đang hiển thị (đúng hơn là đếm toàn bộ keys)
-  const selectedCount = useMemo(
-    () => filteredQuestions.filter((q) => answers[q.id as any] !== undefined).length,
-    [filteredQuestions, answers]
+  // Keyboard shortcuts (← → to navigate)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!filteredQuestions.length) return;
+      if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); next(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [filteredQuestions.length, qIndex]);
+
+  // UI helpers
+  const headerRight = (
+    <HStack spacing={2}>
+      <Tooltip label={shuffleOn ? "Đang xáo trộn câu hỏi" : "Giữ nguyên thứ tự"}>
+        <IconButton aria-label="Shuffle" size="sm" icon={<Icon as={FaRandom} />} onClick={() => setShuffleOn(s => !s)} variant={shuffleOn ? "solid" : "outline"} colorScheme="teal"/>
+      </Tooltip>
+      <Tooltip label="Xóa lựa chọn">
+        <IconButton aria-label="Reset" size="sm" icon={<Icon as={MdOutlineRestartAlt} />} onClick={handleReset} variant="outline"/>
+      </Tooltip>
+      <Button as={Link} href="/admin/quiz" size="sm" leftIcon={<MdOutlineManageSearch/>} variant="outline">
+        Quản lý câu hỏi
+      </Button>
+    </HStack>
   );
 
-  
-
+  // Render
   return (
-    <Box w="100%" px={{ base: 3, md: 6 }} py={6}>
+    <Container maxW="container.xl" py={6}>
       <Flex align="center" gap={3} mb={2}>
         <Heading size="lg">Trắc nghiệm</Heading>
         <Spacer />
-        {isAdmin && (
-          <Button as={Link} href="/admin/quiz" size="sm" colorScheme="blue" variant="outline">
-            Quản lý câu hỏi
-          </Button>
-        )}
+        {headerRight}
       </Flex>
-      <Text color="gray.500" mb={4}>
-        Chọn đối tượng phù hợp để hiển thị bộ câu hỏi.
-      </Text>
 
-      {/* Audience selector */}
-      <HStack mb={6} spacing={3}>
-        <Button variant={audience === "student" ? "solid" : "outline"} colorScheme="teal" size="sm" onClick={() => setAudience("student")}>
-          Sinh viên
-        </Button>
-        <Button variant={audience === "worker" ? "solid" : "outline"} colorScheme="teal" size="sm" onClick={() => setAudience("worker")}>
-          Người đi làm
-        </Button>
-        <Button variant={audience === "teacher" ? "solid" : "outline"} colorScheme="teal" size="sm" onClick={() => setAudience("teacher")}>
-          Giảng viên
-        </Button>
-        <Button variant={audience === "other" ? "solid" : "outline"} colorScheme="teal" size="sm" onClick={() => setAudience("other")}>
-          Khác
-        </Button>
-      </HStack>
+      {loading && (
+        <Stack spacing={4}>
+          <Skeleton height="28px" />
+          <Skeleton height="160px" />
+          <Skeleton height="160px" />
+        </Stack>
+      )}
 
-      <Flex gap={6} align="start" flexDir={{ base: "column", lg: "row" }}>
-        <Box flex={1}>
-          {!audience ? (
-            <Text color="gray.500">Hãy chọn đối tượng trước.</Text>
-          ) : filteredQuestions.length === 0 ? (
-            <Text color="gray.500">Chưa có câu hỏi.</Text>
-          ) : (
-            <Stack spacing={4}>
-              {filteredQuestions.map((q, idx) => {
-                const id = q.id;
-                const label = q.content || q.text || `Câu hỏi #${idx + 1}`;
-                const isMulti = false; // giữ mặc định single-choice
-                const options = Array.isArray(q.answers) ? q.answers : [];
+      {!loading && error && (
+        <Alert status="error" borderRadius="md" mb={6}>
+          <AlertIcon />
+          {error}
+        </Alert>
+      )}
 
-                return (
-                  <Box key={String(id)} bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="md" p={4}>
-                    <Text fontWeight="600" mb={3}>
-                      {idx + 1}. {label}
-                    </Text>
+      {!loading && !error && (
+        <>
+          <AnimatePresence mode="wait">
+            {!audience && (
+              <MotionBox
+                key="audience-select"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.35 }}
+                mb={8}
+              >
+                <Text color={muted} mb={4} fontSize={{ base: "sm", md: "md" }}>
+                  Chọn nhóm đối tượng phù hợp để bắt đầu. Mỗi nhóm có bộ câu hỏi riêng.
+                </Text>
+                <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+                  {AUDIENCES.map(a => {
+                    const ActiveIcon = a.icon;
+                    return (
+                      <MotionBox
+                        key={a.id}
+                        role="button"
+                        whileHover={{ y: -4 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => { setAudience(a.id); setQIndex(0); }}
+                        cursor="pointer"
+                        position="relative"
+                        p={4}
+                        borderRadius="lg"
+                        bg={cardBg}
+                        borderWidth="2px"
+                        borderColor={borderCol}
+                        shadow="sm"
+                        _hover={{ borderColor: accent }}
+                        overflow="hidden"
+                      >
+                        <Box position="absolute" inset={0} opacity={0.08} bgGradient={a.gradient} />
+                        <Flex direction="column" gap={2} position="relative">
+                          <Flex w={12} h={12} align="center" justify="center" borderRadius="full" bgGradient={a.gradient} color="white" shadow="md">
+                            <ActiveIcon />
+                          </Flex>
+                          <Text fontWeight="600" fontSize="sm">{a.label}</Text>
+                          <Text fontSize="xs" color={muted}>{a.desc}</Text>
+                        </Flex>
+                      </MotionBox>
+                    );
+                  })}
+                </SimpleGrid>
+              </MotionBox>
+            )}
+          </AnimatePresence>
 
-                    {isMulti ? (
-                      <CheckboxGroup value={(answers[id] as string[]) || []} onChange={(vals) => handleChangeMulti(id, vals as string[])}>
-                        <Stack>
-                          {options.map((opt) => (
-                            <Checkbox key={String(opt.id ?? opt.content)} value={String(opt.id ?? opt.content)}>
-                              {opt.content}
-                            </Checkbox>
-                          ))}
-                        </Stack>
-                      </CheckboxGroup>
-                    ) : (
-                      <RadioGroup value={String(answers[id] ?? "")} onChange={(v) => handleChangeSingle(id, v)}>
-                        <Stack>
-                          {options.map((opt) => (
-                            <Radio key={String(opt.id ?? opt.content)} value={String(opt.id ?? opt.content)}>
-                              {opt.content}
-                            </Radio>
-                          ))}
-                        </Stack>
-                      </RadioGroup>
-                    )}
-                  </Box>
-                );
-              })}
-            </Stack>
+          {audience && (
+            <MotionBox
+              key="questions"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              mb={6}
+            >
+              <Flex align="center" mb={4} wrap="wrap" gap={3}>
+                <Badge colorScheme="teal" px={3} py={1} borderRadius="full" fontSize="0.75rem" textTransform="none">
+                  Đối tượng: {AUDIENCES.find(a=>a.id===audience)?.label}
+                </Badge>
+                <Button size="xs" variant="ghost" onClick={() => { setAudience(""); setSubmitted(false); setAdvice(""); }}>
+                  Đổi đối tượng
+                </Button>
+                <Spacer />
+                <HStack color={muted} fontSize="sm">
+                  <Text>Đã chọn {selectedCount}/{filteredQuestions.length}</Text>
+                  <Text>• Tiến độ</Text>
+                </HStack>
+              </Flex>
+
+              <Progress value={percent(filteredQuestions.length ? selectedCount / filteredQuestions.length : 0)} size="sm" colorScheme="teal" borderRadius="full" mb={4}/>
+            </MotionBox>
           )}
 
-          <HStack mt={6} spacing={3}>
-            <Button colorScheme="blue" onClick={handleSubmit} isDisabled={!audience || filteredQuestions.length === 0}>
-              Nộp bài
-            </Button>
-            <Button variant="ghost" onClick={handleReset}>Làm lại</Button>
-            <Text color="gray.500">
-              Đã chọn: {selectedCount}/{filteredQuestions.length}
-            </Text>
-          </HStack>
-        </Box>
+          {audience && filteredQuestions.length === 0 && (
+            <Text color={muted}>Chưa có câu hỏi cho nhóm này.</Text>
+          )}
 
-        <Box w={{ base: "100%", lg: "360px" }} position="sticky" top="44px">
-          <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="md" p={4}>
-            <Heading size="md" mb={2}>Tóm tắt</Heading>
-            <Text color="gray.600">Bạn đã chọn {selectedCount} trên {filteredQuestions.length} câu.</Text>
+          {audience && filteredQuestions.length > 0 && (
+            <Flex gap={6} align="start" direction={{ base: "column", lg: "row" }}>
+              {/* LEFT: questions */}
+              <Box flex="1 1 0">
+                <Stack spacing={5}>
+                  {filteredQuestions.map((q, idx) => {
+                    const id = q.id;
+                    const label = q.content || q.text || `Câu hỏi #${idx + 1}`;
+                    const isMulti = !!q.multi; // default single
+                    const options = Array.isArray(q.answers) ? q.answers : [];
 
-            {dass && (
-              <Box mt={3}>
-                <Heading size="sm" mb={2}>Kết quả DASS-21</Heading>
-                <Stack fontSize="sm" spacing={1}>
-                  <Text>Trầm cảm: <b>{dass.depression.score}</b> — {dass.depression.level}</Text>
-                  <Text>Lo âu: <b>{dass.anxiety.score}</b> — {dass.anxiety.level}</Text>
-                  <Text>Stress: <b>{dass.stress.score}</b> — {dass.stress.level}</Text>
+                    return (
+                      <MotionBox
+                        key={String(id)}
+                        id={`q-${idx}`}
+                        bg={cardBg}
+                        border="1px solid"
+                        borderColor={idx === qIndex ? accent : borderCol}
+                        borderRadius="lg"
+                        p={5}
+                        shadow="sm"
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 24 }}
+                      >
+                        <Flex mb={3} align="flex-start" gap={3}>
+                          <Box mt={1} w={6} h={6} flexShrink={0} borderRadius="full" bg={accent} color="white" fontSize="xs" display="flex" alignItems="center" justifyContent="center" fontWeight="600">
+                            {idx + 1}
+                          </Box>
+                          <Text fontWeight="600">{label}</Text>
+                        </Flex>
+
+                        {isMulti ? (
+                          <CheckboxGroup
+                            value={(answers[id] as string[]) || []}
+                            onChange={(vals) => changeMulti(id, vals as string[])}
+                          >
+                            <Stack>
+                              {options.map((opt) => (
+                                <Checkbox key={String(opt.id ?? opt.content)} value={String(opt.id ?? opt.content)}>
+                                  {opt.content}
+                                </Checkbox>
+                              ))}
+                            </Stack>
+                          </CheckboxGroup>
+                        ) : (
+                          <RadioGroup
+                            value={String(answers[id] ?? "")}
+                            onChange={(v) => changeSingle(id, v)}
+                          >
+                            <Stack>
+                              {options.map((opt) => (
+                                <Radio key={String(opt.id ?? opt.content)} value={String(opt.id ?? opt.content)} colorScheme="teal">
+                                  {opt.content}
+                                </Radio>
+                              ))}
+                            </Stack>
+                          </RadioGroup>
+                        )}
+                      </MotionBox>
+                    );
+                  })}
                 </Stack>
-                <Text mt={2} color="gray.500">Điểm đã nhân đôi theo chuẩn DASS-42.</Text>
-              </Box>
-            )}
 
-            {!dass && partialDass && (
-              <Box mt={3}>
-                <Heading size="sm" mb={2}>Điểm tạm tính (chưa đủ 21 câu)</Heading>
-                <Stack fontSize="sm" spacing={1}>
-                  <Text>Trầm cảm: <b>{partialDass.depression.scaled}</b> (điểm tạm, đã nhân đôi) — đã trả lời {partialDass.depression.answered}/7 câu nhóm</Text>
-                  <Text>Lo âu: <b>{partialDass.anxiety.scaled}</b> (điểm tạm, đã nhân đôi) — đã trả lời {partialDass.anxiety.answered}/7 câu nhóm</Text>
-                  <Text>Stress: <b>{partialDass.stress.scaled}</b> (điểm tạm, đã nhân đôi) — đã trả lời {partialDass.stress.answered}/7 câu nhóm</Text>
-                </Stack>
-                <Text mt={2} color="gray.500">Điểm trên chỉ mang tính tham khảo khi chưa trả lời đủ 21 câu.</Text>
-              </Box>
-            )}
-
-            {submitted && (
-              <Box mt={3} fontSize="sm" color="gray.500">
-                <Text mb={2}>Đã lưu lựa chọn của bạn. Dưới đây là lời khuyên tham khảo dành cho bạn.</Text>
-                {adviceLoading ? (
-                  <HStack color="gray.500" spacing={2}>
-                    <Spinner size="sm" />
-                    <Text>Đang tạo lời khuyên…</Text>
+                <HStack mt={8} spacing={3} flexWrap="wrap">
+                  <Tooltip label="Nộp bài (kiểm tra thiếu trước khi tính điểm)">
+                    <Button colorScheme="teal" onClick={confirmSubmit.onOpen} leftIcon={<FaFlagCheckered/>}>
+                      Nộp bài
+                    </Button>
+                  </Tooltip>
+                  <Button variant="ghost" onClick={handleReset} leftIcon={<FaTrash/>}>
+                    Làm lại
+                  </Button>
+                  <HStack fontSize="sm" color={muted}>
+                    <Text>Đã chọn: {selectedCount}/{filteredQuestions.length}</Text>
+                    <Text>• Phím tắt: <Kbd>←</Kbd>/<Kbd>→</Kbd></Text>
                   </HStack>
-                ) : advice ? (
-                  <Box whiteSpace="pre-wrap" color={adviceColor}>
-                    {advice}
-                  </Box>
-                ) : (
-                  <Text color="gray.500">Chưa có lời khuyên.</Text>
-                )}
+                </HStack>
               </Box>
-            )}
-          </Box>
-        </Box>
-      </Flex>
-    </Box>
+
+              {/* RIGHT: summary & advice */}
+              <Box w={{ base: "100%", lg: "380px" }} position="sticky" top="44px" flexShrink={0}>
+                <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="md" p={4}>
+                  <Heading size="md" mb={2}>Tóm tắt</Heading>
+                  <Text color={muted}>Bạn đã chọn {selectedCount} trên {filteredQuestions.length} câu.</Text>
+
+                  {/* Navigator */}
+                  <Box mt={4}>
+                    <HStack justify="space-between" mb={2}>
+                      <Heading size="sm">Điều hướng</Heading>
+                      <HStack>
+                        <IconButton aria-label="Prev" icon={<FaChevronLeft/>} size="sm" variant="ghost" onClick={prev} isDisabled={qIndex<=0}/>
+                        <IconButton aria-label="Next" icon={<FaChevronRight/>} size="sm" variant="ghost" onClick={next} isDisabled={qIndex>=filteredQuestions.length-1}/>
+                      </HStack>
+                    </HStack>
+                    <SimpleGrid columns={isDesktop ? 8 : 6} spacing={2}>
+                      {filteredQuestions.map((q, idx) => {
+                        const done = answers[q.id as any] !== undefined;
+                        const active = idx === qIndex;
+                        return (
+                          <Tooltip key={String(q.id)} label={`Câu ${idx+1}${done ? " • đã chọn" : ""}`}>
+                            <Button
+                              size="xs"
+                              variant={active ? "solid" : done ? "outline" : "ghost"}
+                              colorScheme={active ? "teal" : done ? "teal" : undefined}
+                              onClick={() => goto(idx)}
+                            >
+                              {idx + 1}
+                            </Button>
+                          </Tooltip>
+                        );
+                      })}
+                    </SimpleGrid>
+                  </Box>
+
+                  {dass && (
+                    <Box mt={5}>
+                      <Heading size="sm" mb={2}>Kết quả DASS-21</Heading>
+                      <Stack spacing={4} fontSize="sm">
+                        {([
+                          ['Trầm cảm', dass.depression],
+                          ['Lo âu', dass.anxiety],
+                          ['Stress', dass.stress],
+                        ] as const).map(([label, obj]) => (
+                          <Box key={label}>
+                            <Flex justify="space-between" mb={1} fontWeight="500">
+                              <Text>{label}</Text>
+                              <HStack spacing={2} fontSize="xs">
+                                <Badge colorScheme={levelColor(obj.level)}>{obj.level}</Badge>
+                                <Text>{obj.score}</Text>
+                              </HStack>
+                            </Flex>
+                            <Progress value={progressPercent(obj.score)} size="xs" colorScheme={levelColor(obj.level)} borderRadius="full" />
+                          </Box>
+                        ))}
+                      </Stack>
+                      <HStack mt={3} color={muted} fontSize="xs">
+                        <Icon as={FaInfoCircle}/>
+                        <Text>Điểm đã nhân đôi theo chuẩn DASS-42. Chỉ mang tính tham khảo, không thay thế tư vấn chuyên môn.</Text>
+                      </HStack>
+                    </Box>
+                  )}
+
+                  {!dass && partialDass && (
+                    <Box mt={5}>
+                      <Heading size="sm" mb={2}>Điểm tạm tính</Heading>
+                      <Stack spacing={4} fontSize="sm">
+                        {([
+                          ['Trầm cảm', partialDass.depression],
+                          ['Lo âu', partialDass.anxiety],
+                          ['Stress', partialDass.stress],
+                        ] as const).map(([label, obj]) => (
+                          <Box key={label}>
+                            <Flex justify="space-between" mb={1} fontWeight="500">
+                              <Text>{label}</Text>
+                              <Text fontSize="xs">{obj.answered}/7 câu</Text>
+                            </Flex>
+                            <Progress value={progressPercent(obj.scaled)} size="xs" colorScheme="teal" borderRadius="full" />
+                          </Box>
+                        ))}
+                      </Stack>
+                      <HStack mt={3} color={muted} fontSize="xs">
+                        <Icon as={FaInfoCircle}/>
+                        <Text>Điểm tham khảo khi chưa trả lời đủ 21 câu.</Text>
+                      </HStack>
+                    </Box>
+                  )}
+
+                  {submitted && (
+                    <Box mt={5} fontSize="sm">
+                      <Heading size="sm" mb={2}>Lời khuyên</Heading>
+                      {adviceLoading ? (
+                        <HStack color={muted} spacing={2}><Spinner size="sm"/><Text>Đang tạo lời khuyên…</Text></HStack>
+                      ) : advice ? (
+                        <Box whiteSpace="pre-wrap" color={adviceColor}>{advice}</Box>
+                      ) : (
+                        <Text color={muted}>Chưa có lời khuyên.</Text>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Flex>
+          )}
+
+          {/* Confirm submit modal */}
+          <AlertDialog
+            isOpen={confirmSubmit.isOpen}
+            leastDestructiveRef={cancelRef}
+            onClose={confirmSubmit.onClose}
+            isCentered
+          >
+            <AlertDialogOverlay bg="blackAlpha.600">
+              <AlertDialogContent>
+                <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                  Xác nhận nộp bài
+                </AlertDialogHeader>
+                <AlertDialogBody>
+                  Bạn đã trả lời {selectedCount}/{filteredQuestions.length} câu.
+                  {filteredQuestions.length === 21 ? " Với bài DASS-21, cần trả lời đủ để tính điểm chuẩn." : ""}
+                </AlertDialogBody>
+                <AlertDialogFooter>
+                  <Button ref={cancelRef} onClick={confirmSubmit.onClose} variant="ghost">
+                    Huỷ
+                  </Button>
+                  <Button
+                    colorScheme="teal"
+                    ml={3}
+                    onClick={() => {
+                      confirmSubmit.onClose();
+                      handleSubmit();
+                    }}
+                  >
+                    Nộp bài
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialogOverlay>
+          </AlertDialog>
+        </>
+      )}
+    </Container>
   );
 }

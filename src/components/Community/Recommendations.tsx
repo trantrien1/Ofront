@@ -8,7 +8,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-// Firebase removed
+
 import { Community } from "../../atoms/communitiesAtom";
 import { FaReddit } from "react-icons/fa";
 import useCommunityData from "../../hooks/useCommunityData";
@@ -38,10 +38,10 @@ const RecommendationsBox = () => (
       height="70px"
       borderRadius="4px 4px 0px 0px"
       fontWeight={600}
-      bgImage="url(/images/recCommsArt.png)"
+      bgImage="url(/images/ptit.png)"
       backgroundSize="cover"
       bgGradient="linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75)),
-      url('images/recCommsArt.png')"
+      url('images/ptit.png')"
     >
       Cộng đồng hàng đầu
     </Flex>
@@ -101,10 +101,10 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
         height="70px"
         borderRadius="4px 4px 0px 0px"
         fontWeight={600}
-        bgImage="url(/images/recCommsArt.png)"
+        bgImage="url(/images/ptit.png)"
         backgroundSize="cover"
         bgGradient="linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75)),
-        url('images/recCommsArt.png')"
+        url('images/ptit.png')"
       >
         Cộng đồng hàng đầu
       </Flex>

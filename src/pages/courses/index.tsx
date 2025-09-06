@@ -62,7 +62,7 @@ const useCoursesFromApi = () => {
         const mapped: CourseItem[] = (maybeArray as any[]).map((c: any) => ({
           id: String(c.id ?? c.courseId ?? c._id ?? c.slug ?? Math.random().toString(36).slice(2)),
           title: String(c.title ?? c.name ?? "Khoá học"),
-          thumbnail: String(c.imageUrl ?? "/images/recCommsArt.png"),
+          thumbnail: String(c.imageUrl ?? "/images/logo2.png"),
           durationMinutes: Number(c.durationMinutes ?? 0),
           progressPercent: 0,
           completed: false,

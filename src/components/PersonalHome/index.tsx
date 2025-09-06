@@ -74,6 +74,19 @@ const PersonalHome: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
   const { onVote, onDeletePost, onSelectPost } = usePosts();
+  // Wrap delete to manage local loading & remove from local list
+  const handleDeletePost = async (post: Post) => {
+    setPostsLoading(true);
+    try {
+      const ok = await onDeletePost(post);
+      if (ok) {
+        setUserPosts(prev => prev.filter(p => p.id !== post.id));
+      }
+      return ok;
+    } finally {
+      setPostsLoading(false);
+    }
+  };
 
   const [roleLabel, setRoleLabel] = useState<string>("undefined");
   const roleColor: any = roleLabel === "admin" ? "purple" : roleLabel === "moderator" ? "orange" : "gray";
@@ -298,7 +311,7 @@ const PersonalHome: React.FC = () => {
                       <PostItem
                         post={post}
                         onVote={onVote}
-                        onDeletePost={onDeletePost}
+                        onDeletePost={handleDeletePost}
                         userIsCreator={true}
                         onSelectPost={onSelectPost}
                         userVoteValue={undefined}

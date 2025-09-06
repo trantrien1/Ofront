@@ -141,9 +141,10 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       await createPost(postData);
       
       toast({
-  title: "Đăng bài thành công!",
-  status: "success",
-  duration: 3000,
+        title: "Bài đăng đang chờ duyệt",
+        description: "Chúng tôi sẽ thông báo khi bài được phê duyệt.",
+        status: "info",
+        duration: 4000,
       });
 
       // Reset form

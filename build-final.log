@@ -1,0 +1,227 @@
+
+> reddit-clone-yt@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.5
+  - Environments: .env.local
+
+   Linting and checking validity of types ...
+
+./src/components/Layout/Sidebar.tsx
+103:6  Warning: React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Modal/Auth/index.tsx
+47:6  Warning: React Hook useEffect has a missing dependency: 'handleClose'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Modal/CreatePost/index.tsx
+91:6  Warning: React Hook useEffect has missing dependencies: 'communityId' and 'toast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/PersonalHome/index.tsx
+108:9  Warning: The 'safeAtob' function makes the dependencies of useCallback Hook (at line 126) change on every render. Move it inside the useCallback callback. Alternatively, wrap the definition of 'safeAtob' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+
+./src/components/Post/Comments/index.tsx
+365:6  Warning: React Hook useEffect has a missing dependency: 'getPostComments'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Post/Posts.tsx
+189:6  Warning: React Hook useEffect has a missing dependency: 'setPostStateValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+243:6  Warning: React Hook useEffect has missing dependencies: 'getPosts', 'postStateValue.posts.length', 'postStateValue.postsCache', and 'setPostStateValue'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/hooks/useAuth.ts
+65:6  Warning: React Hook useEffect has a missing dependency: 'checkAuth'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/hooks/useCommunityData.ts
+173:6  Warning: React Hook useEffect has missing dependencies: 'getSnippets' and 'setCommunityStateValue'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+313:6  Warning: React Hook useEffect has missing dependencies: 'communityStateValue.currentCommunity', 'getCommunityData', and 'setCommunityStateValue'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/hooks/usePosts.ts
+194:6  Warning: React Hook useEffect has a missing dependency: 'getCommunityPostVotes'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+204:6  Warning: React Hook useEffect has a missing dependency: 'setPostStateValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/hooks/useStompNotifications.ts
+331:6  Warning: React Hook useEffect has a missing dependency: 'setNotifState'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/admin/quiz/index.tsx
+27:32  Warning: React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/app/index.tsx
+47:6  Warning: React Hook useEffect has a missing dependency: 'fetchPosts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+56:6  Warning: React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/chatbot.tsx
+162:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
+166:9  Warning: A font-display parameter is missing (adding `&display=optional` is recommended). See: https://nextjs.org/docs/messages/google-font-display  @next/next/google-font-display
+166:9  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
+198:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+223:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+223:19  Warning: img elements must have an alt prop, either with meaningful text, or an empty string for decorative images.  jsx-a11y/alt-text
+
+./src/pages/comments/[id].tsx
+59:6  Warning: React Hook useEffect has missing dependencies: 'fetchPost' and 'id'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/courses/delete/[courseId].tsx
+37:6  Warning: React Hook useEffect has missing dependencies: 'router' and 'toast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/courses/quizz.tsx
+395:6  Warning: React Hook useCallback has missing dependencies: 'audience', 'dass', and 'partialDass'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+411:6  Warning: React Hook useEffect has missing dependencies: 'next' and 'prev'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/courses/videos.tsx
+133:6  Warning: React Hook useEffect has a missing dependency: 'markCompletedOnce'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/my-community.tsx
+90:6  Warning: React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+99:6  Warning: React Hook useEffect has missing dependencies: 'load' and 'user'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+165:6  Warning: React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/r/[community]/comments/[pid].tsx
+70:6  Warning: React Hook useEffect has a missing dependency: 'router.query'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/pages/r/[community]/index.tsx
+32:6  Warning: React Hook useEffect has a missing dependency: 'setCommunityStateValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/services/admin-approvals.service.ts
+33:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/admin.service.js
+116:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/auth.service.ts
+8:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/comments.service.js
+32:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/courses.service.ts
+35:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/groups.service.ts
+240:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/notifications.service.js
+31:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/posts.service.js
+334:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/quiz.service.ts
+31:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/users.service.js
+36:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/videos.service.ts
+28:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Collecting page data ...
+   Generating static pages (0/33) ...
+   Generating static pages (8/33) 
+   Generating static pages (16/33) 
+   Generating static pages (24/33) 
+ ✓ Generating static pages (33/33)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (pages)                              Size     First Load JS
+┌ ○ / (327 ms)                             9.24 kB         376 kB
+├   /_app                                  0 B             365 kB
+├ ○ /404                                   183 B           365 kB
+├ ○ /admin                                 920 B           375 kB
+├ ○ /admin/dashboard                       200 B           374 kB
+├ ○ /admin/quiz                            3.31 kB         368 kB
+├ ○ /admin/reports/[id]                    2.64 kB         368 kB
+├ ○ /anime                                 900 B           366 kB
+├ ƒ /api/_utils/auth                       0 B             365 kB
+├ ƒ /api/admin/approve-post                0 B             365 kB
+├ ƒ /api/admin/pending-posts               0 B             365 kB
+├ ƒ /api/admin/posts/recent                0 B             365 kB
+├ ƒ /api/admin/reports                     0 B             365 kB
+├ ƒ /api/admin/stats                       0 B             365 kB
+├ ƒ /api/admin/users/recent                0 B             365 kB
+├ ƒ /api/chat                              0 B             365 kB
+├ ƒ /api/comment/create                    0 B             365 kB
+├ ƒ /api/comment/get/by-posts/[id]         0 B             365 kB
+├ ƒ /api/comment/like                      0 B             365 kB
+├ ƒ /api/course/create                     0 B             365 kB
+├ ƒ /api/course/delete                     0 B             365 kB
+├ ƒ /api/course/get                        0 B             365 kB
+├ ƒ /api/course/update                     0 B             365 kB
+├ ƒ /api/course/video/create               0 B             365 kB
+├ ƒ /api/course/video/get-by-course        0 B             365 kB
+├ ƒ /api/debug/click                       0 B             365 kB
+├ ƒ /api/dev-login                         0 B             365 kB
+├ ƒ /api/group/add-admin                   0 B             365 kB
+├ ƒ /api/group/admins/add                  0 B             365 kB
+├ ƒ /api/group/create                      0 B             365 kB
+├ ƒ /api/group/delete                      0 B             365 kB
+├ ƒ /api/group/delete/[id]                 0 B             365 kB
+├ ƒ /api/group/get/[id]                    0 B             365 kB
+├ ƒ /api/group/get/all                     0 B             365 kB
+├ ƒ /api/group/get/by-user                 0 B             365 kB
+├ ƒ /api/group/join                        0 B             365 kB
+├ ƒ /api/group/posts                       0 B             365 kB
+├ ƒ /api/group/rename                      0 B             365 kB
+├ ƒ /api/group/update                      0 B             365 kB
+├ ƒ /api/group/update-status               0 B             365 kB
+├ ƒ /api/like                              0 B             365 kB
+├ ƒ /api/login                             0 B             365 kB
+├ ƒ /api/notifications                     0 B             365 kB
+├ ƒ /api/notifications/[id]/read           0 B             365 kB
+├ ƒ /api/notifications/get                 0 B             365 kB
+├ ƒ /api/post/create                       0 B             365 kB
+├ ƒ /api/post/delete/[id]                  0 B             365 kB
+├ ƒ /api/post/get                          0 B             365 kB
+├ ƒ /api/post/get/[id]                     0 B             365 kB
+├ ƒ /api/post/get/all                      0 B             365 kB
+├ ƒ /api/post/get/by-group                 0 B             365 kB
+├ ƒ /api/post/like                         0 B             365 kB
+├ ƒ /api/post/update                       0 B             365 kB
+├ ƒ /api/posts/approve                     0 B             365 kB
+├ ƒ /api/posts/community-feed              0 B             365 kB
+├ ƒ /api/posts/moderate                    0 B             365 kB
+├ ƒ /api/quiz/advice                       0 B             365 kB
+├ ƒ /api/quiz/create                       0 B             365 kB
+├ ƒ /api/quiz/delete                       0 B             365 kB
+├ ƒ /api/quiz/get                          0 B             365 kB
+├ ƒ /api/quiz/update                       0 B             365 kB
+├ ƒ /api/register                          0 B             365 kB
+├ ƒ /api/users                             0 B             365 kB
+├ ƒ /api/users/lookup                      0 B             365 kB
+├ ○ /app                                   2.81 kB         376 kB
+├ ○ /chatbot                               6.33 kB         371 kB
+├ ○ /comments/[id]                         1.08 kB         382 kB
+├ ○ /community                             3.69 kB         374 kB
+├ ○ /community/[community]                 1.58 kB         385 kB
+├ ○ /community/[community]/comments/[pid]  2.55 kB         384 kB
+├ ○ /community/[community]/index.impl      1.57 kB         385 kB
+├ ○ /community/[community]/submit          580 B           375 kB
+├ ○ /community/find                        3.16 kB         368 kB
+├ ○ /courses                               7.04 kB         372 kB
+├ ○ /courses/[courseId]                    2.81 kB         368 kB
+├ ○ /courses/[courseId]/watch/[videoId]    2.14 kB         367 kB
+├ ○ /courses/create                        1.99 kB         367 kB
+├ ○ /courses/delete/[courseId] (302 ms)    1.28 kB         366 kB
+├ ○ /courses/quizz                         196 B           376 kB
+├ ○ /courses/update/[courseId]             2.48 kB         368 kB
+├ ○ /courses/videos                        2.49 kB         368 kB
+├ ○ /my-community (315 ms)                 5.03 kB         370 kB
+├ ○ /no-access (315 ms)                    728 B           366 kB
+├ ○ /popular (360 ms)                      3.72 kB         374 kB
+├ ○ /profile (346 ms)                      9.98 kB         381 kB
+├ ○ /quiz (360 ms)                         241 B           377 kB
+├ ƒ /r/[community]                         654 B           384 kB
+├ ○ /r/[community]/comments/[pid]          2.54 kB         383 kB
+├ ○ /r/[community]/submit                  579 B           375 kB
+└ ○ /settings                              1.14 kB         366 kB
++ First Load JS shared by all              365 kB
+  ├ chunks/framework-ae562e2278ed0cd0.js   45.2 kB
+  ├ chunks/main-9030ecf3515b27d1.js        32 kB
+  ├ chunks/pages/_app-1249e00bfede960e.js  287 kB
+  └ other shared chunks (total)            1.18 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+---BUILD_DONE---

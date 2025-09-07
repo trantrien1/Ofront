@@ -43,6 +43,10 @@ const LandingPage: React.FC = () => {
   const accent = useColorModeValue("blue.600", "blue.300");
   const accentSoft = useColorModeValue("blue.50", "whiteAlpha.100");
 
+  // Pre-compute any color mode values that were previously (incorrectly) used inside callbacks
+  const featuresHoverBg = useColorModeValue("gray.100","whiteAlpha.100");
+  const faqExpandedBg = useColorModeValue("gray.50", "whiteAlpha.100");
+
   return (
     <Box bg={bg}>
       {/* ================= HERO ================= */}
@@ -145,7 +149,7 @@ const LandingPage: React.FC = () => {
                     size="lg"
                     variant="outline"
                     borderColor={border}
-                    _hover={{ transform: "translateY(-2px)", bg: useColorModeValue("gray.100","whiteAlpha.100") }}
+                    _hover={{ transform: "translateY(-2px)", bg: featuresHoverBg }}
                     transition="all .25s ease"
                   >
                     Xem tính năng
@@ -358,7 +362,7 @@ const LandingPage: React.FC = () => {
             ].map(({ q, a }) => (
               <AccordionItem key={q} border="none">
                 <h2>
-                  <AccordionButton _expanded={{ bg: useColorModeValue("gray.50", "whiteAlpha.100") }}>
+                  <AccordionButton _expanded={{ bg: faqExpandedBg }}>
                     <Box as="span" flex="1" textAlign="left" fontWeight="semibold">{q}</Box>
                     <AccordionIcon />
                   </AccordionButton>

@@ -114,7 +114,7 @@ const PersonalHome: React.FC = () => {
       return "";
     }
   };
-  const decodeJwt = (token: string) => {
+  const decodeJwt = useCallback((token: string) => {
     try {
       const parts = token.split(".");
       if (parts.length < 2) return null;
@@ -123,7 +123,7 @@ const PersonalHome: React.FC = () => {
     } catch {
       return null;
     }
-  };
+  }, [safeAtob]);
   const parseJoinDate = (src: any): Date | null => {
     if (!src) return null;
     if (src?.seconds) return new Date(src.seconds * 1000);
@@ -171,7 +171,7 @@ const PersonalHome: React.FC = () => {
     } catch {
       setRoleLabel("user");
     }
-  }, [user]);
+  }, [user, decodeJwt]);
 
   const fetchUserProfile = useCallback(async () => {
     if (!user?.uid) {
@@ -277,6 +277,14 @@ const PersonalHome: React.FC = () => {
 
   const roleColor: any =
     roleLabel === "admin" ? "purple" : roleLabel === "moderator" ? "orange" : "gray";
+
+  // Extract color tokens that are referenced inside map/render callbacks to avoid calling hooks there
+  const tabHoverBg = useColorModeValue("gray.100","whiteAlpha.100");
+  const emptyPostsHintColor = useColorModeValue("gray.500","gray.500");
+  // Additional lifted tokens (were previously inside conditional branches)
+  const profileBioColor = useColorModeValue("gray.800", "gray.200");
+  const editProfileVariant = useColorModeValue("solid", "outline");
+  const stickyBg = useColorModeValue("whiteAlpha.900", "blackAlpha.700");
 
   // ---------- Actions ----------
   const handleDeletePost = async (post: Post) => {
@@ -386,7 +394,7 @@ const PersonalHome: React.FC = () => {
             </HStack>
 
             {!!userProfile?.bio && (
-              <Text mt={3} color={useColorModeValue("gray.800", "gray.200")}>
+              <Text mt={3} color={profileBioColor}>
                 {userProfile.bio}
               </Text>
             )}
@@ -445,7 +453,7 @@ const PersonalHome: React.FC = () => {
             <Button
               leftIcon={<MdEdit />}
               colorScheme={brand}
-              variant={useColorModeValue("solid", "outline")}
+              variant={editProfileVariant}
               onClick={handleEditProfile}
             >
               Edit profile
@@ -459,7 +467,7 @@ const PersonalHome: React.FC = () => {
         position="sticky"
         top="0"
         zIndex={10}
-        bg={useColorModeValue("whiteAlpha.900", "blackAlpha.700")}
+  bg={stickyBg}
         backdropFilter="saturate(140%) blur(6px)"
         borderTop="1px solid"
         borderBottom="1px solid"
@@ -477,7 +485,7 @@ const PersonalHome: React.FC = () => {
                   fontWeight={600}
                   fontSize="sm"
                   position="relative"
-                  _hover={{ bg: useColorModeValue("gray.100","whiteAlpha.100") }}
+                  _hover={{ bg: tabHoverBg }}
                   _focusVisible={{ boxShadow: "none" }}
                   _before={{
                     content: '""',
@@ -522,7 +530,7 @@ const PersonalHome: React.FC = () => {
                     <Stack align="center" spacing={3}>
                       <ChakraImage src="/images/logo.png" alt="logo" boxSize="50px" borderRadius="full" />
                       <Text color={subtle}>Chưa có bài viết</Text>
-                      <Text color={useColorModeValue("gray.500","gray.500")} fontSize="sm" textAlign="center">
+                      <Text color={emptyPostsHintColor} fontSize="sm" textAlign="center">
                         Hãy bắt đầu chia sẻ với cộng đồng!
                       </Text>
                     </Stack>

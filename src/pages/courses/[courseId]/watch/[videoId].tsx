@@ -13,17 +13,7 @@ import { Tag, TagLeftIcon, TagLabel } from "@chakra-ui/react";
 import Link from "next/link";
 import { FaRegCheckCircle, FaYoutube } from "react-icons/fa";
 import { CoursesService, VideosService } from "../../../../services";
-
-// Helpers for localStorage
-function getCompleted(courseId: string) {
-  const data = typeof window !== "undefined" ? localStorage.getItem(`completed_${courseId}`) : null;
-  return data ? JSON.parse(data) : [];
-}
-function setCompleted(courseId: string, completed: string[]) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(`completed_${courseId}`, JSON.stringify(completed));
-  }
-}
+import { markVideoCompleted } from "../../../../services/videos.service";
 
 function youtubeWatchToEmbed(url?: string) {
   if (!url) return "";
@@ -41,7 +31,7 @@ function youtubeWatchToEmbed(url?: string) {
   return "";
 }
 
-type Lesson = { id: string; title: string; link?: string };
+type Lesson = { id: string; title: string; link?: string; isCompleted?: boolean };
 
 export default function WatchVideoPage() {
   const router = useRouter();
@@ -51,8 +41,7 @@ export default function WatchVideoPage() {
   const current = useMemo(() => list.find((v) => v.id === videoId), [list, videoId]);
   const embed = youtubeWatchToEmbed(current?.link) || "";
 
-  // State for completed videos
-  const [completed, setCompletedState] = useState<string[]>([]);
+  // Use backend isCompleted flags
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load course lessons when courseId changes
@@ -81,31 +70,33 @@ export default function WatchVideoPage() {
           id: String(l.id ?? l.videoId ?? idx),
           title: String(l.title ?? l.name ?? `Bài ${idx + 1}`),
           link: l.link || l.url || l.youtubeUrl,
+          isCompleted: !!(l.isCompleted || l.completed || l.done),
         }));
         if (mounted) setList(mapped);
       } catch {
         // keep empty
       }
-      setCompletedState(getCompleted(courseId));
     })();
     return () => { mounted = false; };
   }, [courseId]);
 
-  // Mark video as completed after 1 minute
+  // Mark video as completed after 1 minute via backend
   useEffect(() => {
-    if (!current || completed.includes(current.id)) return;
-    timerRef.current = setTimeout(() => {
-      const newCompleted = [...completed, current.id];
-      setCompleted(courseId, newCompleted);
-      setCompletedState(newCompleted);
-    }, 60000); // 1 phút
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [current, completed, courseId]);
+    if (!current) return;
+    if (current.isCompleted) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      try {
+        if (/^\d+$/.test(current.id)) await markVideoCompleted(Number(current.id));
+      } catch {}
+      setList(prev => prev.map(v => v.id === current.id ? { ...v, isCompleted: true } : v));
+    }, 60000);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [current]);
 
   // Tính phần trăm hoàn thành
-  const percent = list.length ? Math.round((completed.length / list.length) * 100) : 0;
+  const doneCount = list.filter(v => v.isCompleted).length;
+  const percent = list.length ? Math.round((doneCount / list.length) * 100) : 0;
   const allDone = percent === 100;
 
   const leftBg = useColorModeValue("white", "gray.800");
@@ -145,7 +136,7 @@ export default function WatchVideoPage() {
             {list.map((v) => {
               const href = `/courses/${courseId}/watch/${v.id}`;
               const isActive = v.id === videoId;
-              const isDone = completed.includes(v.id);
+              const isDone = !!v.isCompleted;
               return (
                 <Link key={v.id} href={href} shallow>
                   <Flex

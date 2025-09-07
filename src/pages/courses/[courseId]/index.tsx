@@ -19,13 +19,7 @@ import { FaYoutube, FaLock, FaRegCheckCircle } from "react-icons/fa";
 import { CoursesService, VideosService } from "../../../services";
 import { getClientRole, isAdminRole } from "../../../helpers/role";
 
-// Helpers for localStorage
-function getCompleted(courseId: string) {
-  const data = typeof window !== "undefined" ? localStorage.getItem(`completed_${courseId}`) : null;
-  return data ? JSON.parse(data) : [];
-}
-
-type Lesson = { id: string; title: string; date?: string; locked?: boolean };
+type Lesson = { id: string; title: string; date?: string; locked?: boolean; isCompleted?: boolean };
 
 export default function CourseDetailPage() {
   const router = useRouter();
@@ -72,6 +66,7 @@ export default function CourseDetailPage() {
             title: String(l.title ?? l.name ?? `Bài ${idx + 1}`),
             date: l.date ? String(l.date) : undefined,
             locked: !!l.locked,
+            isCompleted: !!(l.isCompleted || l.completed || l.done),
           }));
           setList(mapped);
         }
@@ -89,21 +84,15 @@ export default function CourseDetailPage() {
   const descCol = useColorModeValue('gray.700','gray.300');
   const headBar = useColorModeValue('#051d2d','gray.900');
 
-  // State for completed videos
-  const [completed, setCompleted] = useState<string[]>([]);
-
+  // robust role check (cookie/localStorage/JWT)
   useEffect(() => {
-    if (courseId) {
-      setCompleted(getCompleted(courseId));
-    }
-    // robust role check (cookie/localStorage/JWT)
     try {
       const r = getClientRole();
       setIsAdmin(isAdminRole(r));
     } catch {}
   }, [courseId]);
-
-  const percent = list.length ? Math.round((completed.length / list.length) * 100) : 0;
+  const doneCount = list.filter(l => l.isCompleted).length;
+  const percent = list.length ? Math.round((doneCount / list.length) * 100) : 0;
   const allDone = percent === 100;
 
   return (
@@ -170,7 +159,7 @@ export default function CourseDetailPage() {
         <Box h="10px" bg={headBar} />
         <VStack align="stretch" spacing={0}>
           {list.map((v) => {
-            const isDone = completed.includes(v.id);
+            const isDone = !!v.isCompleted;
             return (
               <Link key={v.id} href={`/courses/${courseId}/watch/${v.id}`}>
                 <Flex align="center" px={4} py={4} borderBottom="1px solid" borderColor={borderCol} _hover={{ bg: rowHover }}>

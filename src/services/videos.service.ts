@@ -18,4 +18,11 @@ export async function getVideosByCourse(courseId: number | string) {
   return data;
 }
 
-export default { createVideo, getVideosByCourse };
+// Đánh dấu video đã hoàn thành xem cho user hiện tại
+export async function markVideoCompleted(videoId: number | string) {
+  // Backend: POST /user-video/create/{videoId}
+  await request.post(`/user-video/create/${encodeURIComponent(String(videoId))}`);
+  return true;
+}
+
+export default { createVideo, getVideosByCourse, markVideoCompleted };

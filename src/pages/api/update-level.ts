@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const levelRaw = body.level ?? body.likeLevel ?? body.lv;
     if (levelRaw === undefined || levelRaw === null || levelRaw === '') return res.status(400).json({ error: 'level is required' });
     const levelNum = Number(levelRaw);
-    if (!Number.isFinite(levelNum) || levelNum < 1 || levelNum > 4) return res.status(400).json({ error: 'level must be 1..4' });
+  if (!Number.isFinite(levelNum) || levelNum < 1 || levelNum > 5) return res.status(400).json({ error: 'level must be 1..5' });
     const postId = body.postId ?? body.id ?? body.post_id;
     const commentId = body.commentId ?? body.comment_id ?? body.cmtId;
     if (!!postId === !!commentId) return res.status(400).json({ error: 'Provide exactly one of postId or commentId' });

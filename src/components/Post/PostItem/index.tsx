@@ -29,11 +29,14 @@ import {
   ModalCloseButton,
   Textarea,
   Input,
+  Tooltip,
 } from "@chakra-ui/react";
+import { keyframes } from "@emotion/react";
 import { NextRouter } from "next/router";
 import { AiOutlineDelete } from "react-icons/ai";
 import { BsChat, BsDot, BsGlobe } from "react-icons/bs";
-import { FaReddit, FaThumbsUp, FaThumbsDown, FaShare } from "react-icons/fa";
+import { FaReddit, FaThumbsUp, FaShare, FaHeart, FaAngry, FaSurprise, FaSadTear, FaLaugh, FaGrinHearts } from "react-icons/fa";
+import { BsEmojiFrown, BsEmojiSunglasses, BsEmojiSmile, BsEmojiNeutral } from "react-icons/bs";
 import {
   IoArrowRedoOutline,
   IoBookmarkOutline,
@@ -190,6 +193,29 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   // Determine liked state from prop or post state for immediate UI feedback
   const [localLikeLevel, setLocalLikeLevel] = useState<number | undefined>((post as any).likeLevel);
   const [pending, setPending] = useState(false);
+  // Reaction bar state (Facebook-like UX)
+  const [showReactions, setShowReactions] = useState(false);
+  const hoverTimer = useRef<any>(null);
+  const hideTimer = useRef<any>(null);
+  const clearTimers = () => { if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; } if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } };
+  const handleMainEnter = () => { clearTimers(); hoverTimer.current = setTimeout(() => setShowReactions(true), 300); };
+  const handleMainLeave = () => { clearTimers(); hideTimer.current = setTimeout(() => setShowReactions(false), 150); };
+  const handleBarEnter = () => { clearTimers(); setShowReactions(true); };
+  const handleBarLeave = () => { clearTimers(); hideTimer.current = setTimeout(() => setShowReactions(false), 150); };
+
+  // 6 reactions mapped to 5 backend levels (Haha & Wow -> 4)
+  const reactions = [
+    { lv: 1, label: 'Đồng ý', icon: FaThumbsUp, color: 'blue.500' },
+    { lv: 2, label: 'Đồng ý hoàn toàn', icon: FaHeart, color: 'red.500' },
+    { lv: 3, label: 'Đồng ý bình thường', icon: FaGrinHearts, color: 'pink.400' },
+    { lv: 4, label: 'Không đồng ý', icon: FaSadTear, color: 'yellow.500' },
+    { lv: 5, label: 'Hoàn toàn không đồng ý', icon: FaAngry, color: 'orange.500' },
+  ] as const;
+
+  const slideIn = keyframes`
+    from { transform: translateX(-10px); opacity: 0.9; }
+    to { transform: translateX(0); opacity: 1; }
+  `;
 
   // Stable effect-based sync instead of render-time conditional to avoid clobbering optimistic state
   const incomingLikeLevel = (post as any).likeLevel;
@@ -204,8 +230,11 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingLikeLevel]);
   const currentLikeLevel: number | undefined = localLikeLevel;
-  const isPositive = currentLikeLevel === 3 || currentLikeLevel === 4; // treat 3/4 as positive
-  const isNegative = currentLikeLevel === 1 || currentLikeLevel === 2; // treat 1/2 as negative
+  const isPositive = currentLikeLevel === undefined || [1,2,3,4].includes(currentLikeLevel); // 1..4 positive/neutral
+  const isNegative = currentLikeLevel === 5; // 5: angry
+  // Border color follows current reaction color when available
+  const activeReaction = reactions.find(r => r.lv === currentLikeLevel);
+  const postBorderColor = activeReaction ? activeReaction.color : borderCol;
   // Relative time label (must call hook at stable position)
   const createdAtLabel = useRelativeTime(normalizeTimestamp(post.createdAt));
 
@@ -246,7 +275,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       rounded="xl"
       p={4}
       border="2px solid"
-      borderColor={isPositive ? 'green.400' : isNegative ? 'red.400' : borderCol}
+      borderColor={postBorderColor}
       shadow="md"
       cursor={singlePostView ? "unset" : "pointer"}
       _hover={{
@@ -340,50 +369,98 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       {/* Actions - grouped: user interactions on the left, admin on the right */}
       <Flex mt={3} gap={3} align="center" wrap="wrap" justify="space-between">
         {/* Left cluster: Like / Dislike / Comment / Share */}
-        <HStack gap={3} align="center">
-          {/* Like */}
-          <HStack
-            px={3}
-            py={2}
-            rounded="full"
-            border="1px solid"
-            borderColor={isPositive ? "green.400" : borderCol}
-            bg={chipBg}
-            _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
-            cursor="pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isPositive && onUpdateLikeLevel) {
-                setLocalLikeLevel(3);
-                onUpdateLikeLevel(post, 3);
-              }
-            }}
-          >
-            <Icon as={FaThumbsUp} color={isPositive ? "green.500" : iconMuted} />
-            <Text color={chipText} fontSize="sm" fontWeight="medium">Hài lòng</Text>
-          </HStack>
+        <HStack gap={3} align="center" position="relative">
+          {/* Main Like button with delayed hover to open reaction bar */}
+          {(() => {
+            const current = reactions.find(r => r.lv === currentLikeLevel);
+            const mainIcon = (current?.icon) || FaThumbsUp;
+            const mainColor = current ? current.color : iconMuted;
+            const mainLabel = current ? current.label : 'Đồng ý';
+            return (
+              <HStack
+                px={3}
+                py={2}
+                rounded="full"
+                border="1px solid"
+                borderColor={current ? mainColor : borderCol}
+                bg={chipBg}
+                _hover={{ bg: chipHoverBg, transform: "scale(1.03)" }}
+                cursor="pointer"
+                onMouseEnter={handleMainEnter}
+                onMouseLeave={handleMainLeave}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Toggle default Like (1)
+                  if (currentLikeLevel === 1) {
+                    // Unset locally (backend may not support clear)
+                    setLocalLikeLevel(undefined as any);
+                  } else {
+                    setLocalLikeLevel(1);
+                    if (onUpdateLikeLevel) onUpdateLikeLevel(post, 1);
+                  }
+                }}
+              >
+                <Icon as={mainIcon as any} color={current ? mainColor : iconMuted} />
+                <Text color={chipText} fontSize="sm" fontWeight="medium">{mainLabel}</Text>
+              </HStack>
+            );
+          })()}
 
-          {/* Dislike */}
-          <HStack
-            px={3}
-            py={2}
-            rounded="full"
-            border="1px solid"
-            borderColor={isNegative ? "red.400" : borderCol}
-            bg={chipBg}
-            _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
-            cursor="pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isNegative && onUpdateLikeLevel) {
-                setLocalLikeLevel(1);
-                onUpdateLikeLevel(post, 1);
-              }
-            }}
-          >
-            <Icon as={FaThumbsDown} color={isNegative ? "red.500" : iconMuted} />
-            <Text color={chipText} fontSize="sm" fontWeight="medium">Không hài lòng</Text>
-          </HStack>
+          {/* Reaction bar (popover) */}
+          {showReactions && (
+            <HStack
+              spacing={2}
+              position="absolute"
+              top="-56px"
+              left={0}
+              bg={cardBg}
+              border="1px solid"
+              borderColor={borderCol}
+              boxShadow="lg"
+              rounded="full"
+              px={3}
+              py={2}
+              onMouseEnter={handleBarEnter}
+              onMouseLeave={handleBarLeave}
+              zIndex={10}
+              animation={`${slideIn} 140ms ease-out`}
+            >
+              {reactions.map(({ lv, label, icon, color }) => {
+                const active = currentLikeLevel === lv;
+                return (
+                  <Tooltip key={lv} label={label} hasArrow>
+                    <Box
+                      as="button"
+                      onClick={(e: any) => {
+                        e.stopPropagation();
+                        if (currentLikeLevel === lv) {
+                          // Unset locally when clicking same reaction
+                          setLocalLikeLevel(undefined as any);
+                        } else {
+                          setLocalLikeLevel(lv as any);
+                          if (onUpdateLikeLevel) onUpdateLikeLevel(post, lv as any);
+                        }
+                        setShowReactions(false);
+                      }}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      w="38px"
+                      h="38px"
+                      rounded="full"
+                      bg={active ? chipHoverBg : chipBg}
+                      border="1px solid"
+                      borderColor={active ? color : borderCol}
+                      transition="transform 120ms ease, background 120ms ease"
+                      _hover={{ transform: 'scale(1.15)' }}
+                    >
+                      <Icon as={icon as any} color={active ? color : iconMuted} boxSize={5} />
+                    </Box>
+                  </Tooltip>
+                );
+              })}
+            </HStack>
+          )}
 
           {/* Comment */}
           <HStack

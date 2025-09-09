@@ -7,9 +7,10 @@ import { useRouter } from "next/router";
 import { userState } from "../atoms/userAtom";
 import * as PostsService from "../services/posts.service";
 
-// Two-level satisfaction mapping (extendable later)
-export const LIKE_LEVEL = { DISSATISFIED: 1, SATISFIED: 3 } as const;
-type LikeLevel = typeof LIKE_LEVEL[keyof typeof LIKE_LEVEL];
+// Expanded like-level mapping to align with API (1..5)
+// 1: Like (Đồng ý), 2: Love (Tim), 3: Care/Strong like, 4: Wow/Haha, 5: Angry
+export const LIKE_LEVEL = { LIKE: 1, LOVE: 2, CARE: 3, WOW: 4, ANGRY: 5 } as const;
+type LikeLevel = 1 | 2 | 3 | 4 | 5;
 
 const usePosts = (communityData?: Community) => {
   const router = useRouter();
@@ -74,7 +75,7 @@ const usePosts = (communityData?: Community) => {
       }
     }, 6000);
     try {
-    await (PostsService as any).updateLikeLevel?.({ postId: post.id, level });
+  await (PostsService as any).updateLikeLevel?.({ postId: post.id, level });
   try { console.log('[update-level][success]', { postId: post.id, level }); } catch {}
     } catch (e: any) {
       patchPostEverywhere(prev); // rollback
@@ -101,9 +102,9 @@ const usePosts = (communityData?: Community) => {
   // Legacy vote (kept only if some UI still calls it) – could be removed later
   const onVote = async (e: React.MouseEvent<any>, post: Post) => {
     e.stopPropagation();
-    // Redirect legacy like to satisfied toggle
-    if ((post as any).likeLevel === LIKE_LEVEL.SATISFIED) return clearSatisfaction(post);
-    return setSatisfaction(post, LIKE_LEVEL.SATISFIED);
+    // Redirect legacy like to strong like (CARE) toggle
+    if ((post as any).likeLevel === LIKE_LEVEL.CARE) return clearSatisfaction(post);
+    return setSatisfaction(post, LIKE_LEVEL.CARE);
   };
 
   const onDeletePost = async (post: Post): Promise<boolean> => {
@@ -127,10 +128,10 @@ const usePosts = (communityData?: Community) => {
     } catch (e) { console.error('onDeletePost error', e); return false; }
   };
 
-  // Backwards compatibility adapter for existing UI expecting onUpdateLikeLevel(post, level)
+  // Adapter for UI: accept and forward any level 1..5
   const onUpdateLikeLevel = async (post: Post, level: number) => {
-    if (level === LIKE_LEVEL.DISSATISFIED) return setSatisfaction(post, LIKE_LEVEL.DISSATISFIED);
-    if (level === LIKE_LEVEL.SATISFIED) return setSatisfaction(post, LIKE_LEVEL.SATISFIED);
+    const clamped = Math.max(1, Math.min(5, Math.floor(level)));
+    return setSatisfaction(post, clamped as LikeLevel);
   };
 
   return {
@@ -140,9 +141,9 @@ const usePosts = (communityData?: Community) => {
     selectPost,
     onSelectPost: selectPost,
     onDeletePost,
-    // satisfaction API
-    setSatisfied: (post: Post) => setSatisfaction(post, LIKE_LEVEL.SATISFIED),
-    setDissatisfied: (post: Post) => setSatisfaction(post, LIKE_LEVEL.DISSATISFIED),
+  // satisfaction API
+  setSatisfied: (post: Post) => setSatisfaction(post, LIKE_LEVEL.CARE),
+  setDissatisfied: (post: Post) => setSatisfaction(post, LIKE_LEVEL.LIKE),
     clearSatisfaction,
     // legacy
     onVote,

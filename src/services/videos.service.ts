@@ -31,14 +31,14 @@ export async function updateVideo(payload: Partial<VideoPayload> & { id: number 
   if (payload.url != null) body.url = payload.url as any;
   if (payload.description != null) body.description = payload.description;
   if (payload.coureId != null) body.coureId = payload.coureId;
-  const { data } = await request.put('/course/video/update', body);
+  const { data } = await request.put('/video/update', body);
   return data;
 }
 
 export async function deleteVideo(id: number | string) {
-  const { data } = await request.delete('/course/video/delete', { params: { id } } as any).catch(async (e) => {
+  const { data } = await request.delete('/video/delete', { params: { id } } as any).catch(async (e) => {
     // Some servers may expect id in path; fallback to body
-    try { const r = await request.delete('/course/video/delete', { data: { id } } as any); return r; } catch (err) { throw e; }
+    try { const r = await request.delete('/video/delete', { data: { id } } as any); return r; } catch (err) { throw e; }
   });
   return data;
 }

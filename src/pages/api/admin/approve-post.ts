@@ -15,41 +15,62 @@ function cleanToken(raw?: string | null) {
   return s;
 }
 
+const first = (v: any) => Array.isArray(v) ? v[0] : v;
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "PUT" && req.method !== "POST") {
-    res.setHeader("Allow", ["PUT", "POST"]);
+  if (req.method !== "PUT") {
+    res.setHeader("Allow", ["PUT"]);
     return res.status(405).json({ error: "method_not_allowed" });
   }
 
   try {
-    const { id } = req.query;
-    if (!id) return res.status(400).json({ error: "missing_id" });
+  const rawId = first((req.body as any)?.id ?? (req.query as any)?.id);
+  const rawStatus = first((req.body as any)?.status ?? (req.query as any)?.status ?? 1);
+  const rawGroupMaybe = first(req.headers["x-group-id"] ?? (req.body as any)?.groupId ?? (req.query as any)?.groupId);
+
+  const id = Number(rawId);
+  const statusNum = Number(rawStatus);
+
+  if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ error: "invalid_id" });
+  if (!(statusNum === 0 || statusNum === 1)) return res.status(400).json({ error: "invalid_status" });
+
     const token = cleanToken(req.cookies?.token || null);
-    const headers: Record<string, string> = { Accept: "application/json", "Content-Type": "application/json" };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-      headers["Cookie"] = `token=${encodeURIComponent(token)}`;
-    }
-    const body = JSON.stringify({ status: 1,id });
+    const incomingCookie = typeof req.headers.cookie === "string" ? req.headers.cookie : "";
+    const tokenCookie = token ? `token=${encodeURIComponent(token)}` : "";
+    const cookie = [tokenCookie, incomingCookie].filter(Boolean).join("; ").replace(/^(;\s*)+|(;\s*)+$/g, "");
 
-    const attempts = [
-        { url: `${UPSTREAM}/post/update-status`, method: "PUT" },
-    ];
+  const headers: Record<string, string> = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(cookie ? { Cookie: cookie } : {}),
+    };
+  const groupNum = rawGroupMaybe != null && String(rawGroupMaybe).trim() !== '' ? Number(rawGroupMaybe) : NaN;
+  if (Number.isFinite(groupNum) && groupNum > 0) {
+    headers["x-group-id"] = String(groupNum);
+  }
 
-    let lastError: any = null;
-    for (const a of attempts) {
-      try {
-        const r = await fetch(a.url, { method: a.method as any, headers, body });
-        const ct = r.headers.get("content-type") || "";
-        const resp = ct.includes("application/json") ? await r.json() : await r.text();
-        if (r.ok) return res.status(200).json(resp || { ok: true });
-        lastError = { status: r.status, body: resp };
-        if (![404, 401, 403, 500].includes(r.status)) break;
-      } catch (e) {
-        lastError = e;
-      }
-    }
-    return res.status(502).json({ error: "upstream_unavailable", detail: lastError });
+  // Backend expects strings in Map<String,String>
+  const body = JSON.stringify({ id: String(id), status: String(statusNum) });
+    const url = `${UPSTREAM}/post/update-status`;
+
+    const r = await fetch(url, { method: "PUT", headers, body });
+    const ct = r.headers.get("content-type") || "";
+    const text = await r.text();
+    const parsed = ct.includes("application/json") ? (text ? JSON.parse(text) : {}) : undefined;
+
+    if (r.ok) return res.status(200).json(parsed ?? { ok: true });
+
+    try {
+      console.error("[approve-post] fail", {
+        status: r.status,
+        url,
+  bodySent: { id: String(id), status: String(statusNum) },
+  headersInfo: { hasAuth: !!headers.Authorization, xGroup: headers["x-group-id"] },
+        upstream: String(text || '').slice(0, 400),
+      });
+    } catch {}
+    return res.status(r.status || 502).json({ error: "upstream_error", status: r.status, body: parsed ?? text });
   } catch (e: any) {
     return res.status(500).json({ error: "proxy_error", message: e?.message || String(e) });
   }

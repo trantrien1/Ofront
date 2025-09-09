@@ -153,7 +153,8 @@ const VideosPage: React.FC = () => {
     if (!title && !url) return;
     setSaving(true);
     try {
-      await updateVideo({ id, title: title || curr?.title || '', url: url || curr?.url || '' });
+      const coureId = courseId ? (Number(courseId) && Number.isFinite(Number(courseId)) ? Number(courseId) : courseId) : undefined as any;
+      await updateVideo({ id, title: title || curr?.title || '', url: url || curr?.url || '', coureId: coureId as any });
       setVideos(prev => prev.map(v => v.id === id ? { ...v, title: title || v.title, url: url || v.url } : v));
       toast({ status: 'success', title: 'Đã cập nhật video' });
     } catch (e: any) {

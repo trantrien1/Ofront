@@ -25,8 +25,10 @@ export const getPendingPosts = async (): Promise<PendingPost[]> => {
   }
 };
 
-export const approvePostById = async (id: number | string) => {
-  const res = await request.put(`admin/approve-post`, null, { params: { id } });
+export const approvePostById = async (id: number | string, groupId?: number | string) => {
+  const payload: any = { id, status: 1 };
+  if (groupId != null) payload.groupId = groupId;
+  const res = await request.put(`admin/approve-post`, payload);
   return res.data;
 };
 

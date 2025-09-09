@@ -704,9 +704,9 @@ const AdminDashboard: React.FC = () => {
                             <Td>{group}</Td>
                             <Td><Badge colorScheme="yellow">Chờ duyệt</Badge></Td>
                             <Td>
-                              <Button size="sm" colorScheme="green" onClick={async () => {
+                <Button size="sm" colorScheme="green" onClick={async () => {
                                 try {
-                                  await approvePostById(p.id);
+                  await approvePostById(p.id, p?.groupOfPost?.id ?? p?.group?.id);
                                   setPendingPosts(prev => prev.filter(x => String(x.id) !== String(p.id)));
                                   toast({ title: 'Đã duyệt bài', description: `ID ${p.id}`, status: 'success', duration: 2500, isClosable: true });
                                 } catch (e: any) {

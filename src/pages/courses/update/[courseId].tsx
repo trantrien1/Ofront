@@ -148,7 +148,8 @@ export default function CourseUpdatePage() {
       const title = (v.editTitle || '').trim();
       const url = (v.editUrl || '').trim();
       if (!title || !url) throw new Error('Thiếu tiêu đề hoặc link');
-      await VideosService.updateVideo({ id, title, url });
+  const cid = courseId ? (Number(courseId) && Number.isFinite(Number(courseId)) ? Number(courseId) : courseId) : undefined as any;
+  await VideosService.updateVideo({ id, title, url, coureId: cid as any });
       setVideos(prev => prev.map(x => x.id === id ? { ...x, title, url, saving: false } : x));
       toast({ status: 'success', title: 'Đã cập nhật video' });
     } catch (e: any) {

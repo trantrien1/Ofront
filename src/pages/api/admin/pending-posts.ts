@@ -112,7 +112,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     for (const headers of headerAttempts) {
       attemptIdx += 1;
       const r = await fetch(url, { method: "GET", headers });
-      //console.log("HIHIHIHIHIHIH",r);
       const ct = r.headers.get("content-type") || "";
       let text = "";
       try { text = await r.text(); } catch {}

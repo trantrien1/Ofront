@@ -17,7 +17,7 @@ const AppHome: NextPage = () => {
   const user = useRecoilValue(userState) as any;
   const hasFetchedRef = useRef(false);
   const loadingUser = false;
-  const { postStateValue, setPostStateValue, onVote, onSelectPost, onDeletePost, loading, setLoading } = usePosts();
+  const { postStateValue, setPostStateValue, onVote, onSelectPost, onDeletePost, onUpdateLikeLevel, loading, setLoading } = usePosts();
   const communityStateValue = useRecoilValue(communityState);
 
   const fetchPosts = async () => {
@@ -64,6 +64,7 @@ const AppHome: NextPage = () => {
             post={post}
             postIdx={idx}
             onVote={onVote}
+            onUpdateLikeLevel={onUpdateLikeLevel}
             onDeletePost={onDeletePost}
             userVoteValue={undefined}
             userIsCreator={user?.uid === post.creatorId}

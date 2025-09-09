@@ -102,7 +102,7 @@ const PersonalHome: React.FC = () => {
 
   const [roleLabel, setRoleLabel] = useState<string>("user");
 
-  const { onVote, onDeletePost, onSelectPost } = usePosts();
+  const { onVote, onDeletePost, onSelectPost, onUpdateLikeLevel } = usePosts();
 
   // ---------- Utils ----------
   const safeAtob = (b64: string) => {
@@ -542,6 +542,7 @@ const PersonalHome: React.FC = () => {
                         <PostItem
                           post={post}
                           onVote={onVote}
+                          onUpdateLikeLevel={onUpdateLikeLevel}
                           onDeletePost={handleDeletePost}
                           userIsCreator
                           onSelectPost={onSelectPost}

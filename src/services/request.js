@@ -61,6 +61,42 @@ if (token) {
 	} catch (e) {}
 }
 
+// --- Lightweight instrumentation for debugging like/update-level calls ---
+request.interceptors.request.use((config) => {
+	try {
+		// Only log targeted endpoints to avoid noise
+		if (config?.url && /update-level|like/.test(config.url)) {
+			config.metadata = { start: Date.now() };
+			console.log('[HTTP][req]', config.method?.toUpperCase(), config.url, 'payload=', config.data);
+		}
+	} catch {}
+	return config;
+});
+
+request.interceptors.response.use((response) => {
+	try {
+		const url = response?.config?.url || '';
+		if (/update-level|like/.test(url)) {
+			const start = response.config.metadata?.start;
+			const ms = start ? (Date.now() - start) : undefined;
+			console.log('[HTTP][res]', response.config.method?.toUpperCase(), url, 'status=', response.status, ms != null ? (ms + 'ms') : '');
+		}
+	} catch {}
+	return response;
+}, (error) => {
+	try {
+		const cfg = error?.config || {};
+		const url = cfg.url || '';
+		if (/update-level|like/.test(url)) {
+			const start = cfg.metadata?.start;
+			const ms = start ? (Date.now() - start) : undefined;
+			const status = error?.response?.status;
+			console.log('[HTTP][err]', cfg.method?.toUpperCase(), url, 'status=', status, ms != null ? (ms + 'ms') : '', 'msg=', error?.message);
+		}
+	} catch {}
+	return Promise.reject(error);
+});
+
 // Function to update token after login
 export const updateRequestToken = (newToken) => {
 	try {

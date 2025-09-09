@@ -13,6 +13,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!req.body?.title || String(req.body.title).trim() === '') {
       return res.status(400).json({ error: 'Title is required' });
     }
+    // Ensure content is present (backend requires NotBlank)
+    const bodyContent = (req.body?.content ?? req.body?.body ?? '').toString();
+    if (bodyContent.trim().length === 0) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
 
     // Sanitize token helper
     const cleanToken = (t?: string | null) => {
@@ -35,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!token && cleanToken(req.cookies?.authToken)) token = cleanToken(req.cookies?.authToken);
     if (!token && cleanToken(req.cookies?.accessToken)) token = cleanToken(req.cookies?.accessToken);
 
-    // Build headers
+  // Build headers
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -56,22 +61,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       delete headers['Authorization'];
       delete headers['Cookie'];
     }
+    // Require authentication for posting
+    if (!forcePublic && !token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
-    // Build payload per backend PostDTO: { title, content, type, groupId }
-  const content = req.body?.content ?? req.body?.body ?? '';
+  // Build payload per backend PostDTO: { title, content, type, groupId, imageURL?, status?, isPersonalPost? }
+  const content = bodyContent;
   const rawGroupId = (req.body?.groupId ?? req.body?.communityId);
   const groupIdNum = rawGroupId != null ? Number(String(rawGroupId)) : undefined;
   const hasGroup = typeof groupIdNum === 'number' && Number.isFinite(groupIdNum);
-  const type = req.body?.type || (hasGroup ? 'blog' : undefined);
-  const payload: any = { title: req.body?.title, content };
+  // Backend only accepts 'blog' or 'forum'. Map by context; ignore UI 'postType' (TEXT/IMAGE)
+  const type = hasGroup ? 'blog' : 'forum';
+  const imageURL = (req.body as any)?.imageURL ?? (req.body as any)?.imageUrl ?? undefined;
+  const isPersonalPost = typeof (req.body as any)?.isPersonalPost === 'boolean' ? (req.body as any)?.isPersonalPost : undefined;
+
+  const payload: any = { title: String(req.body?.title ?? '').trim(), content: content };
   if (hasGroup) payload.groupId = groupIdNum;
   if (type) payload.type = type;
+  if (typeof imageURL !== 'undefined' && imageURL !== null) payload.imageURL = imageURL;
+  // Always start with status=0 on creation as required
+  payload.status = 0;
+  if (typeof isPersonalPost === 'boolean') payload.isPersonalPost = isPersonalPost;
 
   // If posting to a group and user is admin of that group, mark intent to auto-approve
     // Backend ExtractUserUtils reads token from cookie; we already forward it in headers
     const upstream = process.env.UPSTREAM_URL || 'https://rehearten-production.up.railway.app';
   let shouldAutoApprove = false;
-    if (!forcePublic && hasGroup && token) {
+  if (!forcePublic && hasGroup && token) {
       try {
         const rRole = await fetch(`${upstream}/group/get/by-user`, { method: 'GET', headers });
         const txt = await rRole.text();
@@ -80,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (Array.isArray(data)) {
           const found = data.find((g: any) => Number(g?.id) === Number(groupIdNum));
           const role = String(found?.userRole || '').toLowerCase();
-      if (role === 'admin') { payload.status = 1; shouldAutoApprove = true; }
+  if (role === 'admin') { shouldAutoApprove = true; }
         }
       } catch {}
     }

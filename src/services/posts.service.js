@@ -1,139 +1,36 @@
 import request from "./request";
 
+// Like level meanings (1..4):
+// 1 = không hài lòng
+// 2 = cực kì không hài lòng
+// 3 = hài lòng
+// 4 = cực kì hài lòng
+export const LIKE_LEVEL_LABELS = {
+	1: "Không hài lòng",
+	2: "Cực kì không hài lòng",
+	3: "Hài lòng",
+	4: "Cực kì hài lòng",
+};
+
 export const getPosts = async (options = {}) => {
-	// Use local Next.js API proxy which forwards cookie token to upstream
-	// request.baseURL already points to the local API root (e.g. http://localhost:3000/api/)
-	// so use a relative path without leading slash to avoid duplicate /api segments.
-	// Ensure upstream-required query params exist (match screenshot/example)
-	const params = {
-		// Upstream expects these keys to exist; title/typeSort can be empty strings
-		title: typeof options.title !== "undefined" ? String(options.title) : "",
-		sort: typeof options.sort !== "undefined" ? String(options.sort) : "like",
-		typeSort: typeof options.typeSort !== "undefined" ? String(options.typeSort) : "",
-	};
+	// Build query with defaults; default sorting by 'like' desc
+	const title = options.title != null ? String(options.title).trim() : '';
+	const rawSort = options.sort ? String(options.sort).trim().toLowerCase() : 'like';
+	const sort = (rawSort === 'like' || rawSort === 'time') ? rawSort : 'like';
+	// Always include typeSort; default to 'desc' for stability
+	const typeSort = (String(options.typeSort ?? 'desc').toLowerCase() === 'asc') ? 'asc' : 'desc';
 	const usp = new URLSearchParams();
-	if (typeof params.title !== 'undefined') usp.set('title', params.title);
-	if (params.sort) usp.set('sort', params.sort);
-	if (typeof params.typeSort !== 'undefined') usp.set('typeSort', params.typeSort);
+	if (title.length > 0) usp.set('title', title);
+	if (sort) usp.set('sort', sort);
+	if (typeSort) usp.set('typeSort', typeSort);
 	const query = usp.toString();
-	// Use local API proxy so cookies/withCredentials are sent to our domain,
-	// and the proxy forwards Authorization/cookies to upstream.
-	// request.baseURL already points to /api, so a relative path is correct here.
-	// Use local Next.js API route so cookies & auth are included automatically
 	const url = `post/get${query ? "?" + query : ""}`;
-	// For unauthenticated or general feed, callers may omit options.auth; if explicitly public, pass x-public header
-	const isPublic = options && (options.public === true || options.auth === false);
-			let response;
-			try {
-					// Prefer a simple public proxy when fetching public feed
-					if (isPublic) {
-							try {
-									response = await request.get("posts/community-feed", { headers: { 'x-public': '1' } });
-							} catch (e) {
-									// fall back to regular endpoint with explicit public header
-							}
-					}
-					if (!response) {
-							// Build per-request config; for public calls, also remove Authorization just for this request
-							const config = isPublic
-								? {
-										headers: { 'x-public': '1' },
-										transformRequest: [
-											(data, headers) => {
-												try { if (headers && 'Authorization' in headers) delete headers.Authorization; } catch {}
-												return data;
-											},
-										],
-									}
-								: { headers: {} };
-							response = await request.get(url, config);
-					}
-	} catch (err) {
-		const status = err?.response?.status;
-		// On unauthorized/forbidden, retry explicitly as public to avoid 403 when token is invalid/missing
-					if (!isPublic && (status === 401 || status === 403)) {
-							try {
-									response = await request.get("posts/community-feed", { headers: { 'x-public': '1' } });
-							} catch (_) {
-									response = await request.get(url, { headers: { 'x-public': '1' } });
-							}
-		} else {
-			throw err;
-		}
-	}
 
-	console.debug("PostsService.getPosts: raw response=", response.data);
-
-	// Map upstream post shape to frontend Post type
-	try {
-		const raw = response.data;
-		let postsArray = [];
-
-		// Handle different response formats
-		if (Array.isArray(raw)) {
-			postsArray = raw;
-		} else if (raw && Array.isArray(raw.posts)) {
-			// Handle mock data format: {posts: [...]} 
-			postsArray = raw.posts;
-		} else if (raw && raw.data && Array.isArray(raw.data)) {
-			// Handle wrapped data format: {data: [...]} 
-			postsArray = raw.data;
-		}
-
-		if (postsArray.length > 0) {
-			const mapped = postsArray.map((p) => {
-				// Use username from backend userOfPost
-				const correctUsername = extractUsername(p.userOfPost);
-				const nestedGroupId = (p.group && (p.group.id ?? p.group.groupId)) || (p.groupOfPost && (p.groupOfPost.id ?? p.groupOfPost.groupId));
-				const nestedGroupName = (p.group && (p.group.name ?? p.group.displayName)) || (p.groupOfPost && (p.groupOfPost.name ?? p.groupOfPost.displayName));
-				const cid = p.communityId || p.groupId || nestedGroupId || p.categoryId || p.communityDisplayText || "general";
-				const cdisp = p.communityDisplayText || nestedGroupName || p.communityName || (p.communityId ? String(p.communityId) : "");
-				return {
-					id: String(p.id),
-		communityId: cid,
-					communityImageURL: p.communityImageURL || null,
-					userDisplayText: correctUsername,
-					userUID: p.userUID || p.userOfPost?.userUID || "",
-					creatorId: String(p.creatorId || p.userId || p.userOfPost?.id || p.userOfPost?.userId || ""),
-					title: p.title || "",
-					body: p.body || p.content || "",
-					numberOfComments: Number(p.countComment ?? p.commentCount ?? p.numberOfComments) || 0,
-					voteStatus: Number(p.countLike ?? p.likes ?? p.voteStatus) || 0,
-					status: typeof p.status === 'number' ? p.status : (p.approved === true ? 1 : (p.approved === false ? 0 : undefined)),
-					approved: typeof p.approved === 'boolean' ? p.approved : (typeof p.status === 'number' ? Number(p.status) === 1 : undefined),
-					currentUserVoteStatus: p.userIsLike ? { id: `self_${p.id}`, voteValue: 1 } : undefined,
-					imageURL: p.imageURL || null,
-					postType: p.postType || "",
-					createdAt: p.createdAt || new Date().toISOString(),
-					editedAt: p.editedAt || null,
-					communityDisplayText: cdisp,
-					isPinned: Boolean(p.isPinned),
-					communityRuleNumber: p.communityRuleNumber || null,
-					// extras for UI without changing Post type
-					// @ts-ignore
-					authorAvatarURL: p.userOfPost?.urlAvatar || null,
-					// @ts-ignore
-					userOfPost: p.userOfPost || null,
-					// @ts-ignore
-					likedByMe: !!p.userIsLike,
-					// @ts-ignore
-					likeCount: Number(p.countLike ?? 0),
-				};
-			});
-			response.data = mapped;
-		} else {
-			// If no posts, return empty array
-			response.data = [];
-		}
-	} catch (e) {
-		console.debug("PostsService.getPosts: mapping error", e);
-		// Fallback to empty array if mapping fails
-		response.data = [];
-	}
-
-	console.debug("PostsService.getPosts: final response=", response.data);
-	return response.data;
-	};
+	const response = await request.get(url);
+	const raw = response.data;
+	const arr = Array.isArray(raw) ? raw : [];
+	return arr.map((p) => mapFromPostResponse(p));
+};
 
 // Get posts filtered by group/community using new upstream endpoint /post/get/by-group
 export const getPostsByGroup = async ({ groupId, sort = "like", typeSort } = {}) => {
@@ -142,172 +39,92 @@ export const getPostsByGroup = async ({ groupId, sort = "like", typeSort } = {})
 	}
 	const usp = new URLSearchParams();
 	usp.set("groupId", String(groupId));
-		if (sort) usp.set("sort", String(sort));
-		if (typeSort) usp.set("typeSort", String(typeSort));
+	// Backend expects sort values: 'time' or 'like'. Map 'createdAt' -> 'time'.
+	let finalSort = sort ? String(sort).trim() : 'like';
+	if (finalSort.toLowerCase() === 'createdat' || finalSort === 'createdAt') finalSort = 'time';
+	if (finalSort) usp.set('sort', finalSort);
+	// Always include typeSort; default to 'desc' for stability
+	usp.set('typeSort', (String(typeSort ?? 'desc').toLowerCase() === 'asc') ? 'asc' : 'desc');
 	const url = `post/get/by-group?${usp.toString()}`;
-		let response;
-	try {
-		response = await request.get(url);
-	} catch (err) {
-		// If unauthorized/forbidden, try explicit public fetch (no auth)
-		const status = err?.response?.status;
-		if (status === 401 || status === 403) {
-			try {
-				response = await request.get(url, { headers: { 'x-public': '1' } });
-			} catch (e2) {
-					// fall through to legacy attempt below
-					response = undefined;
-			}
-		} else {
-				// Not an auth error; try legacy endpoint scoped by communityId
-				response = undefined;
-		}
-	}
-
-		// If still no response, try legacy scoped endpoint: /api/group/posts?communityId={id}
-		if (!response) {
-			try {
-				const legacy = await request.get(`group/posts`, { params: { communityId: String(groupId) } });
-				response = legacy;
-			} catch (e3) {
-				// Final fallback: return empty array instead of throwing to avoid UI crash
-				return [];
-			}
-		}
-
-	// Map like getPosts
-	try {
-		const raw = response.data;
-		let postsArray = [];
-		if (Array.isArray(raw)) {
-			postsArray = raw;
-		} else if (raw && Array.isArray(raw.posts)) {
-			postsArray = raw.posts;
-		} else if (raw && raw.data && Array.isArray(raw.data)) {
-			postsArray = raw.data;
-		}
-		if (postsArray.length > 0) {
-				const mapped = postsArray.map((p) => {
-				const correctUsername = extractUsername(p.userOfPost);
-				return {
-					id: String(p.id),
-			// Ensure posts are scoped to the requested group; fallback to data fields if missing
-			communityId: (typeof groupId !== 'undefined' && groupId !== null && String(groupId) !== '')
-				? String(groupId)
-				: (p.communityId || p.groupId || p.categoryId || p.communityDisplayText || "general"),
-					communityImageURL: p.communityImageURL || null,
-					userDisplayText: correctUsername,
-					userUID: p.userUID || p.userOfPost?.userUID || "",
-					creatorId: String(p.creatorId || p.userId || p.userOfPost?.id || p.userOfPost?.userId || ""),
-					title: p.title || "",
-					body: p.body || p.content || "",
-					numberOfComments: Number(p.numberOfComments ?? p.countComment ?? p.commentCount) || 0,
-					voteStatus: Number(p.voteStatus) || Number(p.likes) ||  Number(p.countLike) || 0,
-					status: typeof p.status === 'number' ? p.status : (p.approved === true ? 1 : (p.approved === false ? 0 : undefined)),
-					approved: typeof p.approved === 'boolean' ? p.approved : (typeof p.status === 'number' ? Number(p.status) === 1 : undefined),
-					currentUserVoteStatus: p.userIsLike ? { id: `self_${p.id}`, voteValue: 1 } : undefined,
-					imageURL: p.imageURL || null,
-					postType: p.postType || "",
-					createdAt: p.createdAt || new Date().toISOString(),
-					editedAt: p.editedAt || null,
-					communityDisplayText: p.communityDisplayText || p.communityId || "",
-					isPinned: Boolean(p.isPinned),
-					communityRuleNumber: p.communityRuleNumber || null,
-				};
-			});
-			response.data = mapped;
-		} else {
-			response.data = [];
-		}
-		} catch (e) {
-			response.data = [];
-	}
-	return response.data;
+	const response = await request.get(url);
+	const raw = response.data;
+	const arr = Array.isArray(raw) ? raw : [];
+	return arr.map((p) => mapFromPostResponse(p, { groupIdFallback: groupId }));
 };
 
 export const likePost = async ({ postId } = {}) => {
 	// backend LikeDTO expects { postId }
 	const numericId = typeof postId === 'string' ? Number(postId) : postId;
 	const payload = { postId: Number.isFinite(numericId) ? numericId : postId };
-	try { console.debug("PostsService.likePost: sending payload=", payload); } catch (e) {}
 	// Use generic API route and preserve method (PUT per your upstream)
 	const response = await request.put("like", payload);
-	try { console.debug("PostsService.likePost: response=", response.data); } catch (e) {}
 	return response.data;
 };
 
 export const approvePost = async ({ postId, approve = true } = {}) => {
-	const payload = { postId, approve: !!approve };
-	const response = await request.post("posts/approve", payload);
+	// Backend expects { id, status } at post/update-status
+	if (!postId) throw new Error('postId required');
+	const payload = { id: Number(postId), status: approve ? 1 : 0 };
+	const response = await request.put("post/update-status", payload);
 	return response.data;
 };
 
 export const updatePost = async ({ postId, title, content } = {}) => {
-	const response = await request.put("post/update", { postId, title, content });
+	const response = await request.put("post/update", { id: postId, title, content });
 	return response.data;
 };
 
 export const deletePost = async ({ postId } = {}) => {
 	if (!postId) throw new Error('postId required');
-	let idPart = postId;
-	// Try numeric coercion if possible
-	try {
-		const n = typeof postId === 'string' ? Number(postId) : postId;
-		if (Number.isFinite(n)) idPart = n;
-	} catch {}
-	const response = await request.delete(`post/delete/${idPart}`);
+	const response = await request.delete(`post/delete/${postId}`);
 	return response.data;
 };
 
-export const createPost = async (postData) => {
-	// Create new post via API proxy; ensure groupId is present for backend
-	const payload = { ...postData };
-	if (payload && payload.communityId != null && payload.groupId == null) {
-		const n = typeof payload.communityId === 'string' ? Number(payload.communityId) : payload.communityId;
-		payload.groupId = Number.isFinite(n) ? n : payload.communityId;
+export const updateLikeLevel = async ({ postId, commentId, level } = {}) => {
+	// Backend expects exactly the field name 'level' (see LikeDTO)
+	if ((!postId && !commentId) || level === undefined || level === null) {
+		throw new Error('postId/commentId và level bắt buộc');
 	}
-	const response = await request.post("post/create", payload);
-	try { console.debug("PostsService.createPost: response=", response.data); } catch (e) {}
+	// Normalize numeric ids to numbers when possible to align with repository lookups
+	const norm = (v) => {
+		if (v == null) return v;
+		const n = Number(v);
+		return Number.isFinite(n) ? n : v;
+	};
+	const payload = { level: Number(level), ...(postId ? { postId: norm(postId) } : {}), ...(commentId ? { commentId: norm(commentId) } : {}) };
+	const resp = await request.put('update-level', payload);
+	return resp.data;
+};
+
+// Explicit re-export for TypeScript tooling (some setups need this in .js files)
+export { updateLikeLevel as __updateLikeLevelRef, LIKE_LEVEL_LABELS as __LIKE_LEVEL_LABELS_REF };
+
+export const createPost = async (postData) => {
+	// Send exactly what caller supplies; backend will set group only when type='blog' and groupId provided
+	const response = await request.post("post/create", postData);
 	return response.data;
 };
 
 // Map a single raw API post object to frontend Post
-function mapRawToPost(p) {
-	const correctUsername = extractUsername(p?.userOfPost);
-	const nestedGroupId = (p?.group && (p.group.id ?? p.group.groupId)) || (p?.groupOfPost && (p.groupOfPost.id ?? p.groupOfPost.groupId));
-	const nestedGroupName = (p?.group && (p.group.name ?? p.group.displayName)) || (p?.groupOfPost && (p.groupOfPost.name ?? p.groupOfPost.displayName));
-	const cid = p?.communityId || p?.groupId || nestedGroupId || p?.categoryId || p?.communityDisplayText || "general";
-	const cdisp = p?.communityDisplayText || nestedGroupName || p?.communityName || (p?.communityId ? String(p.communityId) : "");
+function mapFromPostResponse(p, opts = {}) {
+	const username = extractUsername(p?.userOfPost);
 	return {
 		id: String(p?.id ?? ""),
-		communityId: cid,
-		communityImageURL: p?.communityImageURL || null,
-		userDisplayText: correctUsername,
-		userUID: p?.userUID || p?.userOfPost?.userUID || "",
-		creatorId: String(p?.creatorId || p?.userId || p?.userOfPost?.id || p?.userOfPost?.userId || ""),
+	// Minimal, consistent fields the UI uses
+	userDisplayText: username,
 		title: p?.title || "",
-	body: p?.body || p?.content || "",
-	numberOfComments: Number(p?.countComment ),
-	voteStatus: Number(p?.countLike),
-		status: typeof p?.status === 'number' ? p.status : (p?.approved === true ? 1 : (p?.approved === false ? 0 : undefined)),
-		approved: typeof p?.approved === 'boolean' ? p.approved : (typeof p?.status === 'number' ? Number(p.status) === 1 : undefined),
-		currentUserVoteStatus: p?.userIsLike ? { id: `self_${p?.id}`, voteValue: 1 } : undefined,
-		imageURL: p?.imageURL || null,
-		postType: p?.postType || "",
-		createdAt: p?.createdAt || new Date().toISOString(),
-		editedAt: p?.editedAt || null,
-		communityDisplayText: cdisp,
-		isPinned: Boolean(p?.isPinned),
-		communityRuleNumber: p?.communityRuleNumber || null,
-	// extras for UI
-	// @ts-ignore
-	authorAvatarURL: p?.userOfPost?.urlAvatar || null,
-	// @ts-ignore
-	userOfPost: p?.userOfPost || null,
-	// @ts-ignore
-	likedByMe: !!p?.userIsLike,
-	// @ts-ignore
-	likeCount: Number(p?.countLike ?? 0),
+		body: p?.content || "",
+	// Prefer backend field names for easier debugging
+	countComment: Number(p?.countComment ?? 0),
+	countLike: Number(p?.countLike ?? 0),
+	// Aliases kept for compatibility; consider migrating consumers to count* fields
+	numberOfComments: Number(p?.countComment ?? 0),
+	voteStatus: Number(p?.countLike ?? 0),
+		likeLevel: typeof p?.levelIcon === 'number' ? p.levelIcon : undefined,
+	createdAt: p?.createdAt ?? null,
+	editedAt: p?.editedAt ?? null,
+	// Include groupId only when needed by caller context
+	...(opts?.groupIdFallback != null ? { groupId: String(opts.groupIdFallback) } : {}),
 	};
 }
 
@@ -318,17 +135,10 @@ export const getPostById = async ({ postId } = {}) => {
 	try {
 		response = await request.get(url);
 	} catch (err) {
-		// Retry public if auth fails
-		const status = err?.response?.status;
-		if (status === 401 || status === 403) {
-			response = await request.get(url, { headers: { 'x-public': '1' } });
-		} else {
-			throw err;
-		}
+		throw err;
 	}
 	const raw = response.data;
-	const rawPost = Array.isArray(raw) ? raw[0] : (raw && raw.data ? raw.data : raw);
-	return mapRawToPost(rawPost || {});
+	return mapFromPostResponse(raw || {});
 };
 
 export default {

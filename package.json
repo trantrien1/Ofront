@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test:db": "node scripts/test-database.js",
-    "db:setup": "mysql -u root -p < database/schema.sql"
+  "db:setup": "mysql -u root -p < database/schema.sql",
+  "clean:cache": "node -e \"try{fs=require('fs');fs.rmSync('.next',{recursive:true,force:true});fs.rmSync('.turbo',{recursive:true,force:true});console.log('Cache cleaned')}catch(e){console.error(e)}\"",
+  "clean:full": "node -e \"try{fs=require('fs');fs.rmSync('.next',{recursive:true,force:true});fs.rmSync('.turbo',{recursive:true,force:true});fs.rmSync('node_modules',{recursive:true,force:true});['package-lock.json','pnpm-lock.yaml','yarn.lock'].forEach(f=>{if(fs.existsSync(f)) fs.rmSync(f)});console.log('Full clean done')}catch(e){console.error(e)}\" && npm install && echo Reinstalled"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.1.1",
@@ -47,6 +49,9 @@
     "eslint": "8.32.0",
     "eslint-config-next": "14.2.5",
     "typescript": "4.9.4"
+  },
+  "engines": {
+    "node": ">=18.17 <21"
   },
   "overrides": {
     "react": "18.2.0",

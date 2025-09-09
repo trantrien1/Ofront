@@ -1,0 +1,5 @@
+{
+  "status": "ok",
+  "message": "Placeholder for Chrome DevTools fetch to prevent 500. Adjust as needed.",
+  "generatedAt": "${new Date().toISOString()}"
+}

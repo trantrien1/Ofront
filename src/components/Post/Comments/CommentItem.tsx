@@ -1,6 +1,5 @@
-import React, { useCallback, useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  Avatar,
   Box,
   Flex,
   Icon,
@@ -9,9 +8,15 @@ import {
   Text,
   Button,
   useColorModeValue,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+  PopoverBody,
+  HStack,
 } from "@chakra-ui/react";
 type Timestamp = any;
-import { FaReddit, FaThumbsUp } from "react-icons/fa";
+import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import { Image } from "@chakra-ui/react";
 import { normalizeTimestamp, useRelativeTime } from "../../../helpers/timestampHelpers";
 import { useRouter } from "next/router";
@@ -78,19 +83,27 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
-  const [liking, setLiking] = useState(false);
-  const [likedByMe, setLikedByMe] = useState<boolean>(!!comment.likedByMe);
-  const [likeCount, setLikeCount] = useState<number>(typeof comment.likeCount === 'number' ? comment.likeCount : 0);
+  const [updating, setUpdating] = useState(false);
+  const [likeLevel, setLikeLevel] = useState<number | undefined>(() => {
+    const lvl = (comment as any).likeLevel;
+    if (typeof lvl === 'number') return lvl;
+    // Fallback: legacy likedByMe -> satisfied (3)
+    if ((comment as any).likedByMe) return 3;
+    return undefined;
+  });
+  const inflightRef = useRef<string | null>(null);
 
   // Theming colors
   const highlightBg = useColorModeValue("gray.100", "whiteAlpha.100");
   const highlightBorder = useColorModeValue("gray.300", "whiteAlpha.300");
   const timestampColor = useColorModeValue("gray.600", "gray.400");
   const actionsColor = useColorModeValue("gray.600", "gray.400");
-  const likeNeutralIcon = useColorModeValue("gray.500", "gray.400");
-  const likeCountColor = useColorModeValue("gray.500", "gray.400");
+  const likePosBg = useColorModeValue("green.500", "green.400");
+  const likePosBgHover = useColorModeValue("green.600", "green.500");
+  const likeNegBg = useColorModeValue("red.500", "red.400");
+  const likeNegBgHover = useColorModeValue("red.600", "red.500");
   const hoverLinkColor = useColorModeValue("blue.600", "blue.300");
-  const likedLabelColor = useColorModeValue("blue.600", "blue.300");
+  const likeCountColor = useColorModeValue("gray.500", "gray.400");
   console.log("đây là giờ comment", comment.createdAt);
   // Precompute relative time label to avoid calling hook inside conditional directly in JSX
   const commentTimeLabel = useRelativeTime(comment.createdAt ? normalizeTimestamp(comment.createdAt) : undefined);
@@ -143,41 +156,38 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     setReplyText("");
   };
 
-  const handleToggleLike = async () => {
-    if (!comment.id || liking) return;
-    // Optimistic update
-    const nextLiked = !likedByMe;
-    const delta = nextLiked ? 1 : -1;
-    setLikedByMe(nextLiked);
-    setLikeCount((c) => Math.max(0, (c || 0) + delta));
-    // persist locally so reload keeps the state
-    try {
-      if (typeof window !== 'undefined') {
-        const raw = window.localStorage.getItem('commentLikes');
-        const obj = raw ? JSON.parse(raw) : {};
-        obj[comment.id] = { liked: nextLiked, at: Date.now() };
-        window.localStorage.setItem('commentLikes', JSON.stringify(obj));
-      }
-    } catch {}
-    setLiking(true);
-    try {
-      await CommentsService.likeComment({ commentId: comment.id });
-    } catch (e) {
-      // rollback on error
-      setLikedByMe(likedByMe);
-      setLikeCount((c) => Math.max(0, (c || 0) - delta));
-      // rollback persisted state
-      try {
-        if (typeof window !== 'undefined') {
-          const raw = window.localStorage.getItem('commentLikes');
-          const obj = raw ? JSON.parse(raw) : {};
-          obj[comment.id] = { liked: !nextLiked, at: Date.now() };
-          window.localStorage.setItem('commentLikes', JSON.stringify(obj));
-        }
-      } catch {}
+  const setLevel = async (level: number) => {
+    if (!comment.id) return;
+    if (updating) return;
+    // Toggle off if same level clicked (local only for now)
+    if (likeLevel === level) {
+      setLikeLevel(undefined);
+      return;
     }
-    setLiking(false);
+    const prev = likeLevel;
+    setLikeLevel(level);
+    setUpdating(true);
+    inflightRef.current = comment.id;
+    try {
+      console.debug('[CommentItem] update-level start', { commentId: comment.id, level });
+      await fetch('/api/update-level', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ commentId: comment.id, level })
+      });
+      console.debug('[CommentItem] update-level done');
+    } catch (e) {
+      // rollback
+      setLikeLevel(prev);
+      console.warn('[CommentItem] update-level failed', e);
+    }
+    inflightRef.current = null;
+    setUpdating(false);
   };
+
+  const isPositive = likeLevel === 3 || likeLevel === 4;
+  const isNegative = likeLevel === 1 || likeLevel === 2;
 
   return (
     <Box>
@@ -210,26 +220,49 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             {isLoading && <Spinner size="sm" />}
           </Stack>
           <Text fontSize="10pt">{comment.text}</Text>
-          <Stack
-            direction="row"
-            align="center"
-            cursor="pointer"
-            fontWeight={600}
-            color={actionsColor}
-          >
-            <Flex align="center" onClick={handleToggleLike} opacity={liking ? 0.6 : 1}>
-              <Icon as={FaThumbsUp} color={likedByMe ? 'blue.500' : likeNeutralIcon} mr={1} />
-              <Text fontSize="9pt" mr={2} color={likedByMe ? likedLabelColor : 'inherit'}>
-                {likedByMe ? 'Liked' : 'Like'}
-              </Text>
-              <Text fontSize="9pt" color={likeCountColor}>{likeCount || 0}</Text>
-            </Flex>
-            <Text 
-              fontSize="9pt" 
-              _hover={{ color: hoverLinkColor }}
-              onClick={() => setShowReplyInput(!showReplyInput)}
-            >
-              Reply
+          <Stack direction="row" align="center" fontWeight={600} color={actionsColor}>
+            <Popover placement="top" trigger="click">
+              <PopoverTrigger>
+                <Button
+                  size="xs"
+                  variant={likeLevel ? 'solid' : 'outline'}
+                  fontSize="9pt"
+                  isLoading={updating}
+                  colorScheme={isPositive ? 'green' : isNegative ? 'red' : undefined}
+                >
+                  {isPositive ? 'Hài lòng' : isNegative ? 'Không hài lòng' : 'Phản hồi'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent w="auto" bg={useColorModeValue('white', 'gray.700')} _focus={{ outline: 'none' }}>
+                <PopoverArrow />
+                <PopoverBody p={2}>
+                  <HStack spacing={2}>
+                    <Button
+                      size="xs"
+                      leftIcon={<Icon as={FaThumbsUp} />}
+                      bg={isPositive ? likePosBg : undefined}
+                      color={isPositive ? 'white' : 'green.500'}
+                      _hover={{ bg: isPositive ? likePosBgHover : 'green.50' }}
+                      onClick={() => !updating && setLevel(3)}
+                    >
+                      Hài lòng
+                    </Button>
+                    <Button
+                      size="xs"
+                      leftIcon={<Icon as={FaThumbsDown} />}
+                      bg={isNegative ? likeNegBg : undefined}
+                      color={isNegative ? 'white' : 'red.500'}
+                      _hover={{ bg: isNegative ? likeNegBgHover : 'red.50' }}
+                      onClick={() => !updating && setLevel(1)}
+                    >
+                      Không hài lòng
+                    </Button>
+                  </HStack>
+                </PopoverBody>
+              </PopoverContent>
+            </Popover>
+            <Text fontSize="9pt" _hover={{ color: hoverLinkColor }} onClick={() => setShowReplyInput(!showReplyInput)}>
+              Trả lời
             </Text>
             {comment.replyCount && comment.replyCount > 0 && (
               <Text fontSize="9pt" color={likeCountColor}>

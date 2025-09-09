@@ -11,7 +11,7 @@ import usePosts from "../hooks/usePosts";
 const CommunityFeed: NextPage = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const { onVote, onDeletePost, onSelectPost } = usePosts();
+  const { onVote, onDeletePost, onSelectPost, onUpdateLikeLevel } = usePosts();
 
   const load = async () => {
     setLoading(true);
@@ -56,6 +56,7 @@ const CommunityFeed: NextPage = () => {
                 post={post}
                 postIdx={index}
                 onVote={onVote}
+                onUpdateLikeLevel={onUpdateLikeLevel}
                 onDeletePost={onDeletePost}
                 userVoteValue={undefined}
                 userIsCreator={false}

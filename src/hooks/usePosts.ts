@@ -1,216 +1,156 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { authModalState } from "../atoms/authModalAtom";
 import { Community, communityState } from "../atoms/communitiesAtom";
-import { Post, postState, PostVote } from "../atoms/postsAtom";
+import { Post, postState } from "../atoms/postsAtom";
 import { useRouter } from "next/router";
 import { userState } from "../atoms/userAtom";
-import { likePost, deletePost as deletePostSvc } from "../services/posts.service";
+import * as PostsService from "../services/posts.service";
+
+// Two-level satisfaction mapping (extendable later)
+export const LIKE_LEVEL = { DISSATISFIED: 1, SATISFIED: 3 } as const;
+type LikeLevel = typeof LIKE_LEVEL[keyof typeof LIKE_LEVEL];
 
 const usePosts = (communityData?: Community) => {
-  const user = useRecoilValue(userState) as any;
-  const loadingUser = false;
-  const [postStateValue, setPostStateValue] = useRecoilState(postState);
-  const setAuthModalState = useSetRecoilState(authModalState);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const router = useRouter();
-  const communityStateValue = useRecoilValue(communityState);
+  const [postStateValue, setPostStateValue] = useRecoilState(postState);
+  const communityValue = useRecoilValue(communityState);
+  const user = useRecoilValue(userState);
+  const setAuthModalState = useSetRecoilState(authModalState);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false); // kept for compatibility
 
-  const onSelectPost = (post: Post, postIdx: number) => {
-    console.log("=== usePosts onSelectPost called ===");
-    console.log("Setting selectedPost:", { 
-      postId: post?.id, 
-      postTitle: post?.title?.slice(0, 50),
-      postIdx 
-    });
-    
-    setPostStateValue((prev) => ({
-      ...prev,
-      selectedPost: { ...post, postIdx },
-    }));
+  // Prevent parallel requests per post
+  const inflightRef = useRef<Record<string, boolean>>({});
 
-    // Navigate directly to post comments without community - posts are from users now
-    const targetUrl = `/comments/${post.id}`;
-    console.log("✅ Navigating to:", targetUrl);
-    
-    // Use router.push with callback to log navigation result
-    router.push(targetUrl).then(() => {
-      console.log("✅ Navigation completed successfully");
-    }).catch((err) => {
-      console.error("❌ Navigation failed:", err);
-    });
-    
-    console.log("Navigation command sent");
-    console.log("====================================");
+  const selectPost = (post: Post, postIdx: number) => {
+    setPostStateValue(prev => ({ ...prev, selectedPost: { ...post, postIdx } }));
+    const cid = communityData?.id || post.communityId;
+    router.push(cid ? `/community/${cid}/comments/${post.id}` : `/comments/${post.id}`);
   };
 
-  const onVote = async (
-    event: React.MouseEvent<HTMLButtonElement | SVGElement, MouseEvent>,
-    post: Post,
-    vote: number,
-    communityId?: string
-  ) => {
-    event.stopPropagation();
-    if (!user?.uid) {
-      setAuthModalState({ open: true, view: "login" });
-      return;
-    }
+  // Patch a post everywhere (posts array, selectedPost, cache)
+  const patchPostEverywhere = (updated: Post) => {
+    setPostStateValue(prev => {
+      const uid = String(updated.id);
+      let found = false;
+      const posts = prev.posts.map(p => {
+        if (String(p.id) === uid) { found = true; return updated; }
+        return p;
+      });
+      if (!found) { try { console.warn('[patchPostEverywhere] post not found in list', { id: uid }); } catch {} }
+      const selectedPost = prev.selectedPost && String(prev.selectedPost.id) === uid
+        ? { ...(prev.selectedPost as Post), ...updated }
+        : prev.selectedPost;
+      const cid = updated.communityId || communityValue.currentCommunity?.id;
+      let postsCache = prev.postsCache;
+      if (cid) {
+        const existing = prev.postsCache[cid] || [];
+        postsCache = { ...prev.postsCache, [cid]: existing.map(p => String(p.id) === uid ? updated : p) };
+      }
+      return { ...prev, posts, selectedPost, postsCache };
+    });
+  };
 
-    // Chỉ lấy communityId khi đang ở mode cộng đồng
-    let currentCommunityId = "";
-    if (communityId) {
-      currentCommunityId = communityId;
-    } else if (post.communityId) {
-      currentCommunityId = post.communityId;
-    } else if (communityStateValue.currentCommunity?.id) {
-      currentCommunityId = communityStateValue.currentCommunity.id;
-    }
-
-    // Nếu đang ở trang chủ thì currentCommunityId sẽ là ""
-
-    // Determine existing vote (from mapped post data or recoil cache)
-    const existingVote = post.currentUserVoteStatus
-      ? {
-          id: post.currentUserVoteStatus.id,
-          postId: post.id,
-          communityId: currentCommunityId,
-          voteValue: post.currentUserVoteStatus.voteValue,
-        }
-      : postStateValue.postVotes.find((v) => v.postId === post.id);
-
+  // Satisfaction setter (optimistic + rollback + spam guard)
+  const setSatisfaction = async (post: Post, level: LikeLevel) => {
+  try { console.log('[update-level][invoke]', { postId: post?.id, level, uid: user?.uid }); } catch {}
+    if (!user?.uid) { setAuthModalState({ open: true, view: "login" }); return; }
+    if (!post?.id) return;
+    const key = String(post.id);
+  if (inflightRef.current[key]) { try { console.log('[update-level][skip-inflight]', { postId: post.id }); } catch {}; return; }
+    inflightRef.current[key] = true;
+    const prev = post as Post;
+    const optimistic = { ...post, likeLevel: level } as any;
+  try { console.log('[update-level][optimistic]', { postId: post.id, level }); } catch {}
+    patchPostEverywhere(optimistic);
+    // Expose for manual inspection in DevTools
+    try { (window as any).__lastSatisfaction = { ts: Date.now(), postId: post.id, level }; } catch {}
+    // Fuse: auto-clear inflight after 6s in case promise hangs
+    const fuse = setTimeout(() => {
+      if (inflightRef.current[key]) {
+        inflightRef.current[key] = false;
+        try { console.warn('[usePosts] fuse cleared inflight stuck', { postId: post.id }); } catch {}
+      }
+    }, 6000);
     try {
-      // Prepare copies for optimistic update
-      const updatedPost: any = { ...post };
-      const updatedPosts = [...postStateValue.posts];
-      let updatedPostVotes: PostVote[] = [...postStateValue.postVotes];
-
-      const existing: any = existingVote as any;
-
-      if (!existing) {
-        const newVote: PostVote = {
-          id: `${user?.uid || "anon"}_${post.id}`,
-          postId: post.id,
-          communityId: currentCommunityId || "",
-          voteValue: vote,
-        };
-
-        updatedPost.currentUserVoteStatus = { id: newVote.id, voteValue: vote } as any;
-        updatedPost.voteStatus = (post.voteStatus || 0) + vote;
-        updatedPostVotes = [...updatedPostVotes, newVote];
-      } else if (existing.voteValue === vote) {
-        // removing existing vote
-        updatedPost.voteStatus = (post.voteStatus || 0) - vote;
-        updatedPost.currentUserVoteStatus = undefined;
-        updatedPostVotes = updatedPostVotes.filter((v) => v.postId !== post.id);
-      } else {
-        // flipping vote
-        updatedPost.voteStatus = (post.voteStatus || 0) + 2 * vote;
-        const voteIdx = updatedPostVotes.findIndex((v) => v.postId === post.id);
-        if (voteIdx !== -1) {
-          updatedPostVotes[voteIdx] = { ...updatedPostVotes[voteIdx], voteValue: vote };
-        }
-        updatedPost.currentUserVoteStatus = { id: existing.id, voteValue: vote } as any;
-      }
-
-      const idx = postStateValue.posts.findIndex((p) => p.id === post.id);
-      if (idx !== -1) updatedPosts[idx] = updatedPost;
-
-      const updatedState = {
-        ...postStateValue,
-        posts: updatedPosts,
-        postVotes: updatedPostVotes,
-        postsCache: {
-          ...postStateValue.postsCache,
-          [currentCommunityId || ""]: updatedPosts,
-        },
-      } as typeof postStateValue;
-
-      if (updatedState.selectedPost && updatedState.selectedPost.id === post.id) {
-        updatedState.selectedPost = updatedPost;
-      }
-
-      setPostStateValue(updatedState);
-
-      try {
-        // backend likePost expects { postId, commentId } shape; commentId may be undefined for post likes
-  await likePost({ postId: post.id });
-      } catch (e) {
-        console.error("Failed to persist like to backend", e);
-      }
-    } catch (error) {
-      console.error("onVote error", error);
+    await (PostsService as any).updateLikeLevel?.({ postId: post.id, level });
+  try { console.log('[update-level][success]', { postId: post.id, level }); } catch {}
+    } catch (e: any) {
+      patchPostEverywhere(prev); // rollback
+      setError(e?.message || 'Cập nhật phản hồi thất bại');
+    console.error('[update-level][error]', e);
+    } finally {
+      inflightRef.current[key] = false;
+  try { console.log('[update-level][inflight-cleared]', { postId: post.id }); } catch {}
+      clearTimeout(fuse);
     }
+  };
+
+  // Local clear (no backend delete yet)
+  const clearSatisfaction = async (post: Post) => {
+    if (!user?.uid) { setAuthModalState({ open: true, view: "login" }); return; }
+    if (!post?.id) return;
+    const prev = post;
+    const optimistic: any = { ...post };
+    delete optimistic.likeLevel;
+    patchPostEverywhere(optimistic);
+    // When backend supports clearing, call API & rollback if fails
+  };
+
+  // Legacy vote (kept only if some UI still calls it) – could be removed later
+  const onVote = async (e: React.MouseEvent<any>, post: Post) => {
+    e.stopPropagation();
+    // Redirect legacy like to satisfied toggle
+    if ((post as any).likeLevel === LIKE_LEVEL.SATISFIED) return clearSatisfaction(post);
+    return setSatisfaction(post, LIKE_LEVEL.SATISFIED);
   };
 
   const onDeletePost = async (post: Post): Promise<boolean> => {
     try {
-      const currentUser = (user as any) || {};
-      const currentUid = currentUser?.uid ? String(currentUser.uid).toLowerCase() : null;
-      const candidates: string[] = [];
-      try {
-        if ((post as any).creatorId) candidates.push(String((post as any).creatorId));
-        if ((post as any).userUID) candidates.push(String((post as any).userUID));
-        if (post.userDisplayText) candidates.push(String(post.userDisplayText));
-        if ((post as any).userOfPost?.username) candidates.push(String((post as any).userOfPost.username));
-        if ((post as any).userOfPost?.userUID) candidates.push(String((post as any).userOfPost.userUID));
-      } catch {}
-      const normalized = candidates.filter(Boolean).map(v => v.trim().toLowerCase());
-      const isOwner = !!currentUid && normalized.includes(currentUid);
-      const isAdmin = currentUser?.role === 'admin';
-      if (!isOwner && !isAdmin) {
-        console.warn("User attempted to delete post without permission");
-        return false;
-      }
-      await deletePostSvc({ postId: post.id });
-
-  setPostStateValue((prev) => ({
+      const currentUid = user?.uid?.toLowerCase();
+      const candidates = [ (post as any).creatorId, (post as any).userUID, post.userDisplayText, (post as any).userOfPost?.username, (post as any).userOfPost?.userUID ]
+        .filter(Boolean).map((v: any) => String(v).toLowerCase());
+      const isOwner = !!currentUid && candidates.includes(currentUid);
+      const isAdmin = (user as any)?.role === 'admin';
+      if (!isOwner && !isAdmin) return false;
+      await (PostsService as any).deletePost?.({ postId: post.id });
+      setPostStateValue(prev => ({
         ...prev,
-        posts: prev.posts.filter((item) => item.id !== post.id),
+        posts: prev.posts.filter(p => p.id !== post.id),
         postsCache: {
           ...prev.postsCache,
-          [post.communityId]: prev.postsCache[post.communityId]?.filter((item) => item.id !== post.id),
-        },
+          [post.communityId]: (prev.postsCache[post.communityId] || []).filter(p => p.id !== post.id)
+        }
       }));
       return true;
-    } catch (error) {
-      console.error("onDeletePost error", error);
-      return false;
-    }
+    } catch (e) { console.error('onDeletePost error', e); return false; }
   };
 
-  const getCommunityPostVotes = async (communityId: string) => {
-    // placeholder: backend integration can be added later to fetch post votes for the community
-    const postVotes: any[] = [];
-    setPostStateValue((prev) => ({
-      ...prev,
-      postVotes: postVotes as PostVote[],
-    }));
+  // Backwards compatibility adapter for existing UI expecting onUpdateLikeLevel(post, level)
+  const onUpdateLikeLevel = async (post: Post, level: number) => {
+    if (level === LIKE_LEVEL.DISSATISFIED) return setSatisfaction(post, LIKE_LEVEL.DISSATISFIED);
+    if (level === LIKE_LEVEL.SATISFIED) return setSatisfaction(post, LIKE_LEVEL.SATISFIED);
   };
-
-  useEffect(() => {
-    if (!user?.uid || !communityStateValue.currentCommunity) return;
-    getCommunityPostVotes(communityStateValue.currentCommunity.id);
-  }, [user, communityStateValue.currentCommunity]);
-
-  useEffect(() => {
-    if (!user?.uid && !loadingUser) {
-      setPostStateValue((prev) => ({
-        ...prev,
-        postVotes: [],
-      }));
-      return;
-    }
-  }, [user, loadingUser]);
 
   return {
     postStateValue,
     setPostStateValue,
-    onSelectPost,
+    // renamed selectPost but keep original alias for safety
+    selectPost,
+    onSelectPost: selectPost,
     onDeletePost,
+    // satisfaction API
+    setSatisfied: (post: Post) => setSatisfaction(post, LIKE_LEVEL.SATISFIED),
+    setDissatisfied: (post: Post) => setSatisfaction(post, LIKE_LEVEL.DISSATISFIED),
+    clearSatisfaction,
+    // legacy
+    onVote,
+    onUpdateLikeLevel,
+    LIKE_LEVEL,
+    LIKE_LEVEL_LABELS: (PostsService as any).LIKE_LEVEL_LABELS || {},
     loading,
     setLoading,
-    onVote,
     error,
   };
 };

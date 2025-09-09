@@ -33,7 +33,7 @@ const Posts: React.FC<PostsProps> = ({
   // const setAuthModalState = useSetRecoilState(authModalState);
   const router = useRouter();
 
-  const { postStateValue, setPostStateValue, onVote, onDeletePost } = usePosts(
+  const { postStateValue, setPostStateValue, onVote, onDeletePost, onUpdateLikeLevel } = usePosts(
     communityData!
   );
 
@@ -189,6 +189,14 @@ const Posts: React.FC<PostsProps> = ({
   }, [communityData?.id]);
 
   useEffect(() => {
+    // Community context: if component is used with communityData prop but id is not ready yet,
+    // don't fallback to global feed. Wait until id is available to fetch group posts.
+    if (typeof communityData !== 'undefined' && !communityData?.id) {
+      // Ensure loading state so UI can show spinner while community info loads
+      setLoading(true);
+      return;
+    }
+
     // If we have a community id, try to use cache else fetch
     if (communityData?.id) {
       if (
@@ -269,14 +277,25 @@ const Posts: React.FC<PostsProps> = ({
       } else {
         response = await PostsService.getPosts({});
       }
-      const posts: Post[] = (response as Post[]) || [];
+      // Strictly scope to this community when applicable
+      const incoming: Post[] = (response as Post[]) || [];
+      const posts: Post[] = communityData?.id
+        ? incoming.filter((p) => {
+            const cid = String(communityData.id);
+            const origin = (p as any).originGroupId ? String((p as any).originGroupId) : undefined;
+            const mappedCid = p.communityId ? String(p.communityId) : undefined;
+            return origin ? origin === cid : (mappedCid ? mappedCid === cid : true);
+          })
+        : incoming;
       setPostStateValue((prev) => ({
         ...prev,
         posts,
-        postsCache: {
-          ...prev.postsCache,
-          [communityData?.id!]: posts,
-        },
+        postsCache: communityData?.id
+          ? {
+              ...prev.postsCache,
+              [communityData.id]: posts,
+            }
+          : prev.postsCache,
         postUpdateRequired: false,
       }));
     } catch (error: any) {
@@ -293,14 +312,16 @@ const Posts: React.FC<PostsProps> = ({
         <PostLoader />
       ) : (
         <Stack>
-          {(postStateValue.posts || []).filter((p) => {
+      {(postStateValue.posts || []).filter((p) => {
             // Show all if user can moderate; otherwise only approved or no-status posts
             if (canModerate(communityData?.id || "")) return true;
             // Only posts of this community when in a community page
             if (communityData?.id) {
-              const cid = String(communityData.id);
-              const pid = String(p.communityId || (p as any).communityDisplayText || (p as any).groupId || "");
-              if (cid && pid && cid !== pid) return false;
+        const cid = String(communityData.id);
+        const origin = (p as any).originGroupId ? String((p as any).originGroupId) : undefined;
+        const pid = String(p.communityId || (p as any).communityDisplayText || (p as any).groupId || "");
+        if (origin && origin !== cid) return false;
+        if (!origin && cid && pid && cid !== pid) return false;
             }
             // Always show my own posts immediately (even if pending)
             if (currentUserId && String(p.creatorId) === String(currentUserId)) return true;
@@ -313,6 +334,7 @@ const Posts: React.FC<PostsProps> = ({
               post={post}
               // postIdx={index}
               onVote={onVote}
+              onUpdateLikeLevel={onUpdateLikeLevel}
               onDeletePost={onDeletePost}
               userVoteValue={
                 postStateValue.postVotes.find((item) => item.postId === post.id)

@@ -14,7 +14,7 @@ import usePosts from "../hooks/usePosts";
 const Popular: NextPage = () => {
   const [popularPosts, setPopularPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const { onVote, onDeletePost, onSelectPost } = usePosts();
+  const { onVote, onDeletePost, onSelectPost, onUpdateLikeLevel } = usePosts();
 
   const getPopularPosts = async () => {
     setLoading(true);
@@ -65,6 +65,7 @@ const Popular: NextPage = () => {
                 post={post}
                 postIdx={index}
                 onVote={onVote}
+                onUpdateLikeLevel={onUpdateLikeLevel}
                 onDeletePost={onDeletePost}
                 userVoteValue={undefined}
                 userIsCreator={false}

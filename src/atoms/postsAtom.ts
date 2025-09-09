@@ -4,6 +4,8 @@ type Timestamp = any;
 export type Post = {
   id: string;
   communityId: string;
+  // Original group id from backend, used to strictly filter by community where needed
+  originGroupId?: string;
   communityImageURL?: string;
   userDisplayText: string; // change to authorDisplayText
   creatorId: string;
@@ -15,6 +17,8 @@ export type Post = {
   status?: number;
   // convenience flag derived from status when present
   approved?: boolean;
+  // Reaction level (1..4) if set by current user
+  likeLevel?: number;
   currentUserVoteStatus?: {
     id: string;
     voteValue: number;

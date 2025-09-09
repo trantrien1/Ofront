@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Flex,
   Icon,
@@ -24,7 +24,7 @@ import {
 import { NextRouter } from "next/router";
 import { AiOutlineDelete } from "react-icons/ai";
 import { BsChat, BsDot, BsGlobe } from "react-icons/bs";
-import { FaReddit, FaThumbsUp, FaShare } from "react-icons/fa";
+import { FaReddit, FaThumbsUp, FaThumbsDown, FaShare } from "react-icons/fa";
 import {
   IoArrowRedoOutline,
   IoBookmarkOutline,
@@ -77,6 +77,8 @@ export type PostItemContentProps = {
     communityId: string,
     postIdx?: number
   ) => void;
+  // New: granular like-level (1..4) but we only surface 2 states (positive=3, negative=1)
+  onUpdateLikeLevel?: (post: Post, level: number) => void;
   onDeletePost: (post: Post) => Promise<boolean>;
   userIsCreator: boolean;
   onSelectPost?: (value: Post, postIdx: number) => void;
@@ -98,6 +100,7 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   userIsCreator,
   homePage,
   canModerate = false,
+  onUpdateLikeLevel,
 }) => {
   const [loadingImage, setLoadingImage] = useState(true);
   const [loadingDelete, setLoadingDelete] = useState(false);
@@ -139,12 +142,31 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const chipBg = useColorModeValue("gray.100", "gray.700");
   const chipHoverBg = useColorModeValue("gray.200", "gray.600");
   const chipText = useColorModeValue("gray.800", "gray.100");
-  const likeBg = useColorModeValue("blue.500", "blue.400");
-  const likeBgHover = useColorModeValue("blue.600", "blue.500");
-  const likeBorder = useColorModeValue("blue.500", "blue.400");
+  const likePosBg = useColorModeValue("green.500", "green.400");
+  const likePosBgHover = useColorModeValue("green.600", "green.500");
+  const likeNegBg = useColorModeValue("red.500", "red.400");
+  const likeNegBgHover = useColorModeValue("red.600", "red.500");
   const iconMuted = useColorModeValue("gray.600", "gray.300");
+  const contentBg = useColorModeValue("gray.50", "whiteAlpha.100");
   // Determine liked state from prop or post state for immediate UI feedback
-  const isLiked = ((userVoteValue ?? post.currentUserVoteStatus?.voteValue) === 1);
+  const [localLikeLevel, setLocalLikeLevel] = useState<number | undefined>((post as any).likeLevel);
+  const [pending, setPending] = useState(false);
+
+  // Stable effect-based sync instead of render-time conditional to avoid clobbering optimistic state
+  const incomingLikeLevel = (post as any).likeLevel;
+  useEffect(() => {
+    setLocalLikeLevel(prev => {
+      if (incomingLikeLevel === prev) return prev; // no change
+      // If we are in a short optimistic pending window and server echoes old value, keep optimistic one
+      if (pending && prev !== undefined && (incomingLikeLevel === undefined || incomingLikeLevel === null)) return prev;
+      try { console.log('[PostItem] sync localLikeLevel ->', incomingLikeLevel, 'for post', post.id); } catch {}
+      return incomingLikeLevel;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingLikeLevel]);
+  const currentLikeLevel: number | undefined = localLikeLevel;
+  const isPositive = currentLikeLevel === 3 || currentLikeLevel === 4; // treat 3/4 as positive
+  const isNegative = currentLikeLevel === 1 || currentLikeLevel === 2; // treat 1/2 as negative
   // Relative time label (must call hook at stable position)
   const createdAtLabel = useRelativeTime(normalizeTimestamp(post.createdAt));
 
@@ -184,14 +206,16 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
       bg={cardBg}
       rounded="xl"
       p={4}
-      border="1px solid"
-      borderColor={borderCol}
+      border="2px solid"
+      borderColor={isPositive ? 'green.400' : isNegative ? 'red.400' : borderCol}
       shadow="md"
       cursor={singlePostView ? "unset" : "pointer"}
       _hover={{
         bg: hoverBg,
       }}
   onClick={() => onSelectPost && post && onSelectPost(post, postIdx ?? 0)}
+      tabIndex={0}
+      onKeyDown={(e)=>{ if(e.key==='Enter' && onSelectPost) { onSelectPost(post, postIdx ?? 0);} }}
     >
       {/* Header meta - Reddit Style */}
       <HStack spacing={2} mb={2} color={metaColor} fontSize="sm">
@@ -217,9 +241,11 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
 
       {/* Content */}
       {post.body && (
-        <Text fontSize="md" color={bodyColor} mb={3}>
-          {post.body}
-        </Text>
+        <Box bg={contentBg} px={4} py={3} rounded="lg" mb={3}>
+          <Text fontSize="lg" color={bodyColor}>
+            {post.body}
+          </Text>
+        </Box>
       )}
 
       {/* Media box with spoiler overlay */}
@@ -272,156 +298,153 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
 
       
 
-      {/* Actions - Reddit Style */}
-      <Flex mt={3} gap={3} align="center" wrap="wrap">
-      <HStack
-        px={3}
-        py={1}
-        rounded="full"
-        border="1px solid"
-        borderColor={borderCol}
-        bg={chipBg}
-        transition="all 0.2s ease"
-        cursor="pointer"
-        onClick={(e) => e.stopPropagation()}
-        spacing={3}
-      >
-        <IconButton
-          aria-label="Like"
-          icon={<FaThumbsUp />}
-          size="sm"
-          variant="ghost"
-          bg={isLiked ? likeBg : chipBg}
-          color={isLiked ? "white" : chipText}
-          borderRadius="full"
-          borderColor={isLiked ? likeBorder : "transparent"}
-          _hover={{
-            bg: isLiked ? likeBgHover : chipHoverBg,
-            transform: "scale(1.1)"
-          }}
-          transition="all 0.2s ease"
-          aria-pressed={isLiked}
-          onClick={(event) => onVote(event, post, 1, post.communityId)}
-        />
-        <Text fontWeight="semibold" color={chipText}>
-          {post.voteStatus.toLocaleString()}
-        </Text>
-      </HStack>
-
-
-        <HStack
-          px={3}
-          py={2}
-          rounded="full"
-          borderColor={borderCol}
-          bg={chipBg}
-          _hover={{ 
-            bg: chipHoverBg, 
-            borderColor: borderCol,
-            transform: "scale(1.05)"
-          }}
-          cursor="pointer"
-      onClick={async (e) => {
-            e.stopPropagation();
-            try {
-        const mapped = await Svc.getPostById({ postId: post.id });
-        if (onSelectPost) onSelectPost(mapped as any, postIdx ?? 0);
-            } catch (err: any) {
-              console.error("Error fetching post detail:", err);
-              toast({ status: 'error', title: 'Không tải được bình luận', description: String(err?.message || err) });
-            }
-          }}
-        >
-          <ChatIcon color={iconMuted} />
-          <Text color={chipText}>{post.numberOfComments}</Text>
-        </HStack>
-
-
-        <HStack
-          px={3}
-          py={2}
-          rounded="full"
-          borderColor={borderCol}
-          bg={chipBg}
-          _hover={{ 
-            bg: chipHoverBg, 
-            borderColor: borderCol,
-            transform: "scale(1.05)"
-          }}
-          transition="all 0.2s ease"
-          cursor="pointer"
-          onClick={(e) => { e.stopPropagation(); toast({ title: "Chức năng này sẽ sớm ra mắt", status: "info", duration: 2500 }); }}
-        >
-          <FiShare2 color={iconMuted} />
-          <Text color={chipText} fontSize="sm" fontWeight="medium">
-            Share
-          </Text>
-        </HStack>
-
-        {/* Moderation buttons */}
-  {canModerate && (
+      {/* Actions - grouped: user interactions on the left, admin on the right */}
+      <Flex mt={3} gap={3} align="center" wrap="wrap" justify="space-between">
+        {/* Left cluster: Like / Dislike / Comment / Share */}
+        <HStack gap={3} align="center">
+          {/* Like */}
           <HStack
             px={3}
             py={2}
             rounded="full"
-            borderColor={borderCol}
+            border="1px solid"
+            borderColor={isPositive ? "green.400" : borderCol}
             bg={chipBg}
-            _hover={{ 
-              bg: chipHoverBg, 
-              borderColor: borderCol,
-              transform: "scale(1.05)"
-            }}
-            transition="all 0.2s ease"
-            cursor={loadingPin ? "not-allowed" : "pointer"}
-            opacity={loadingPin ? 0.6 : 1}
+            _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
+            cursor="pointer"
             onClick={(e) => {
               e.stopPropagation();
-              if (!loadingPin) {
-                handlePinPost();
+              if (!isPositive && onUpdateLikeLevel) {
+                setLocalLikeLevel(3);
+                onUpdateLikeLevel(post, 3);
               }
             }}
           >
-            {loadingPin ? (
-              <Spinner size="sm" color={iconMuted} />
-            ) : (
-              <Icon as={MdPushPin} color={iconMuted} />
-            )}
-            <Text color={iconMuted} fontSize="sm" fontWeight="medium">
-              {loadingPin ? "Processing..." : (isPinned ? "Unpin" : "Pin")}
-            </Text>
+            <Icon as={FaThumbsUp} color={isPositive ? "green.500" : iconMuted} />
+            <Text color={chipText} fontSize="sm" fontWeight="medium">Hài lòng</Text>
           </HStack>
-        )}
 
-    {canDelete && (
+          {/* Dislike */}
           <HStack
             px={3}
             py={2}
             rounded="full"
+            border="1px solid"
+            borderColor={isNegative ? "red.400" : borderCol}
+            bg={chipBg}
+            _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
+            cursor="pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isNegative && onUpdateLikeLevel) {
+                setLocalLikeLevel(1);
+                onUpdateLikeLevel(post, 1);
+              }
+            }}
+          >
+            <Icon as={FaThumbsDown} color={isNegative ? "red.500" : iconMuted} />
+            <Text color={chipText} fontSize="sm" fontWeight="medium">Không hài lòng</Text>
+          </HStack>
+
+          {/* Comment */}
+          <HStack
+            px={3}
+            py={2}
+            rounded="full"
+            border="1px solid"
             borderColor={borderCol}
             bg={chipBg}
-            _hover={{
-              bg: chipHoverBg,
-              borderColor: borderCol,
-              transform: "scale(1.05)",
-              color: "red.500"
+            _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
+            cursor="pointer"
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                const mapped = await Svc.getPostById({ postId: post.id });
+                if (onSelectPost) onSelectPost(mapped as any, postIdx ?? 0);
+              } catch (err: any) {
+                console.error("Error fetching post detail:", err);
+                toast({ status: 'error', title: 'Không tải được bình luận', description: String(err?.message || err) });
+              }
             }}
-            transition="all 0.2s ease"
-            cursor={loadingDelete ? "not-allowed" : "pointer"}
-            opacity={loadingDelete ? 0.6 : 1}
-      onClick={requestDelete}
           >
-            {loadingDelete ? (
-              <Spinner size="sm" color={iconMuted} />
-            ) : (
-              <Icon as={AiOutlineDelete} color="red.400" />
-            )}
-            <Text color={iconMuted} fontSize="sm" fontWeight="medium">
-              {loadingDelete ? "Đang xóa..." : "Xóa"}
-            </Text>
+            <ChatIcon color={iconMuted} />
+            <Text color={chipText}>{post.numberOfComments}</Text>
           </HStack>
-        )}
 
-  {/* Approve/Delete controls removed per request */}
+          {/* Share */}
+          <HStack
+            px={3}
+            py={2}
+            rounded="full"
+            border="1px solid"
+            borderColor={borderCol}
+            bg={chipBg}
+            _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
+            transition="all 0.2s ease"
+            cursor="pointer"
+            onClick={(e) => { e.stopPropagation(); toast({ title: "Chức năng này sẽ sớm ra mắt", status: "info", duration: 2500 }); }}
+          >
+            <FiShare2 color={iconMuted} />
+            <Text color={chipText} fontSize="sm" fontWeight="medium">Share</Text>
+          </HStack>
+        </HStack>
+
+        {/* Right cluster: Admin/Owner */}
+        <HStack gap={3} align="center">
+          {/* Admin/dev-only small debug tag */}
+          {canModerate && (
+            <HStack
+              px={3}
+              py={2}
+              rounded="full"
+              border="1px solid"
+              borderColor={borderCol}
+              bg={chipBg}
+              _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
+              transition="all 0.2s ease"
+              cursor={loadingPin ? "not-allowed" : "pointer"}
+              opacity={loadingPin ? 0.6 : 1}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!loadingPin) handlePinPost();
+              }}
+            >
+              {loadingPin ? (
+                <Spinner size="sm" color={iconMuted} />
+              ) : (
+                <Icon as={MdPushPin} color={iconMuted} />
+              )}
+              <Text color={iconMuted} fontSize="sm" fontWeight="medium">
+                {loadingPin ? "Processing..." : (isPinned ? "Unpin" : "Pin")}
+              </Text>
+            </HStack>
+          )}
+
+          {canDelete && (
+            <HStack
+              px={3}
+              py={2}
+              rounded="full"
+              border="1px solid"
+              borderColor={borderCol}
+              bg={chipBg}
+              _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
+              transition="all 0.2s ease"
+              cursor={loadingDelete ? "not-allowed" : "pointer"}
+              opacity={loadingDelete ? 0.6 : 1}
+              onClick={requestDelete}
+            >
+              {loadingDelete ? (
+                <Spinner size="sm" color={iconMuted} />
+              ) : (
+                <Icon as={AiOutlineDelete} color="red.400" />
+              )}
+              <Text color={iconMuted} fontSize="sm" fontWeight="medium">
+                {loadingDelete ? "Đang xóa..." : "Xóa"}
+              </Text>
+            </HStack>
+          )}
+        </HStack>
       </Flex>
       <AlertDialog
         isOpen={confirmOpen}

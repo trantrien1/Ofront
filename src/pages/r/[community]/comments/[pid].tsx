@@ -28,6 +28,7 @@ const PostPage: React.FC<PostPageProps> = () => {
     loading,
     setLoading,
     onVote,
+    onUpdateLikeLevel,
   } = usePosts(communityStateValue.currentCommunity);
 
   const fetchPost = async () => {
@@ -99,6 +100,7 @@ const PostPage: React.FC<PostPageProps> = () => {
                 <PostItem
                   post={postStateValue.selectedPost}
                   onVote={onVote}
+                  onUpdateLikeLevel={onUpdateLikeLevel}
                   onDeletePost={onDeletePost}
                   userVoteValue={
                     postStateValue.postVotes.find(

@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    // Updated target from es5 to ES2020 to align with Next.js 14 modern output and avoid legacy chunk edge cases
+    "target": "ES2020",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,

@@ -132,6 +132,9 @@ export const updateRequestToken = (newToken) => {
 request.interceptors.response.use(
 	(response) => response,
 	(error) => {
+	// Derive request URL early so it can be used across handlers
+	const cfg = error?.config || {};
+	const url = cfg.url || '';
 		try {
 			const status = error?.response?.status;
 			if (status === 401) {
@@ -155,7 +158,7 @@ request.interceptors.response.use(
 			// ignore
 		}
 		// Map error to Vietnamese, so UI can show friendly messages instead of just status codes
-		try {
+	try {
 			const localized = (() => {
 				// Network or CORS error (no response)
 				if (!error?.response) {
@@ -190,8 +193,31 @@ request.interceptors.response.use(
 					return "";
 				};
 
-				let rawMsg = extractText(data) || String(error?.message || "");
+                let rawMsg = extractText(data) || String(error?.message || "");
 				let lc = rawMsg.toLowerCase();
+
+						// Friendly mapping for sign up conflicts
+						if (status === 409 && /register/i.test(url)) {
+							return "Tài khoản đã tồn tại. Vui lòng dùng email hoặc tên người dùng khác.";
+						}
+
+						// Fallback for any 409 conflicts without endpoint match
+						if (status === 409) {
+							return "Yêu cầu bị xung đột dữ liệu. Vui lòng kiểm tra thông tin và thử lại.";
+						}
+
+						// Handle upstream timeout hints
+						if (status === 500 && (lc.includes('upstream timeout') || lc.includes('timeout'))) {
+							return "Kết nối đến máy chủ bị timeout. Vui lòng thử lại sau.";
+						}
+
+						// Generic 500 mappings by endpoint
+						if (status === 500) {
+							if (/register/i.test(url)) return "Máy chủ đang gặp sự cố khi đăng ký. Vui lòng thử lại sau.";
+							if (/login/i.test(url)) return "Máy chủ đang gặp sự cố khi đăng nhập. Vui lòng thử lại sau.";
+							if (/update-level|like/i.test(url)) return "Không thể cập nhật phản hồi lúc này. Vui lòng thử lại sau.";
+							return "Máy chủ đang gặp sự cố. Vui lòng thử lại sau.";
+						}
 
 				// Special-case common upstream payloads without a clear message
 				if (lc.includes("data is not valid") || lc.includes("bad_request") || lc.includes("\"status\":\"bad_request\"")) {

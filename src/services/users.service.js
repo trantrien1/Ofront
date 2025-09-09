@@ -26,6 +26,7 @@ export const login = async (payload) => {
 
 export const register = async (payload) => {
 	console.debug("UsersService.register: payload=", payload);
+	// Call through local API so we can normalize errors and handle upstream text/json
 	const response = await request.post("register", payload, {
 		headers: { "Content-Type": "application/json" },
 	});

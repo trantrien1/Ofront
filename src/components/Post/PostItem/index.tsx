@@ -20,6 +20,15 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  Textarea,
+  Input,
 } from "@chakra-ui/react";
 import { NextRouter } from "next/router";
 import { AiOutlineDelete } from "react-icons/ai";
@@ -109,6 +118,9 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const [hidden, setHidden] = useState(false); // For spoiler functionality
   const [isPortrait, setIsPortrait] = useState(false);
   const singlePostView = !onSelectPost; // function not passed to [pid]
+  // Local overrides after edit
+  const [overrideTitle, setOverrideTitle] = useState<string | undefined>(undefined);
+  const [overrideBody, setOverrideBody] = useState<string | undefined>(undefined);
   
   const communityStateValue = useRecoilValue(communityState);
   const setCommunityStateValue = useSetRecoilState(communityState);
@@ -130,7 +142,34 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
     .map(v => v.trim().toLowerCase())
     .filter((v, i, arr) => arr.indexOf(v) === i);
   const isOwner = !!currentUid && normalizedOwners.includes(currentUid);
-  const canDelete = !!currentUser && (currentUser?.role === 'admin' || isOwner);
+  const isAdmin = !!currentUser && /admin/i.test(String((currentUser as any)?.role || ''));
+  const canDelete = !!currentUser && (isAdmin || isOwner);
+  const canUpdate = canDelete; // only admin or owner can update
+  
+  // Edit modal state
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState<string>(post.title || "");
+  const [editBody, setEditBody] = useState<string>(post.body || "");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const openEdit = (e: React.MouseEvent) => { e.stopPropagation(); setEditTitle(overrideTitle ?? post.title ?? ""); setEditBody(overrideBody ?? post.body ?? ""); setIsEditOpen(true); };
+  const closeEdit = () => setIsEditOpen(false);
+  const handleSaveEdit = async () => {
+    if (!canUpdate) return;
+    const title = editTitle?.trim();
+    const content = editBody?.trim();
+    if (!title && !content) { closeEdit(); return; }
+    setSavingEdit(true);
+    try {
+      await (Svc as any).updatePost({ postId: post.id, title, content });
+      setOverrideTitle(title ?? overrideTitle);
+      setOverrideBody(content ?? overrideBody);
+      toast({ status: 'success', title: 'Đã cập nhật bài viết' });
+      closeEdit();
+    } catch (err: any) {
+      console.error('update post failed', err);
+      toast({ status: 'error', title: 'Cập nhật thất bại', description: String(err?.message || err) });
+    } finally { setSavingEdit(false); }
+  };
 
   // Color mode values
   const cardBg = useColorModeValue("white", "gray.800");
@@ -236,14 +275,14 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
 
       {/* Title */}
   <Text fontSize="xl" fontWeight="bold" mb={3} color={titleColor}>
-        {post.title}
+        {overrideTitle ?? post.title}
       </Text>
 
       {/* Content */}
-      {post.body && (
+  {(overrideBody ?? post.body) && (
         <Box bg={contentBg} px={4} py={3} rounded="lg" mb={3}>
           <Text fontSize="lg" color={bodyColor}>
-            {post.body}
+    {overrideBody ?? post.body}
           </Text>
         </Box>
       )}
@@ -391,6 +430,30 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
 
         {/* Right cluster: Admin/Owner */}
         <HStack gap={3} align="center">
+          {canUpdate && (
+            <HStack
+              px={3}
+              py={2}
+              rounded="full"
+              border="1px solid"
+              borderColor={borderCol}
+              bg={chipBg}
+              _hover={{ bg: chipHoverBg, transform: "scale(1.05)" }}
+              transition="all 0.2s ease"
+              cursor={savingEdit ? "not-allowed" : "pointer"}
+              opacity={savingEdit ? 0.6 : 1}
+              onClick={openEdit}
+            >
+              {savingEdit ? (
+                <Spinner size="sm" color={iconMuted} />
+              ) : (
+                <Icon as={FaShare} color={iconMuted} transform="rotate(180deg)" />
+              )}
+              <Text color={iconMuted} fontSize="sm" fontWeight="medium">
+                {savingEdit ? "Đang lưu..." : "Cập nhật"}
+              </Text>
+            </HStack>
+          )}
           {/* Admin/dev-only small debug tag */}
           {canModerate && (
             <HStack
@@ -465,6 +528,31 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
+
+      {/* Edit Post Modal */}
+      <Modal isOpen={isEditOpen} onClose={closeEdit} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Cập nhật bài viết</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={3}>
+              <Box>
+                <Text fontSize="sm" fontWeight={600} mb={1}>Tiêu đề</Text>
+                <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Cập nhật tiêu đề..." />
+              </Box>
+              <Box>
+                <Text fontSize="sm" fontWeight={600} mb={1}>Nội dung</Text>
+                <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} placeholder="Cập nhật nội dung..." minH="120px" />
+              </Box>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={closeEdit}>Hủy</Button>
+            <Button colorScheme="blue" onClick={handleSaveEdit} isLoading={savingEdit}>Lưu</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

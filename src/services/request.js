@@ -61,6 +61,40 @@ if (token) {
 	} catch (e) {}
 }
 
+// Helper to read a likely username/uid for x-user header
+function getCurrentUsernameLike() {
+	try {
+		// Prefer explicit username in localStorage
+		const lsUser = typeof window !== 'undefined' ? (localStorage.getItem('username') || localStorage.getItem('uid') || localStorage.getItem('userUID')) : null;
+		if (lsUser && lsUser.trim()) return lsUser.trim();
+		// Try cookie 'username'
+		const cookies = nookies.get(undefined);
+		if (cookies?.username) return String(cookies.username);
+		// Try decode token payload to extract 'sub' or 'username'
+		const raw = cookies?.token || cookies?.authToken || '';
+		if (raw) {
+			let t = raw;
+			try {
+				if (t.startsWith('{') && t.endsWith('}')) {
+					const obj = JSON.parse(t);
+					if (obj?.username) return String(obj.username);
+					if (obj?.uid) return String(obj.uid);
+					if (obj?.token) t = obj.token;
+				}
+			} catch {}
+			const parts = String(t).split('.');
+			if (parts.length >= 2) {
+				try {
+					const json = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+					const payload = JSON.parse(json);
+					return payload?.username || payload?.sub || payload?.uid || payload?.userUID || undefined;
+				} catch {}
+			}
+		}
+	} catch {}
+	return undefined;
+}
+
 // --- Lightweight instrumentation for debugging like/update-level calls ---
 request.interceptors.request.use((config) => {
 	try {
@@ -68,6 +102,25 @@ request.interceptors.request.use((config) => {
 		if (config?.url && /update-level|like/.test(config.url)) {
 			config.metadata = { start: Date.now() };
 			console.log('[HTTP][req]', config.method?.toUpperCase(), config.url, 'payload=', config.data);
+		}
+		// Ensure Authorization header exists per-request if cookie has token
+		if (!config.headers) config.headers = {};
+		const hdrs = config.headers;
+		const cookies = nookies.get(undefined);
+		if (!hdrs['Authorization'] && cookies?.token) {
+			let t = cookies.token;
+			try {
+				if (t && t.startsWith('{') && t.endsWith('}')) {
+					const obj = JSON.parse(t);
+					if (obj?.token) t = obj.token;
+				}
+			} catch {}
+			if (t) hdrs['Authorization'] = `Bearer ${t}`;
+		}
+		// Attach x-user hint for identity matching
+		if (!hdrs['x-user']) {
+			const uname = getCurrentUsernameLike();
+			if (uname) hdrs['x-user'] = String(uname);
 		}
 	} catch {}
 	return config;

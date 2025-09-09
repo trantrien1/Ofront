@@ -6,7 +6,7 @@ import {
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import Link from "next/link";
-import { FiArrowRight, FiZap, FiFeather, FiBell, FiShield, FiStar } from "react-icons/fi";
+import { FiArrowRight, FiZap, FiFeather, FiBell, FiShield, FiStar, FiHeart, FiMessageCircle, FiVideo, FiUsers } from "react-icons/fi";
 import { motion } from "framer-motion";
 import Footer from "./Footer";
 
@@ -34,21 +34,23 @@ const marquee = keyframes`
 
 const LandingPage: React.FC = () => {
   const reducedMotion = usePrefersReducedMotion();
-  const bg = useColorModeValue("gray.50", "gray.900");
+  const bg = useColorModeValue("blue.100", "gray.900");
   const surface = useColorModeValue("white", "gray.800");
   const glass = useColorModeValue("whiteAlpha.800", "whiteAlpha.100");
   const border = useColorModeValue("blackAlpha.200", "whiteAlpha.200");
   const subtle = useColorModeValue("gray.600", "gray.400");
   const primary = useColorModeValue("black", "white");
-  const accent = useColorModeValue("blue.600", "blue.300");
-  const accentSoft = useColorModeValue("blue.50", "whiteAlpha.100");
+  const accent = useColorModeValue("blue.700", "blue.400");
+  const accentSoft = useColorModeValue("blue.100", "whiteAlpha.100");
 
   // Pre-compute any color mode values that were previously (incorrectly) used inside callbacks
-  const featuresHoverBg = useColorModeValue("gray.100","whiteAlpha.100");
+  const featuresHoverBg = useColorModeValue("blue.100","whiteAlpha.100");
   const faqExpandedBg = useColorModeValue("gray.50", "whiteAlpha.100");
 
   return (
     <Box bg={bg}>
+      {/* Top slogan banner */}
+   
       {/* ================= HERO ================= */}
       <Box
         as="section"
@@ -70,7 +72,7 @@ const LandingPage: React.FC = () => {
               position: "absolute",
               inset: "-15%",
               bgGradient:
-                "radial(circle at 30% 20%, rgba(56,189,248,0.20), transparent 42%), radial(circle at 70% 80%, rgba(168,85,247,0.20), transparent 42%)",
+                "radial(circle at 30% 20%, rgba(37,99,235,0.22), transparent 42%), radial(circle at 70% 80%, rgba(29,78,216,0.22), transparent 42%)",
               filter: "blur(40px)",
               willChange: "transform"
             }}
@@ -84,7 +86,7 @@ const LandingPage: React.FC = () => {
             left="-10%"
             w="70vmin"
             h="70vmin"
-            bgGradient="conic-gradient(from 180deg at 50% 50%, rgba(59,130,246,0.30), rgba(168,85,247,0.30), transparent)"
+            bgGradient="conic-gradient(from 180deg at 50% 50%, rgba(59,130,246,0.32), rgba(37,99,235,0.28), rgba(147,51,234,0.22), transparent)"
             rounded="full"
             animation={`${pulseGrad} 10s ease-in-out infinite`}
             willChange="transform"
@@ -104,7 +106,7 @@ const LandingPage: React.FC = () => {
             >
               <MotionBox custom={0} variants={fadeUp}>
                 <Badge px={3} py={1} rounded="full" bg={accentSoft} color={accent} border="1px solid" borderColor={border}>
-                  Realtime • Minimal • Fast
+                  Riêng tư • An toàn • Tự động hóa
                 </Badge>
               </MotionBox>
 
@@ -113,18 +115,21 @@ const LandingPage: React.FC = () => {
                   as="h1"
                   fontWeight="extrabold"
                   lineHeight={1.05}
-                  fontSize={{ base: "2.4rem", md: "3.4rem" }}
+                  fontSize={{ base: "2.4rem", md: "3.6rem" }}
                   letterSpacing="-0.02em"
                   color={primary}
                 >
-                  Xây dựng cộng đồng{" "}
-                  <Text as="span" bgClip="text" bgGradient="linear(to-r, blue.400, purple.300)">nhanh & mượt</Text>.
+                  <Text as="span" bgClip="text" bgGradient="linear(to-r, blue.600, blue.500, purple.500)" display="inline-block">
+                    MindAi
+                  </Text>
+                  {" — đồng hành cùng bạn "}
+                  <Text as="span" bgClip="text" bgGradient="linear(to-r, blue.600, cyan.500)">chăm sóc tinh thần, nuôi dưỡng tương lai</Text>.
                 </Heading>
               </MotionBox>
 
               <MotionBox custom={2} variants={fadeUp}>
                 <Text fontSize={{ base: "md", md: "lg" }} color={subtle} maxW="xl">
-                  Đăng bài, thảo luận và thông báo thời gian thực. Tối giản, mượt và tập trung trải nghiệm.
+                  Nền tảng AI chăm sóc tinh thần được thiết kế riêng cho sinh viên Việt Nam, tích hợp các module rèn luyện kỹ năng, trợ lý cảm xúc thông minh và cộng đồng hỗ trợ an toàn. Hệ thống giúp sinh viên nhận diện, can thiệp kịp thời các vấn đề lo âu, căng thẳng, bế tắc tâm lý, đồng thời khích lệ và phát huy thế mạnh cá nhân. Từ đó, sinh viên có thể học tập hiệu quả hơn và nâng cao chất lượng cuộc sống
                 </Text>
               </MotionBox>
 
@@ -140,28 +145,41 @@ const LandingPage: React.FC = () => {
                       _hover={{ transform: "translateY(-2px)" }}
                       transition="all .25s ease"
                     >
-                      Bắt đầu miễn phí
+                      Bắt đầu
                     </Button>
                   </Link>
-                  <Button
-                    as="a"
-                    href="#features"
-                    size="lg"
-                    variant="outline"
-                    borderColor={border}
-                    _hover={{ transform: "translateY(-2px)", bg: featuresHoverBg }}
-                    transition="all .25s ease"
-                  >
-                    Xem tính năng
-                  </Button>
+                  <Link href="/quiz" passHref>
+                    <Button
+                      as={ChakraLink}
+                      size="lg"
+                      variant="outline"
+                      borderColor={border}
+                      _hover={{ transform: "translateY(-2px)", bg: featuresHoverBg }}
+                      transition="all .25s ease"
+                    >
+                      Làm trắc nghiệm DASS‑21
+                    </Button>
+                  </Link>
+                  <Link href="/anime" passHref>
+                    <Button
+                      as={ChakraLink}
+                      size="lg"
+                      variant="outline"
+                      borderColor={border}
+                      _hover={{ transform: "translateY(-2px)", bg: featuresHoverBg }}
+                      transition="all .25s ease"
+                    >
+                      Trò chuyện với Ami
+                    </Button>
+                  </Link>
                 </HStack>
               </MotionBox>
 
               <MotionBox custom={4} variants={fadeUp}>
                 <HStack spacing={8} pt={2} color={subtle} flexWrap="wrap">
-                  <Stack spacing={0}><Heading size="lg">1,200+</Heading><Text>Nhóm hoạt động</Text></Stack>
-                  <Stack spacing={0}><Heading size="lg">99.9%</Heading><Text>Uptime</Text></Stack>
-                  <Stack spacing={0}><Heading size="lg">~120ms</Heading><Text>Độ trễ thông báo</Text></Stack>
+                  <Stack spacing={0}><Heading size="lg">100%</Heading><Text>Riêng tư & ẩn danh</Text></Stack>
+                  <Stack spacing={0}><Heading size="lg">24/7</Heading><Text>Lắng nghe và phản hồi</Text></Stack>
+                  <Stack spacing={0}><Heading size="lg">AI + Tâm lý</Heading><Text>Nền tảng kết hợp</Text></Stack>
                 </HStack>
               </MotionBox>
             </MotionStack>
@@ -184,34 +202,14 @@ const LandingPage: React.FC = () => {
             >
               <Image alt="App preview" src="/images/A2.png" />
               <HStack p={4} spacing={3} borderTop="1px solid" borderColor={border}>
-                <Badge colorScheme="blue" variant="subtle">Realtime</Badge>
-                <Badge colorScheme="purple" variant="subtle">Tối giản</Badge>
-                <Badge colorScheme="green" variant="subtle">Hiệu năng</Badge>
+                <Badge colorScheme="blue" variant="subtle">Ami AI</Badge>
+                <Badge colorScheme="purple" variant="subtle">DASS‑21</Badge>
+                <Badge colorScheme="green" variant="subtle">Riêng tư</Badge>
               </HStack>
             </MotionBox>
           </SimpleGrid>
 
-          {/* Logo marquee (auto scroll) */}
-      <Box mt={{ base: 10, md: 14 }} overflow="hidden" position="relative">
-            <Box
-              display="flex"
-              whiteSpace="nowrap"
-        animation={!reducedMotion ? `${marquee} 28s linear infinite` : undefined}
-        style={{ willChange: 'transform' }}
-            >
-              <HStack color={subtle} spacing={10} px={4}>
-                <Text fontSize="sm">Được tin dùng bởi</Text>
-                <Text fontWeight="semibold">MathX</Text>
-                <Text fontWeight="semibold">Bonilla</Text>
-                <Text fontWeight="semibold">Vạn An Lộc</Text>
-                {/* lặp lại để seamless */}
-                <Text fontSize="sm" ml={12}>Được tin dùng bởi</Text>
-                <Text fontWeight="semibold">MathX</Text>
-                <Text fontWeight="semibold">Bonilla</Text>
-                <Text fontWeight="semibold">Vạn An Lộc</Text>
-              </HStack>
-            </Box>
-          </Box>
+          
         </Container>
       </Box>
 
@@ -219,17 +217,20 @@ const LandingPage: React.FC = () => {
       <Box as="section" id="features" py={{ base: 16, md: 24 }}>
         <Container maxW="7xl">
           <Stack spacing={3} mb={12} textAlign="center">
-            <Heading size="xl" letterSpacing="-0.02em">Tại sao chọn chúng tôi?</Heading>
+            <Heading size="xl" letterSpacing="-0.02em">Ami đồng hành cùng bạn</Heading>
             <Text color={subtle} fontSize={{ base: "md", md: "lg" }}>
-              Thiết kế tối giản, công nghệ tối ưu — tập trung vào nội dung và kết nối.
+              Trợ lý ảo Ami dịu dàng, thấu cảm; công cụ DASS‑21 và thư viện video giúp bạn hiểu mình hơn.
             </Text>
           </Stack>
 
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
             {[
-              { icon: FiFeather, title: "Tối giản & hiện đại", body: "UI sạch, border tinh tế, tập trung giá trị cốt lõi." },
-              { icon: FiBell,    title: "Thông báo thời gian thực", body: "Push ngay khi có tương tác mới trên mọi thiết bị." },
-              { icon: FiZap,     title: "Hiệu năng cao", body: "Tối ưu tải và tương tác mượt ở quy mô lớn." },
+              { icon: FiHeart, title: "Lắng nghe 24/7", body: "Ami luôn sẵn sàng khi bạn cần trút bầu tâm sự" },
+              { icon: FiMessageCircle, title: "Phong cách trị liệu tích cực", body: "Gợi mở, dịu dàng, định hướng giải quyết vấn đề." },
+              { icon: FiFeather, title: "DASS‑21 chuẩn lâm sàng", body: "Tự đánh giá trầm cảm, lo âu, căng thẳng – kết quả tức thì." },
+              { icon: FiVideo, title: "Thư viện video trị liệu", body: "Nội dung chọn lọc từ Psych2Go, The School of Life…" },
+              { icon: FiShield, title: "Riêng tư & đạo đức", body: "Ẩn danh, không thu thập trái phép; khuyến khích gặp chuyên gia khi cần." },
+              { icon: FiUsers, title: "Cộng đồng an toàn & ẩn danh", body: "Chia sẻ không bị phán xét, có giám sát nhẹ bởi AI để hạn chế nội dung gây hại." },
             ].map((f, i) => (
               <MotionStack
                 key={f.title}
@@ -256,6 +257,22 @@ const LandingPage: React.FC = () => {
               </MotionStack>
             ))}
           </SimpleGrid>
+          <Stack align="center" mt={10} spacing={4}>
+            <HStack spacing={4} flexWrap="wrap" justify="center">
+              <Link href="/anime" passHref>
+                <Button as={ChakraLink} colorScheme="blue" rightIcon={<FiArrowRight />}>Trò chuyện với Ami</Button>
+              </Link>
+              <Link href="/quiz" passHref>
+                <Button as={ChakraLink} variant="outline" borderColor={border}>Làm DASS‑21</Button>
+              </Link>
+              <Link href="/courses/videos" passHref>
+                <Button as={ChakraLink} variant="ghost">Xem video trị liệu</Button>
+              </Link>
+              <Link href="/community" passHref>
+                <Button as={ChakraLink} variant="ghost">Tham gia Cộng đồng</Button>
+              </Link>
+            </HStack>
+          </Stack>
         </Container>
       </Box>
 
@@ -263,14 +280,14 @@ const LandingPage: React.FC = () => {
       <Box as="section" py={{ base: 16, md: 24 }}>
         <Container maxW="7xl">
           <Stack spacing={3} mb={10} textAlign="center">
-            <Heading size="xl" letterSpacing="-0.02em">Bắt đầu trong 3 bước</Heading>
-            <Text color={subtle}>Không cần hướng dẫn dài — trải nghiệm dẫn đường.</Text>
+            <Heading size="xl" letterSpacing="-0.02em">Bạn bắt đầu như thế nào?</Heading>
+            <Text color={subtle}>3 bước nhẹ nhàng để hiểu mình hơn và được đồng hành.</Text>
           </Stack>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
             {[
-              { step: "01", title: "Đăng nhập", body: "Tạo tài khoản hoặc SSO trong vài giây." },
-              { step: "02", title: "Khám phá", body: "Theo dõi nhóm, xem bài nổi bật và bình luận." },
-              { step: "03", title: "Chia sẻ", body: "Đăng bài, tương tác và phát triển cộng đồng." },
+              { step: "01", title: "Chọn cách đồng hành", body: "Trò chuyện với Ami hoặc tham gia Cộng đồng an toàn." },
+              { step: "02", title: "Làm DASS‑21", body: "Tự đánh giá mức độ cảm xúc – kết quả tức thì, ẩn danh." },
+              { step: "03", title: "Nhận gợi ý phù hợp", body: "Video, bài viết, và lời khuyên dịu dàng từ Ami." },
             ].map((s, i) => (
               <MotionStack
                 key={s.step}
@@ -297,9 +314,9 @@ const LandingPage: React.FC = () => {
 
           <Stack align="center" mt={10}>
             <MotionBox whileHover={!reducedMotion ? { y: -2 } : undefined} transition={{ duration: .18 }} style={{ willChange: 'transform' }}>
-              <Link href="/app" passHref>
+              <Link href="/anime" passHref>
                 <Button as={ChakraLink} colorScheme="blue" size="md" rightIcon={<FiArrowRight />}>
-                  Bắt đầu ngay
+                  Bắt đầu với Ami
                 </Button>
               </Link>
             </MotionBox>
@@ -328,18 +345,18 @@ const LandingPage: React.FC = () => {
             <Icon as={FiStar} color={accent} boxSize={8} />
             <Stack spacing={2} flex={1}>
               <Heading size="md" letterSpacing="-0.01em">
-                “Di chuyển toàn bộ cộng đồng trong 1 tuần – mượt hơn 3×.”
+                “Ami rất dịu dàng và tôn trọng ranh giới của mình.”
               </Heading>
               <Text color={subtle}>
-                “Thông báo realtime chuẩn, UI tối giản. Đội mình tập trung nội dung thay vì lo config.”
+                “Mỗi khi quá tải, mình nhắn Ami là thấy nhẹ lòng hơn. Bài test DASS‑21 cũng giúp mình hiểu cảm xúc rõ ràng.”
               </Text>
               <HStack spacing={4} color={subtle} pt={1}>
                 <Box boxSize="34px" rounded="full" overflow="hidden" border="1px solid" borderColor={border}>
                   <Image alt="avatar" src="/images/avatar-placeholder.png" />
                 </Box>
                 <Stack spacing={0}>
-                  <Text fontWeight="medium">Tran Huyen</Text>
-                  <Text fontSize="sm" color={subtle}>Creator tại MathX</Text>
+                  <Text fontWeight="medium">Lan Anh</Text>
+                  <Text fontSize="sm" color={subtle}>Người dùng chia sẻ</Text>
                 </Stack>
               </HStack>
             </Stack>
@@ -352,13 +369,13 @@ const LandingPage: React.FC = () => {
         <Container maxW="7xl">
           <Stack spacing={3} mb={6} textAlign="center">
             <Heading size="xl" letterSpacing="-0.02em">Câu hỏi thường gặp</Heading>
-            <Text color={subtle}>Một vài thắc mắc phổ biến trước khi bạn bắt đầu.</Text>
+            <Text color={subtle}>Một vài điều bạn có thể quan tâm trước khi bắt đầu.</Text>
           </Stack>
           <Accordion allowMultiple bg={surface} border="1px solid" borderColor={border} rounded="2xl">
             {[
-              { q: "Có miễn phí không?", a: "Có. Bắt đầu miễn phí; gói nâng cao có thêm phân tích & quản trị nhiều nhóm." },
-              { q: "Realtime hoạt động thế nào?", a: "WebSocket/STOMP (fallback phù hợp) — đẩy sự kiện ngay khi có tương tác." },
-              { q: "Có API tích hợp không?", a: "Có, hỗ trợ đồng bộ user/bài viết và webhook." },
+              { q: "Dữ liệu của tôi có an toàn không?", a: "Có. Chúng tôi cam kết ẩn danh, không thu thập trái phép và chỉ lưu khi bạn đồng ý." },
+              { q: "Ami có thay thế chuyên gia trị liệu?", a: "Không. Ami là trợ lý ảo hỗ trợ tinh thần. Trường hợp nghiêm trọng, Ami sẽ khuyến khích bạn tìm đến chuyên gia." },
+              { q: "DASS‑21 có chính xác không?", a: "DASS‑21 là công cụ lâm sàng đáng tin cậy để sàng lọc. Kết quả mang tính tham khảo để hiểu bản thân tốt hơn." },
             ].map(({ q, a }) => (
               <AccordionItem key={q} border="none">
                 <h2>
@@ -392,22 +409,24 @@ const LandingPage: React.FC = () => {
             transition={{ duration: .5 }}
             style={{ willChange: 'transform' }}
           >
-            <Heading size="lg" letterSpacing="-0.02em">Sẵn sàng khởi động?</Heading>
+            <Heading size="lg" letterSpacing="-0.02em">Sẵn sàng lắng nghe chính mình?</Heading>
             <Text color={subtle} maxW="2xl">
-              Tạo nhóm, mời thành viên và phát triển cộng đồng ngay hôm nay.
+              Trò chuyện ẩn danh với Ami, làm DASS‑21 và khám phá video trị liệu để chữa lành mỗi ngày.
             </Text>
             <HStack spacing={4}>
               <MotionBox whileHover={!reducedMotion ? { scale: 1.02 } : undefined} whileTap={!reducedMotion ? { scale: 0.98 } : undefined} style={{ willChange: 'transform' }}>
-                <Link href="/app" passHref>
+                <Link href="/anime" passHref>
                   <Button as={ChakraLink} colorScheme="blue" size="lg" rightIcon={<FiArrowRight />}>
-                    Dùng miễn phí
+                    Trò chuyện với Ami
                   </Button>
                 </Link>
               </MotionBox>
               <MotionBox whileHover={!reducedMotion ? { y: -2 } : undefined} style={{ willChange: 'transform' }}>
-                <Button as="a" href="#features" variant="outline" size="lg" borderColor={border}>
-                  Xem tính năng
-                </Button>
+                <Link href="/quiz" passHref>
+                  <Button as={ChakraLink} variant="outline" size="lg" borderColor={border}>
+                    Làm DASS‑21
+                  </Button>
+                </Link>
               </MotionBox>
             </HStack>
           </MotionStack>

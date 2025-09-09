@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import PageContentLayout from "../../components/Layout/PageContent";
 import { Box, Button, Flex, Heading, HStack, IconButton, Image, Input, Stack, Text, Textarea, useToast, Tooltip, Badge, Spinner, useColorModeValue } from "@chakra-ui/react";
-import { markVideoCompleted, getVideosByCourse } from "../../services/videos.service";
+import { markVideoCompleted, getVideosByCourse, updateVideo, deleteVideo } from "../../services/videos.service";
 import { useRouter } from "next/router";
 import { DeleteIcon, EditIcon } from "@chakra-ui/icons";
 
@@ -26,6 +26,10 @@ const VideosPage: React.FC = () => {
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState<string>("");
+  const [editUrl, setEditUrl] = useState<string>("");
+  const [saving, setSaving] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const watchIntervalRef = useRef<any>(null);
   const watchedSecondsRef = useRef<number>(0);
@@ -80,8 +84,17 @@ const VideosPage: React.FC = () => {
     toast({ status: "info", title: "Tính năng upload sẽ được triển khai" });
   };
 
-  const onDelete = (_id: string) => {
-    toast({ status: "info", title: "Xóa chưa được bật" });
+  const onDelete = async (_id: string) => {
+    if (!_id) return;
+    setDeleting(true);
+    try {
+      await deleteVideo(_id);
+      setVideos(prev => prev.filter(v => v.id !== _id));
+      if (selectedId === _id) setSelectedId(null);
+      toast({ status: 'success', title: 'Đã xóa video' });
+    } catch (e: any) {
+      toast({ status: 'error', title: 'Xóa thất bại', description: e?.message });
+    } finally { setDeleting(false); }
   };
 
   const markCompleted = markCompletedOnce; // alias cho nút thủ công (nếu muốn tái sử dụng)
@@ -132,9 +145,20 @@ const VideosPage: React.FC = () => {
     };
   }, [selectedId, videos]);
 
-  const onEdit = (id: string, title: string, description?: string) => {
-    setVideos(prev => prev.map(v => v.id === id ? { ...v, title, description } : v));
-    toast({ status: "success", title: "Đã lưu" });
+  const onEdit = async (id: string) => {
+    if (!id) return;
+    const curr = videos.find(v => v.id === id);
+    const title = editTitle.trim();
+    const url = editUrl.trim();
+    if (!title && !url) return;
+    setSaving(true);
+    try {
+      await updateVideo({ id, title: title || curr?.title || '', url: url || curr?.url || '' });
+      setVideos(prev => prev.map(v => v.id === id ? { ...v, title: title || v.title, url: url || v.url } : v));
+      toast({ status: 'success', title: 'Đã cập nhật video' });
+    } catch (e: any) {
+      toast({ status: 'error', title: 'Cập nhật thất bại', description: e?.message });
+    } finally { setSaving(false); }
   };
 
   return (
@@ -161,7 +185,7 @@ const VideosPage: React.FC = () => {
                     align="center"
                     gap={3}
                     cursor="pointer"
-                    onClick={() => setSelectedId(v.id)}
+                    onClick={() => { setSelectedId(v.id); setEditTitle(v.title || ''); setEditUrl(v.url || ''); }}
                     transition="background 0.15s"
                   >
                     {v.thumb && <Image src={v.thumb} alt={v.title} boxSize="56px" objectFit="cover" borderRadius="md" />}
@@ -180,7 +204,7 @@ const VideosPage: React.FC = () => {
           )}
         </Box>
         {/* Player */}
-        <Box flex={1} w={{ base: '100%', md: '60%' }}>
+  <Box flex={1} w={{ base: '100%', md: '60%' }}>
           <Heading size="md" mb={3}>Trình phát</Heading>
           {!selectedId ? (
             <Text fontSize="sm" color="gray.500">Chọn một video để bắt đầu.</Text>
@@ -189,32 +213,35 @@ const VideosPage: React.FC = () => {
               const vid = videos.find(v => v.id === selectedId);
               if (!vid) return <Text>Video không tồn tại.</Text>;
               return (
-                <Box>
-                  <Box position="relative" mb={3}>
-                    {vid.url ? (
-                      <video
-                        key={vid.id}
-                        ref={videoRef}
-                        src={vid.url}
-                        controls
-                        style={{ width: '100%', borderRadius: '8px', background: '#000' }}
-                      />
-                    ) : (
-                      <Box p={8} textAlign="center" borderWidth="1px" borderRadius="md">Không có URL video.</Box>
+                <Flex gap={4} align="flex-start" direction={{ base: 'column', lg: 'row' }}>
+                  {/* Left: Player and details */}
+                  <Box flex={2} minW={0}>
+                    <Box position="relative" mb={3}>
+                      {vid.url ? (
+                        <video
+                          key={vid.id}
+                          ref={videoRef}
+                          src={vid.url}
+                          controls
+                          style={{ width: '100%', borderRadius: '8px', background: '#000' }}
+                        />
+                      ) : (
+                        <Box p={8} textAlign="center" borderWidth="1px" borderRadius="md">Không có URL video.</Box>
+                      )}
+                    </Box>
+                    <Heading size="sm" mb={2}>{vid.title}</Heading>
+                    {vid.description && <Text mb={2} fontSize="sm" color="gray.600">{vid.description}</Text>}
+                    <HStack spacing={4} fontSize="xs" color="gray.500" mb={2}>
+                      <Text>Trạng thái: {vid.isCompleted ? 'Đã hoàn thành' : 'Đang học'}</Text>
+                      <Text>Đã xem: {Math.min(watchedSecondsRef.current, 60)}s / 60s</Text>
+                    </HStack>
+                    {!vid.isCompleted && (
+                      <Button size="sm" onClick={() => markCompletedOnce(vid.id)} isLoading={(vid as any).__marking}>
+                        Đánh dấu hoàn thành thủ công
+                      </Button>
                     )}
                   </Box>
-                  <Heading size="sm" mb={2}>{vid.title}</Heading>
-                  {vid.description && <Text mb={2} fontSize="sm" color="gray.600">{vid.description}</Text>}
-                  <HStack spacing={4} fontSize="xs" color="gray.500" mb={2}>
-                    <Text>Trạng thái: {vid.isCompleted ? 'Đã hoàn thành' : 'Đang học'}</Text>
-                    <Text>Đã xem: {Math.min(watchedSecondsRef.current, 60)}s / 60s</Text>
-                  </HStack>
-                  {!vid.isCompleted && (
-                    <Button size="sm" onClick={() => markCompletedOnce(vid.id)} isLoading={(vid as any).__marking}>
-                      Đánh dấu hoàn thành thủ công
-                    </Button>
-                  )}
-                </Box>
+                </Flex>
               );
             })()
           )}

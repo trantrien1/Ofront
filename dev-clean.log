@@ -1,12 +1,4 @@
+cập nhập tính năng update post(đã có api gọi file update không cần tạo lại). Lưu ý chỉ có admin và người đăng bài mới update được post. Nhớ tạo thêm nút update trong post
 
-> reddit-clone-yt@0.1.0 dev
-> next dev
+Hiện tại phần "Sửa" khóa học chỉ có sửa tiêu đề và mô tả cho khóa học. Tôi muốn bạn thêm cả phần update video(update tiêu đề, link video) trong phần "Sửa"
 
- ⚠ Port 3000 is in use, trying 3001 instead.
-  ▲ Next.js 14.2.5
-  - Local:        http://localhost:3001
-  - Environments: .env.local
-
- ✓ Starting...
- ✓ Ready in 2s
-^C

@@ -185,6 +185,9 @@ const Posts: React.FC<PostsProps> = ({
         ...prev,
         posts: [],
       }));
+    } else {
+      // If route is changing away from a community, also clear to avoid leaking previous community posts
+      setPostStateValue((prev) => ({ ...prev, posts: [] }));
     }
   }, [communityData?.id]);
 

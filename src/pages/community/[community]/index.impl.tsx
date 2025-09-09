@@ -33,7 +33,9 @@ const CommunityPage: NextPage = () => {
     if (!id) return;
     let ignore = false;
     const fetchCommunity = async () => {
-      setLoading(true); setError(null);
+  // Clear stale community immediately to avoid flashing previous group's posts/header
+  setCommunityStateValue((prev) => ({ ...prev, currentCommunity: undefined as any }));
+  setLoading(true); setError(null);
       try {
         const r = await fetch(`/api/group/get/${encodeURIComponent(id)}`);
         if (!r.ok) throw new Error(`Fetch failed: ${r.status}`);
@@ -54,12 +56,16 @@ const CommunityPage: NextPage = () => {
   }, [communityId, setCommunityStateValue]);
 
   const communityData = communityStateValue.currentCommunity as Community | undefined;
+  const routeId = String(communityId || "");
+  const dataId = communityData?.id ? String(communityData.id) : "";
+  const isMatching = routeId && dataId && routeId === dataId;
   if (!communityId) {
     return (
       <Center py={20}><Spinner /></Center>
     );
   }
-  if (loading && !communityData) {
+  // While fetching or when currentCommunity doesn't yet match the route, show a loader to prevent stale flash
+  if (loading || !isMatching) {
     return (
       <Center py={20}><Spinner /></Center>
     );

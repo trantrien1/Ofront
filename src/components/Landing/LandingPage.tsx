@@ -42,7 +42,12 @@ const LandingPage: React.FC = () => {
   const primary = useColorModeValue("black", "white");
   const accent = useColorModeValue("blue.700", "blue.400");
   const accentSoft = useColorModeValue("blue.100", "whiteAlpha.100");
-
+  // Thêm màu gradient đỏ-cam cho MindAi
+  const mindAiGradient = "linear(to-r, red.500, orange.500, orange.700)";
+  // Gradient đậm hơn cho dòng phụ đề (tăng tương phản)
+  const subtitleGradient = "linear(to-r, orange.500, red.500)";
+  // Màu cho nút nổi bật
+  const ctaShadow = "0 0 0 2px #ff9800, 0 2px 8px rgba(255,152,0,0.15)";
   // Pre-compute any color mode values that were previously (incorrectly) used inside callbacks
   const featuresHoverBg = useColorModeValue("blue.100","whiteAlpha.100");
   const faqExpandedBg = useColorModeValue("gray.50", "whiteAlpha.100");
@@ -50,7 +55,6 @@ const LandingPage: React.FC = () => {
   return (
     <Box bg={bg}>
       {/* Top slogan banner */}
-   
       {/* ================= HERO ================= */}
       <Box
         as="section"
@@ -72,7 +76,7 @@ const LandingPage: React.FC = () => {
               position: "absolute",
               inset: "-15%",
               bgGradient:
-                "radial(circle at 30% 20%, rgba(37,99,235,0.22), transparent 42%), radial(circle at 70% 80%, rgba(29,78,216,0.22), transparent 42%)",
+                "radial(circle at 30% 20%, rgba(255,87,34,0.22), transparent 42%), radial(circle at 70% 80%, rgba(255,152,0,0.22), transparent 42%)",
               filter: "blur(40px)",
               willChange: "transform"
             }}
@@ -86,7 +90,7 @@ const LandingPage: React.FC = () => {
             left="-10%"
             w="70vmin"
             h="70vmin"
-            bgGradient="conic-gradient(from 180deg at 50% 50%, rgba(59,130,246,0.32), rgba(37,99,235,0.28), rgba(147,51,234,0.22), transparent)"
+            bgGradient="conic-gradient(from 180deg at 50% 50%, rgba(255,87,34,0.32), rgba(255,152,0,0.28), rgba(147,51,234,0.22), transparent)"
             rounded="full"
             animation={`${pulseGrad} 10s ease-in-out infinite`}
             willChange="transform"
@@ -110,63 +114,167 @@ const LandingPage: React.FC = () => {
                 </Badge>
               </MotionBox>
 
+              {/* Hiệu ứng text animation cho tiêu đề */}
               <MotionBox custom={1} variants={fadeUp}>
                 <Heading
                   as="h1"
                   fontWeight="extrabold"
-                  lineHeight={1.05}
-                  fontSize={{ base: "2.4rem", md: "3.6rem" }}
+                  lineHeight={1.1}
+                  fontSize={{ base: "2.2rem", md: "3.1rem" }}
                   letterSpacing="-0.02em"
                   color={primary}
+                  mb={2}
                 >
-                  <Text as="span" bgClip="text" bgGradient="linear(to-r, blue.600, blue.500, purple.500)" display="inline-block">
-                    MindAi
+                  <Text
+                    as="span"
+                    data-text="MindAI"
+                    display="inline-block"
+                    fontWeight="extrabold"
+                    fontSize={{ base: "2.4rem", md: "3.2rem" }}
+                    className={!reducedMotion ? "outline-text" : undefined}
+                    style={reducedMotion ? { color: '#4ade80' } : undefined}
+                  >
+                    MindAI
                   </Text>
-                  {" — đồng hành cùng bạn "}
-                  <Text as="span" bgClip="text" bgGradient="linear(to-r, blue.600, cyan.500)">chăm sóc tinh thần, nuôi dưỡng tương lai</Text>.
+                  <br />
+                  <Text
+                    as="span"
+                    bgClip="text"
+                    bgGradient={subtitleGradient}
+                    fontWeight="extrabold"
+                    letterSpacing="-0.5px"
+                    fontSize={{ base: "1.15rem", md: "1.32rem" }}
+                    style={{
+                      display: "inline-block",
+                      marginTop: "0.35em",
+                      animation: reducedMotion ? undefined : "slideUpText 1.2s cubic-bezier(.4,0,.2,1)"
+                    }}
+                  >
+                    Đồng hành cùng bạn, chăm sóc tinh thần, nuôi dưỡng tương lai
+                  </Text>
                 </Heading>
+                {/* Thêm keyframes cho text animation */}
+                <style>{`
+                  @keyframes fadeInText {
+                    0% { opacity: 0; transform: translateY(24px) scale(0.98); }
+                    100% { opacity: 1; transform: translateY(0) scale(1); }
+                  }
+                  @keyframes slideUpText {
+                    0% { opacity: 0; transform: translateY(18px); }
+                    100% { opacity: 1; transform: translateY(0); }
+                  }
+                  /* Neon / glow effect */
+                  .neon-text {
+                    /* Keep gradient fill but add glow */
+                    text-shadow:
+                      0 0 4px rgba(0,255,255,0.6),
+                      0 0 8px rgba(0,255,255,0.5),
+                      0 0 14px rgba(0,255,255,0.45),
+                      0 0 24px rgba(0,212,255,0.35),
+                      0 0 36px rgba(0,212,255,0.25);
+                    animation: glowNeon 1.6s ease-in-out infinite alternate;
+                  }
+                  @keyframes glowNeon {
+                    0% { text-shadow: 0 0 4px rgba(0,255,255,0.45), 0 0 10px rgba(0,255,255,0.3), 0 0 18px rgba(0,212,255,0.2); }
+                    100% { text-shadow: 0 0 6px rgba(0,255,255,0.75), 0 0 14px rgba(0,255,255,0.6), 0 0 28px rgba(0,212,255,0.5), 0 0 46px rgba(0,212,255,0.35); }
+                  }
+                  @media (prefers-reduced-motion: reduce) {
+                    .neon-text { animation: none; text-shadow: none; }
+                  }
+                  /* Outline fill effect */
+                  .outline-text {
+                    position: relative;
+                    color: transparent;
+                    -webkit-text-stroke: 2px #4ade80;
+                  }
+                  .outline-text::after {
+                    content: attr(data-text);
+                    position: absolute;
+                    inset: 0;
+                    width: 0;
+                    color: #4ade80;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    animation: fillText 3s ease forwards .25s;
+                  }
+                  @keyframes fillText { from { width:0; } to { width:100%; } }
+                  @media (prefers-reduced-motion: reduce) {
+                    .outline-text { -webkit-text-stroke: 0; color:#4ade80; }
+                    .outline-text::after { animation:none; width:100%; position:static; }
+                  }
+                `}</style>
               </MotionBox>
 
               <MotionBox custom={2} variants={fadeUp}>
-                <Text fontSize={{ base: "md", md: "lg" }} color={subtle} maxW="xl">
-                  Nền tảng AI chăm sóc tinh thần được thiết kế riêng cho sinh viên Việt Nam, tích hợp các module rèn luyện kỹ năng, trợ lý cảm xúc thông minh và cộng đồng hỗ trợ an toàn. Hệ thống giúp sinh viên nhận diện, can thiệp kịp thời các vấn đề lo âu, căng thẳng, bế tắc tâm lý, đồng thời khích lệ và phát huy thế mạnh cá nhân. Từ đó, sinh viên có thể học tập hiệu quả hơn và nâng cao chất lượng cuộc sống
-                </Text>
+                <Stack
+                  as="ul"
+                  spacing={2.5}
+                  maxW="xl"
+                  fontSize={{ base: "md", md: "lg" }}
+                  color={subtle}
+                  fontWeight="semibold"
+                  lineHeight={1.4}
+                  pl={4}
+                >
+                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'orange.400', rounded:'full' }}>
+                    Thiết kế dành riêng cho sinh viên Việt Nam
+                  </Text>
+                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'red.400', rounded:'full' }}>
+                    Tích hợp rèn luyện kỹ năng • trợ lý cảm xúc thông minh • cộng đồng an toàn
+                  </Text>
+                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'purple.400', rounded:'full' }}>
+                    Nhận diện & can thiệp sớm lo âu, căng thẳng, bế tắc tâm lý
+                  </Text>
+                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'pink.400', rounded:'full' }}>
+                    Khai phóng thế mạnh cá nhân & nâng cao chất lượng học tập, cuộc sống
+                  </Text>
+                </Stack>
               </MotionBox>
 
               <MotionBox custom={3} variants={fadeUp}>
                 <HStack spacing={4} flexWrap="wrap">
+                  {/* Primary CTA */}
                   <Link href="/app" passHref>
                     <Button
                       as={ChakraLink}
                       size="lg"
-                      colorScheme="blue"
+                      px={7}
+                      fontWeight="extrabold"
+                      bgGradient="linear(to-r, orange.500, red.500)"
+                      color="white"
                       rightIcon={<FiArrowRight />}
-                      px={6}
-                      _hover={{ transform: "translateY(-2px)" }}
+                      _hover={{ bgGradient: "linear(to-r, orange.400, red.500)", transform: "translateY(-3px)", shadow: "lg" }}
+                      _active={{ transform: "translateY(-1px)" }}
                       transition="all .25s ease"
                     >
-                      Bắt đầu
+                      Bắt đầu ngay
                     </Button>
                   </Link>
+                  {/* Secondary CTA */}
                   <Link href="/quiz" passHref>
                     <Button
                       as={ChakraLink}
                       size="lg"
                       variant="outline"
-                      borderColor={border}
-                      _hover={{ transform: "translateY(-2px)", bg: featuresHoverBg }}
+                      fontWeight="bold"
+                      borderWidth="2px"
+                      borderColor="orange.400"
+                      color="orange.500"
+                      _hover={{ bg: "orange.50", transform: "translateY(-2px)" }}
                       transition="all .25s ease"
                     >
-                      Làm trắc nghiệm DASS‑21
+                      Làm DASS‑21
                     </Button>
                   </Link>
+                  {/* Tertiary CTA */}
                   <Link href="/anime" passHref>
                     <Button
                       as={ChakraLink}
                       size="lg"
-                      variant="outline"
-                      borderColor={border}
-                      _hover={{ transform: "translateY(-2px)", bg: featuresHoverBg }}
+                      variant="ghost"
+                      fontWeight="medium"
+                      color="red.500"
+                      _hover={{ textDecoration: "underline", bg: "transparent", transform: "translateY(-2px)" }}
                       transition="all .25s ease"
                     >
                       Trò chuyện với Ami

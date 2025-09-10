@@ -181,9 +181,11 @@ const RecommendationsComponent: React.FC<RecommendationsProps> = () => {
               );
             })}
             <Box p="10px 20px">
-              <Button height="30px" width="100%">
-                Xem tất cả
-              </Button>
+              <Link href="/community/find" passHref>
+                <Button height="30px" width="100%">
+                  Xem tất cả
+                </Button>
+              </Link>
             </Box>
           </>
         )}

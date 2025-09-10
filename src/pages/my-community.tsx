@@ -33,9 +33,15 @@ import {
   Portal,
   Tooltip,
   chakra,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
 } from "@chakra-ui/react";
 import NextLink from "next/link";
-import { getGroupsByUser, Group, updateGroup } from "../services/groups.service";
+import { getGroupsByUser, Group, updateGroup, leaveGroup, clearGroupsCache } from "../services/groups.service";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { userState } from "../atoms/userAtom";
 import { communityState, CommunitySnippet } from "../atoms/communitiesAtom";
@@ -68,6 +74,9 @@ const MyCommunityPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [privacyFilter, setPrivacyFilter] = useState<'all' | 'public' | 'private'>('all');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [leaveTarget, setLeaveTarget] = useState<ExtendedGroup | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const cancelLeaveRef = useRef<HTMLButtonElement | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const searching = query.trim().length > 0;
   const toast = useToast();
@@ -403,7 +412,10 @@ const MyCommunityPage: React.FC = () => {
                   }}>Đổi tên</MenuItem>
                   <MenuItem as={CLink} href={`/community/${encodeURIComponent(String(g.id))}?admin=1`}>Quản trị viên</MenuItem>
                   <MenuDivider />
-                  <MenuItem color="red.400" onClick={()=> toast({status:'info', title:'Tính năng sắp có'})}>Rời nhóm</MenuItem>
+                  <MenuItem color="red.400" onClick={()=> {
+                    if (!user) { toast({status:'warning', title:'Bạn cần đăng nhập'}); return; }
+                    setLeaveTarget(g);
+                  }}>Rời nhóm</MenuItem>
                   <MenuItem onClick={()=> toast({status:'info', title:'Tính năng sắp có'})}>Lưu trữ</MenuItem>
                 </MenuList>
               </Portal>
@@ -512,6 +524,41 @@ const MyCommunityPage: React.FC = () => {
         </TabPanels>
       </Tabs>
   </Box>
+    <AlertDialog
+      isOpen={!!leaveTarget}
+      leastDestructiveRef={cancelLeaveRef}
+      onClose={()=> !leaving && setLeaveTarget(null)}
+      isCentered
+      motionPreset='scale'
+    >
+      <AlertDialogOverlay />
+      <AlertDialogContent>
+        <AlertDialogHeader fontSize='lg' fontWeight='bold'>Rời nhóm</AlertDialogHeader>
+        <AlertDialogBody>
+          {leaveTarget ? `Bạn chắc chắn muốn rời khỏi nhóm "${leaveTarget.name}"? Bạn có thể cần được mời lại nếu muốn quay lại.` : ''}
+        </AlertDialogBody>
+        <AlertDialogFooter>
+          <Button ref={cancelLeaveRef} onClick={()=> setLeaveTarget(null)} disabled={leaving}>Hủy</Button>
+          <Button colorScheme='red' ml={3} isLoading={leaving} onClick={async ()=> {
+            if (!leaveTarget || !user) { setLeaveTarget(null); return; }
+            try {
+              setLeaving(true);
+              const username = (user as any)?.username || (user as any)?.displayName || (user as any)?.email || undefined;
+              await leaveGroup(leaveTarget.id, username);
+              setGroups(prev => prev.filter(pg => String(pg.id) !== String(leaveTarget.id)));
+              setCommunityState(cs => ({ ...cs, mySnippets: (cs.mySnippets||[]).filter(s => String(s.communityId) !== String(leaveTarget.id)) }));
+              clearGroupsCache();
+              toast({status:'success', title:'Đã rời nhóm'});
+            } catch(e:any) {
+              toast({status:'error', title:'Rời nhóm thất bại', description: e?.userMessage || e?.message || ''});
+            } finally {
+              setLeaving(false);
+              setLeaveTarget(null);
+            }
+          }}>Rời nhóm</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 };

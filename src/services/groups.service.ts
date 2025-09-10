@@ -1,4 +1,5 @@
 import request from "./request";
+import nookies from 'nookies';
 
 export type Group = {
   id: number | string;
@@ -210,6 +211,14 @@ export const deleteGroup = async (id: string | number) => {
   return res.data;
 };
 
+export const leaveGroup = async (id: string | number, username?: string) => {
+  // Call local API route which proxies to upstream and ensures token/cookies
+  const payload: any = { id: String(id) };
+  if (username) payload.username = username;
+  const res = await request.delete(`group-member/delete`, { data: payload });
+  return res.data;
+};
+
 export const updateGroupStatus = async (id: string | number, status: boolean) => {
   const res = await request.put("group/update-status", { id, status });
   return res.data;
@@ -237,4 +246,4 @@ export const getAllGroups = async (name?: string) => {
   }
 };
 
-export default { getGroupsByUser, getGroupById, getAllGroups, createGroup, joinGroup, updateGroup, deleteGroup, updateGroupStatus };
+export default { getGroupsByUser, getGroupById, getAllGroups, createGroup, joinGroup, updateGroup, deleteGroup, updateGroupStatus, leaveGroup };

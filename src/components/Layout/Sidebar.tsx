@@ -293,13 +293,6 @@ const Sidebar: React.FC = () => {
               onClick={handleHomeClick}
               isActive={isActivePage("/app")}
             />
-            
-            <NavItem
-              icon={MdGroup}
-              label="Cộng đồng của tôi"
-              onClick={handleManageCommunities}
-              isActive={isActivePage("/my-community")}
-            />
             {/* Code manager is now part of My Courses (/courses) */}
             <NavItem
               icon={GiFox}
@@ -352,7 +345,7 @@ const Sidebar: React.FC = () => {
             <VStack spacing={1} align="stretch">
               <NavItem
                 icon={FaHome}
-                label="Khóa học của tôi"
+                label="Khóa học"
                 path="/courses"
                 isActive={isActivePage("/courses")}
               />

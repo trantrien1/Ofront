@@ -28,6 +28,8 @@ export type Post = {
   visibility?: "public" | "community";
   createdAt?: Timestamp;
   editedAt?: Timestamp;
+  // Whether the post was created anonymously
+  anonymous?: boolean;
 };
 
 export type PostVote = {

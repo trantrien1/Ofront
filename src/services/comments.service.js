@@ -13,8 +13,10 @@ export const getCommentsByPostId = async (postId, params = {}) => {
 };
 
 export const createComment = async (payload) => {
-	// payload: { content, postId, parentId? }
-	const response = await request.post("comment/create", payload);
+	// payload: { content, postId, parentId?, isAnonymous? }
+	const data = { ...payload };
+	if (data.anonymous != null && data.isAnonymous == null) data.isAnonymous = data.anonymous;
+	const response = await request.post("comment/create", data);
 	return response.data;
 };
 
@@ -23,9 +25,9 @@ export const likeComment = async ({ commentId }) => {
 	return response.data;
 };
 
-export const replyToComment = async ({ content, postId, parentId }) => {
+export const replyToComment = async ({ content, postId, parentId, anonymous }) => {
 	if (!parentId) throw new Error('parentId is required for reply');
-	const response = await request.post("comment/create", { content, postId, parentId });
+	const response = await request.post("comment/create", { content, postId, parentId, isAnonymous: !!anonymous, anonymous: !!anonymous });
 	return response.data;
 };
 

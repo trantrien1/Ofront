@@ -46,6 +46,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [postLocation, setPostLocation] = useState("personal"); // "personal" or "community"
   const [communityId, setCommunityId] = useState("");
   const [postType, setPostType] = useState("TEXT");
+  const [anonymous, setAnonymous] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -129,14 +130,17 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
         imageURL = imagePreview;
       }
 
-      const postData = {
+  const postData: any = {
         title: title.trim(),
-        body: body.trim(),
-  communityId: postLocation === "community" ? communityId : null,
-        postType,
+        content: body.trim(), // Backend expects 'content'
+        type: postType,
+        groupId: postLocation === "community" ? Number(communityId) : undefined,
         imageURL: imageURL || null,
-        isPersonalPost: postLocation === "personal",
+        anonymous, // primary key used by backend JSON (field is 'isAnonymous' in DTO -> serialized as 'anonymous')
+        isAnonymous: anonymous, // include both just in case backend expects exact name
       };
+      if (!postData.groupId) delete postData.groupId;
+  try { console.log('[CreatePostModal] submitting postData=', JSON.stringify(postData)); } catch {}
 
       await createPost(postData);
       
@@ -155,6 +159,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setPostType("TEXT");
       setSelectedFile(null);
       setImagePreview("");
+  setAnonymous(false);
       
       onClose();
       // Stay within context: if posting to a community, remain in that community page
@@ -269,6 +274,19 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <Text fontSize="sm" color={titleCount} textAlign="right">
                 {title.length}/300
               </Text>
+            </FormControl>
+
+            <FormControl display="flex" alignItems="center">
+              <Button
+                as="div"
+                variant={anonymous ? 'solid' : 'outline'}
+                colorScheme="purple"
+                size="sm"
+                onClick={() => setAnonymous(a => !a)}
+              >
+                {anonymous ? 'anonymous: Bật' : 'anonymous: Tắt'}
+              </Button>
+              <Text ml={3} fontSize="sm" color={hintColor}>Bật để không hiển thị tên của bạn.</Text>
             </FormControl>
 
             <FormControl>

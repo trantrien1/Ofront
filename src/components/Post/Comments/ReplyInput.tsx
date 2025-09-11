@@ -7,9 +7,9 @@ type ReplyInputProps = {
   setComment: (value: string) => void;
   loading: boolean;
   user?: User | null;
-  onReply: (comment: string) => void;
+  onReply: (comment: string, anonymous?: boolean) => void;
   onCancel: () => void;
-  parentCommentText?: string; // Show what we're replying to
+  parentCommentText?: string;
 };
 
 const ReplyInput: React.FC<ReplyInputProps> = ({
@@ -21,6 +21,7 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
   onCancel,
   parentCommentText,
 }) => {
+  const [anonymous, setAnonymous] = useState(false);
   return (
     <Box ml={8} mt={2} borderLeft="2px solid" borderColor="gray.200" pl={4}>
         {parentCommentText && (
@@ -68,6 +69,14 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
             >
               <Button
                 size="sm"
+                variant={anonymous ? 'solid':'outline'}
+                colorScheme="purple"
+                onClick={()=> setAnonymous(a=>!a)}
+              >
+                {anonymous ? 'anonymous: Bật':'anonymous'}
+              </Button>
+              <Button
+                size="sm"
                 variant="ghost"
                 onClick={onCancel}
                 disabled={loading}
@@ -79,7 +88,7 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
                 height="26px"
                 disabled={!comment.length}
                 isLoading={loading}
-                onClick={() => onReply(comment)}
+                onClick={() => onReply(comment, anonymous)}
               >
                 Trả lời
               </Button>

@@ -81,6 +81,8 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 		title: "",
 		body: "",
 	});
+	// Anonymous post toggle
+	const [anonymous, setAnonymous] = useState(false);
 	const [selectedFile, setSelectedFile] = useState<string>();
 	const selectFileRef = useRef<HTMLInputElement>(null);
 	const [loading, setLoading] = useState(false);
@@ -128,6 +130,8 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 									communityId: visibility === "community" ? targetCommunityId : null,
 					isPersonalPost: visibility !== "community",
 					status,
+									anonymous,
+									isAnonymous: anonymous,
 				};
 
 				// Optimistic: insert a temp post immediately
@@ -137,7 +141,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					id: tempId,
 					communityId: cidKey,
 					communityImageURL: communityImageURL,
-					userDisplayText: globalUser?.displayName || globalUser?.email || "you",
+					userDisplayText: anonymous ? 'anonymous' : (globalUser?.displayName || globalUser?.email || "you"),
 					creatorId: globalUser?.uid || user?.uid || "",
 					title,
 					body,
@@ -147,6 +151,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					approved: status === 1,
 					imageURL: selectedFile || undefined,
 					createdAt: new Date().toISOString() as any,
+					anonymous,
 				};
 				setPostItems((prev) => {
 					const nextPosts = [tempPost, ...(prev.posts || [])];
@@ -179,7 +184,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					id: String(created?.id || created?.postId || tempId),
 					communityId: cidKey,
 					communityImageURL,
-					userDisplayText: globalUser?.displayName || globalUser?.email || "you",
+					userDisplayText: anonymous ? 'anonymous' : (globalUser?.displayName || globalUser?.email || "you"),
 					creatorId: globalUser?.uid || user?.uid || "",
 					title,
 					body,
@@ -189,6 +194,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 					approved: typeof created?.approved === 'boolean' ? created.approved : (status === 1),
 					imageURL: selectedFile || undefined,
 					createdAt: new Date().toISOString() as any,
+					anonymous,
 				};
 				setPostItems((prev) => {
 					const list = [...(prev.posts || [])];
@@ -204,6 +210,7 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 
 				// Reset form
 				setTextInputs({ title: "", body: "" });
+				setAnonymous(false);
 				setSelectedFile(undefined);
 
 				// Keep user in context: if posted to a community, go to that community page; otherwise stay put.
@@ -300,6 +307,13 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 		      <Input value={targetCommunityId} onChange={(e) => setTargetCommunityId(e.target.value)} placeholder="Community ID" />
 						</Box>
 					)}
+					<Box>
+						<Text fontSize="sm" fontWeight={600} mb={2}>Chế độ ẩn danh</Text>
+						<Button size="sm" variant={anonymous ? 'solid' : 'outline'} colorScheme="purple" onClick={() => setAnonymous(a => !a)}>
+							{anonymous ? 'Ẩn danh: Bật' : 'Ẩn danh: Tắt'}
+						</Button>
+						<Text fontSize="xs" mt={1} color="gray.500">Nếu bật, tên của bạn sẽ hiển thị là "Ẩn danh".</Text>
+					</Box>
 				</Stack>
 			</Box>
 			<Flex width="100%">

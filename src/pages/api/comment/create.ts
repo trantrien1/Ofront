@@ -18,6 +18,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       content: incoming.content,
       postId: toNum(incoming.postId ?? incoming.id),
     };
+    // Pass through anonymous flags if present (support both naming styles)
+    const anonRaw = (incoming.isAnonymous !== undefined ? incoming.isAnonymous : incoming.anonymous);
+    if (anonRaw !== undefined) {
+      const boolVal = ((): boolean => {
+        if (typeof anonRaw === 'boolean') return anonRaw;
+        if (typeof anonRaw === 'string') {
+          const v = anonRaw.toLowerCase().trim();
+          return v === 'true' || v === '1' || v === 'yes';
+        }
+        if (typeof anonRaw === 'number') return anonRaw === 1;
+        return false;
+      })();
+      payload.isAnonymous = boolVal;
+      payload.anonymous = boolVal; // send both keys to satisfy possible backend expectations
+    }
     if (incoming.parentId != null || incoming.parent_id != null || incoming.parentID != null) {
       payload.parentId = toNum(incoming.parentId ?? incoming.parent_id ?? incoming.parentID);
     }

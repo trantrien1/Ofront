@@ -8,7 +8,7 @@ type CommentInputProps = {
   setComment: (value: string) => void;
   loading: boolean;
   user?: User | null;
-  onCreateComment: (comment: string) => void;
+  onCreateComment: (comment: string, anonymous?: boolean) => void;
 };
 
 const CommentInput: React.FC<CommentInputProps> = ({
@@ -26,6 +26,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
   const focusBorder = useColorModeValue("blue.500", "blue.300");
   const footerBg = useColorModeValue("gray.100", "gray.700");
   const footerBorder = useColorModeValue("gray.200", "gray.600");
+  const [anonymous, setAnonymous] = React.useState(false);
   return (
     <Flex direction="column" position="relative">
       {user && (
@@ -68,6 +69,16 @@ const CommentInput: React.FC<CommentInputProps> = ({
             borderRadius="0px 0px 4px 4px"
           >
             <Button
+              mr="auto"
+              height="26px"
+              variant={anonymous ? 'solid':'outline'}
+              colorScheme="purple"
+              onClick={() => setAnonymous(a=>!a)}
+              size="sm"
+            >
+              {anonymous ? 'anonymous: Bật' : 'anonymous: Tắt'}
+            </Button>
+            <Button
               height="26px"
               disabled={!comment.length}
               isLoading={loading}
@@ -78,7 +89,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
                 console.log("onCreateComment function:", typeof onCreateComment);
                 console.log("User in CommentInput:", user);
                 console.log("==================================");
-                onCreateComment(comment);
+                onCreateComment(comment, anonymous);
               }}
             >
               Bình luận

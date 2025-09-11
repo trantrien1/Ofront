@@ -55,6 +55,9 @@ export type Comment = {
   replyCount?: number; // Number of replies
   likeCount?: number; // Number of likes
   likedByMe?: boolean; // Whether current user liked this comment
+  anonymous?: boolean; // Whether comment is anonymous
+  // Optional client-side hints to match ownership when backend returns varying id fields
+  creatorAltIds?: string[];
 };
 
 type CommentItemProps = {
@@ -241,7 +244,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
         ml={level * 4} // Indent based on nesting level
       >
         <Box mr={2}>
-          <Image src="/images/logo.png" alt="logo" boxSize="30px" borderRadius="full" />
+          <Image src={comment.anonymous ? '/images/avatar-placeholder.png' : comment.creatorPhotoURL || '/images/logo.png'} alt={comment.anonymous ? 'anonymous' : 'avatar'} boxSize="30px" borderRadius="full" />
         </Box>
         <Stack spacing={1} flex={1}>
           <Stack direction="row" align="center" spacing={2} fontSize="8pt">
@@ -249,7 +252,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
               fontWeight={700}
               _hover={{ textDecoration: "underline", cursor: "pointer" }}
             >
-              {comment.creatorDisplayText}
+              {comment.anonymous ? 'anonymous' : comment.creatorDisplayText}
             </Text>
             {comment.createdAt ? (
               <Text color={timestampColor}>{commentTimeLabel}</Text>
@@ -349,20 +352,39 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
                 {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
               </Text>
             )}
-            {userId === comment.creatorId && (
-              <>
-                <Text fontSize="9pt" _hover={{ color: hoverLinkColor }}>
-                  Edit
-                </Text>
-                <Text
-                  fontSize="9pt"
-                  _hover={{ color: hoverLinkColor }}
-                  onClick={() => onDeleteComment(comment)}
-                >
-                  Delete
-                </Text>
-              </>
-            )}
+            {/* Determine ownership more robustly (backend may return different id fields after reload) */}
+            {(() => {
+              // Never allow edit/delete for anonymous comments (even if client still knows who posted)
+              if (!user || comment.anonymous) return null;
+              const u: any = user;
+              // Gather candidate ids for current user
+              const userIds = [u.uid, u.id, u.userId, u.userUID, u.username, u.email, u.email?.split?.('@')[0]]
+                .filter(Boolean)
+                .map((v: any) => String(v).toLowerCase());
+              // Gather candidate ids for comment's creator
+              const commentIds = [comment.creatorId, comment.creatorDisplayText, ...(comment.creatorAltIds || [])]
+                .filter(Boolean)
+                .map(v => String(v).toLowerCase());
+              let owned = false;
+              for (const a of userIds) {
+                if (commentIds.includes(a)) { owned = true; break; }
+              }
+              if (!owned) return null;
+              return (
+                <>
+                  <Text fontSize="9pt" _hover={{ color: hoverLinkColor }}>
+                    Edit
+                  </Text>
+                  <Text
+                    fontSize="9pt"
+                    _hover={{ color: hoverLinkColor }}
+                    onClick={() => onDeleteComment(comment)}
+                  >
+                    Delete
+                  </Text>
+                </>
+              );
+            })()}
           </Stack>
         </Stack>
       </Flex>

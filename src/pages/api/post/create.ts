@@ -80,6 +80,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (hasGroup) payload.groupId = groupIdNum;
   if (type) payload.type = type;
   if (typeof imageURL !== 'undefined' && imageURL !== null) payload.imageURL = imageURL;
+  // Anonymous flag mapping: backend field name (Java boolean isAnonymous) usually serializes as JSON key 'anonymous'
+  // So we must send BOTH 'anonymous' and 'isAnonymous' to be safe.
+  const bodyAnon = (req.body as any)?.anonymous;
+  const bodyIsAnon = (req.body as any)?.isAnonymous;
+  if (typeof bodyAnon === 'boolean') {
+    payload.isAnonymous = bodyAnon;
+    payload.anonymous = bodyAnon;
+  }
+  if (typeof bodyIsAnon === 'boolean') {
+    payload.isAnonymous = bodyIsAnon;
+    payload.anonymous = bodyIsAnon;
+  }
   // Always start with status=0 on creation as required
   payload.status = 0;
   if (typeof isPersonalPost === 'boolean') payload.isPersonalPost = isPersonalPost;

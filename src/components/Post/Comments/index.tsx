@@ -61,7 +61,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   const skeletonBg = useColorModeValue("white", "gray.800");
   const dividerCol = useColorModeValue("gray.100", "gray.700");
 
-  const onCreateComment = async (comment: string) => {
+  const onCreateComment = async (comment: string, anonymous?: boolean) => {
     if (!user) {
       console.log("❌ No user found, opening auth modal");
       setAuthModalState({ open: true, view: "login" });
@@ -81,24 +81,34 @@ const CommentsComponent: React.FC<CommentsProps> = ({
 
     setCommentCreateLoading(true);
     try {
-      const newId = `${Date.now()}`;
+  const newId = `${Date.now()}`;
       setComment("");
       const { id: postId, title } = selectedPost!;
       
+      const isAnon = !!anonymous;
       const optimisticComment = {
         id: newId,
-        creatorId: user.uid,
-        creatorDisplayText: user.email?.split("@")[0] || user.displayName || user.uid || "user",
-        creatorPhotoURL: user.photoURL,
+        creatorId: user.uid, // still keep real id client-side for permission checks
+  creatorDisplayText: isAnon ? 'anonymous' : (user.email?.split("@")[0] || user.displayName || user.uid || "user"),
+        creatorPhotoURL: isAnon ? '/images/avatar-placeholder.png' : user.photoURL,
         communityId: community,
         postId,
         postTitle: title,
         text: comment,
         createdAt: { seconds: Date.now() / 1000 } as any,
+        anonymous: isAnon,
       } as Comment;
 
       console.log("Adding optimistic comment:", optimisticComment);
       setComments((prev) => [optimisticComment, ...prev]);
+      // Persist temp anonymous id so a refresh before server responds still treats it as anonymous
+      if (isAnon && typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('anonCommentIds');
+            const arr = raw ? JSON.parse(raw) : [];
+            if (!arr.includes(newId)) { arr.push(newId); localStorage.setItem('anonCommentIds', JSON.stringify(arr)); }
+        } catch {}
+      }
 
       // Fetch posts again to update number of comments
       setPostState((prev) => ({
@@ -115,14 +125,24 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         console.log("Calling backend to create comment...");
         console.log("Payload:", { content: comment, postId });
         const { CommentsService } = await import("../../../services/index");
-        const result = await CommentsService.createComment({ content: comment, postId });
+  const result = await CommentsService.createComment({ content: comment, postId, isAnonymous: !!anonymous, anonymous: !!anonymous });
         console.log("Backend comment create result:", result);
         // Replace optimistic ID if backend returns a real one
         const realId = result?.id?.toString?.() || result?.data?.id?.toString?.();
         if (realId) {
           setComments((prev) => prev.map(c => c.id === newId ? { ...c, id: realId } : c));
+          if (isAnon && typeof window !== 'undefined') {
+            try {
+              const raw2 = localStorage.getItem('anonCommentIds');
+              let arr2 = raw2 ? JSON.parse(raw2) : [];
+              // Replace temp id
+              arr2 = arr2.filter((x: any) => x !== newId);
+              if (!arr2.includes(realId)) arr2.push(realId);
+              localStorage.setItem('anonCommentIds', JSON.stringify(arr2));
+            } catch {}
+          }
         }
-        toast({ status: 'success', title: 'Comment posted' });
+  toast({ status: 'success', title: anonymous ? 'Đã bình luận (anonymous)' : 'Comment posted' });
         console.log("✅ Comment created successfully!");
         console.log("=========================");
       } catch (err: any) {
@@ -147,7 +167,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     setCommentCreateLoading(false);
   };
 
-  const onReply = async (parentComment: Comment, replyText: string) => {
+  const onReply = async (parentComment: Comment, replyText: string, anonymous?: boolean) => {
     if (!user) {
       setAuthModalState({ open: true, view: "login" });
       return;
@@ -187,13 +207,14 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       });
 
     try {
-      const newId = `${Date.now()}`;
+  const newId = `${Date.now()}`;
 
+      const isAnonReply = !!anonymous;
       const newReply: Comment = {
         id: newId,
         creatorId: user.uid,
-        creatorDisplayText: user.email?.split("@")[0] || user.displayName || user.uid || "user",
-        creatorPhotoURL: user.photoURL,
+  creatorDisplayText: isAnonReply ? 'anonymous' : (user.email?.split("@")[0] || user.displayName || user.uid || "user"),
+        creatorPhotoURL: isAnonReply ? '/images/avatar-placeholder.png' : user.photoURL,
         communityId: community,
         postId: selectedPost?.id!,
         postTitle: selectedPost?.title!,
@@ -201,10 +222,18 @@ const CommentsComponent: React.FC<CommentsProps> = ({
         createdAt: { seconds: Date.now() / 1000, nanoseconds: 0 } as any,
         parentId: parentComment.id,
         replyCount: 0,
+        anonymous: isAnonReply,
       };
 
       // Insert reply under the correct parent at any depth
       setComments((prev) => insertReply(prev, parentComment.id!, newReply));
+      if (isAnonReply && typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('anonCommentIds');
+          const arr = raw ? JSON.parse(raw) : [];
+          if (!arr.includes(newId)) { arr.push(newId); localStorage.setItem('anonCommentIds', JSON.stringify(arr)); }
+        } catch {}
+      }
 
       // Update post number of comments optimistically
       setPostState((prev) => ({
@@ -219,10 +248,19 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       // Persist reply to backend
       try {
         const { CommentsService } = await import("../../../services/index");
-        const result = await CommentsService.replyToComment({ content: replyText, postId: selectedPost?.id!, parentId: parentComment.id });
+  const result = await CommentsService.replyToComment({ content: replyText, postId: selectedPost?.id!, parentId: parentComment.id, anonymous: !!anonymous });
         const realId = result?.id?.toString?.() || result?.data?.id?.toString?.();
         if (realId) {
           setComments((prev) => replaceReplyId(prev, newId, realId));
+          if (isAnonReply && typeof window !== 'undefined') {
+            try {
+              const raw2 = localStorage.getItem('anonCommentIds');
+              let arr2 = raw2 ? JSON.parse(raw2) : [];
+              arr2 = arr2.filter((x: any) => x !== newId);
+              if (!arr2.includes(realId)) arr2.push(realId);
+              localStorage.setItem('anonCommentIds', JSON.stringify(arr2));
+            } catch {}
+          }
         }
         toast({ status: 'success', title: 'Reply posted' });
       } catch (e) {
@@ -306,22 +344,48 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       console.log("Raw API comments received:", apiComments);
 
       // Mapper that supports both flat responses and nested commentsChildren
-      const mapNode = (node: any): Comment => ({
-        id: node.id?.toString?.() || node.id,
-        creatorId: node.userId || node.user?.id || node.user?.userId || "",
-        creatorDisplayText: node.user?.username || node.creatorDisplayText || (user?.email?.split("@")[0] || "user"),
-        creatorPhotoURL: node.creatorPhotoURL || user?.photoURL,
-        communityId: community,
-        postId: node.postId?.toString?.() || selectedPost?.id || "",
-        postTitle: selectedPost?.title || "",
-        text: node.content,
-        createdAt: node.createdAt ? ({ seconds: Math.floor(new Date(node.createdAt).getTime() / 1000) } as any) : undefined,
-        parentId: node.parentId ? (node.parentId.toString?.() || node.parentId) : null,
-        replies: Array.isArray(node.commentsChildren) ? node.commentsChildren.map(mapNode) : [],
-        replyCount: Array.isArray(node.commentsChildren) ? node.commentsChildren.length : (node.replyCount || 0),
-        likeCount: typeof node.likeCount === 'number' ? node.likeCount : (Array.isArray(node.likes) ? node.likes.length : (typeof node.likesCount === 'number' ? node.likesCount : 0)),
-        likedByMe: !!(node.likedByMe || node.liked || (Array.isArray(node.likes) && user?.uid && node.likes.includes(user.uid))),
-      });
+  // Load anonymous IDs once per fetch (client side only)
+  let anonIds: string[] = [];
+  try { if (typeof window !== 'undefined') { const raw = localStorage.getItem('anonCommentIds'); if (raw) anonIds = JSON.parse(raw); } } catch {}
+
+  const mapNode = (node: any): Comment => {
+        const anon = !!(node.anonymous || node.isAnonymous || (node.user?.username && String(node.user.username).toLowerCase() === 'anonymous'));
+        const baseDisplay = node.user?.username || node.creatorDisplayText || (user?.email?.split("@")[0] || "user");
+        // Fallback chain for creatorId: prefer stable explicit IDs, then username/email if no numeric/UID fields are present.
+        const creatorId = node.userId || node.user?.id || node.user?.userId || node.user?.uid || node.user?.userUID || node.user?.username || node.user?.email || "";
+        const altIds: string[] = [];
+        try {
+          const push = (v: any) => { if (v != null) altIds.push(String(v).toLowerCase()); };
+          push(node.user?.uid);
+          push(node.user?.userUID);
+          push(node.user?.username);
+          push(node.user?.email);
+          push(node.user?.email?.split?.('@')[0]);
+          push(node.userId);
+        } catch {}
+        // Force anonymous if id appears in anonIds list (client-side persisted)
+        const isClientAnon = node.id && anonIds.includes(String(node.id));
+        const finalAnon = anon || isClientAnon;
+        return {
+          id: node.id?.toString?.() || node.id,
+          creatorId: creatorId ? String(creatorId) : "",
+          creatorDisplayText: finalAnon ? 'anonymous' : baseDisplay,
+          creatorPhotoURL: finalAnon ? '/images/avatar-placeholder.png' : (node.creatorPhotoURL || user?.photoURL),
+          communityId: community,
+            postId: node.postId?.toString?.() || selectedPost?.id || "",
+          postTitle: selectedPost?.title || "",
+          text: node.content,
+          createdAt: node.createdAt ? ({ seconds: Math.floor(new Date(node.createdAt).getTime() / 1000) } as any) : undefined,
+          parentId: node.parentId ? (node.parentId.toString?.() || node.parentId) : null,
+          replies: Array.isArray(node.commentsChildren) ? node.commentsChildren.map(mapNode) : [],
+          replyCount: Array.isArray(node.commentsChildren) ? node.commentsChildren.length : (node.replyCount || 0),
+          likeCount: typeof node.likeCount === 'number' ? node.likeCount : (Array.isArray(node.likes) ? node.likes.length : (typeof node.likesCount === 'number' ? node.likesCount : 0)),
+          likedByMe: !!(node.likedByMe || node.liked || (Array.isArray(node.likes) && user?.uid && node.likes.includes(user.uid))),
+          anonymous: finalAnon,
+          // @ts-ignore store alternate ids for client side permission
+          creatorAltIds: altIds,
+        };
+      };
 
       let topLevel: Comment[] = [];
       if (Array.isArray(apiComments)) {

@@ -1,4 +1,6 @@
 import request from "./request";
+// In-memory cache: last successful raw posts array for reuse on 304
+let __lastPostsRaw = [];
 
 // Like level meanings (1..4):
 // 1 = không hài lòng
@@ -13,11 +15,9 @@ export const LIKE_LEVEL_LABELS = {
 };
 
 export const getPosts = async (options = {}) => {
-	// Build query with defaults; default sorting by 'like' desc
 	const title = options.title != null ? String(options.title).trim() : '';
 	const rawSort = options.sort ? String(options.sort).trim().toLowerCase() : 'like';
 	const sort = (rawSort === 'like' || rawSort === 'time') ? rawSort : 'like';
-	// Always include typeSort; default to 'desc' for stability
 	const typeSort = (String(options.typeSort ?? 'desc').toLowerCase() === 'asc') ? 'asc' : 'desc';
 	const usp = new URLSearchParams();
 	if (title.length > 0) usp.set('title', title);
@@ -26,9 +26,19 @@ export const getPosts = async (options = {}) => {
 	const query = usp.toString();
 	const url = `post/get${query ? "?" + query : ""}`;
 
-	const response = await request.get(url);
+	let response;
+	try {
+		response = await request.get(url, { validateStatus: s => [200,304].includes(s) });
+	} catch (e) {
+		return __lastPostsRaw.map(p => mapFromPostResponse(p));
+	}
+	if (response.status === 304) {
+		if (__lastPostsRaw.length) return __lastPostsRaw.map(p => mapFromPostResponse(p));
+		return [];
+	}
 	const raw = response.data;
 	const arr = Array.isArray(raw) ? raw : [];
+	__lastPostsRaw = arr;
 	return arr.map((p) => mapFromPostResponse(p));
 };
 
@@ -100,31 +110,44 @@ export const updateLikeLevel = async ({ postId, commentId, level } = {}) => {
 export { updateLikeLevel as __updateLikeLevelRef, LIKE_LEVEL_LABELS as __LIKE_LEVEL_LABELS_REF };
 
 export const createPost = async (postData) => {
-	// Send exactly what caller supplies; backend will set group only when type='blog' and groupId provided
-	const response = await request.post("post/create", postData);
+	const payload = { ...postData };
+	if (typeof payload.anonymous === 'boolean' && typeof payload.isAnonymous !== 'boolean') {
+		payload.isAnonymous = !!payload.anonymous;
+	}
+	if (typeof payload.isAnonymous === 'boolean' && typeof payload.anonymous !== 'boolean') {
+		payload.anonymous = !!payload.isAnonymous;
+	}
+	try { console.log('[posts.service.createPost] payload', payload); } catch {}
+	const response = await request.post("post/create", payload);
+	try { console.log('[posts.service.createPost] response.data=', response.data); } catch {}
 	return response.data;
 };
 
 // Map a single raw API post object to frontend Post
 function mapFromPostResponse(p, opts = {}) {
 	const username = extractUsername(p?.userOfPost);
+	const creatorId = p?.creatorId || p?.userId || p?.userUID || p?.userOfPost?.userUID || p?.userOfPost?.id || '';
+	const communityId = p?.communityId || p?.groupId || p?.group?.id || p?.originGroupId || '';
 	return {
 		id: String(p?.id ?? ""),
-	// Minimal, consistent fields the UI uses
-	userDisplayText: username,
+		userDisplayText: username,
+		creatorId: String(creatorId || '').trim(),
+		communityId: String(communityId || '').trim(),
 		title: p?.title || "",
 		body: p?.content || "",
-	// Prefer backend field names for easier debugging
-	countComment: Number(p?.countComment ?? 0),
-	countLike: Number(p?.countLike ?? 0),
-	// Aliases kept for compatibility; consider migrating consumers to count* fields
-	numberOfComments: Number(p?.countComment ?? 0),
-	voteStatus: Number(p?.countLike ?? 0),
+		countComment: Number(p?.countComment ?? 0),
+		countLike: Number(p?.countLike ?? 0),
+		numberOfComments: Number(p?.countComment ?? 0),
+		voteStatus: Number(p?.countLike ?? 0),
 		likeLevel: typeof p?.levelIcon === 'number' ? p.levelIcon : undefined,
-	createdAt: p?.createdAt ?? null,
-	editedAt: p?.editedAt ?? null,
-	// Include groupId only when needed by caller context
-	...(opts?.groupIdFallback != null ? { groupId: String(opts.groupIdFallback) } : {}),
+		createdAt: p?.createdAt ?? null,
+		editedAt: p?.editedAt ?? null,
+		anonymous: !!p?.anonymous,
+		// also honor 'isAnonymous' if backend uses Java style boolean naming
+		...(p?.isAnonymous !== undefined ? { anonymous: !!p.isAnonymous } : {}),
+		status: typeof p?.status === 'number' ? p.status : undefined,
+		approved: typeof p?.approved === 'boolean' ? p.approved : undefined,
+		...(opts?.groupIdFallback != null ? { groupId: String(opts.groupIdFallback) } : {}),
 	};
 }
 

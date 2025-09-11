@@ -282,11 +282,13 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
     >
       {/* Header meta - Reddit Style */}
       <HStack spacing={2} mb={2} color={metaColor} fontSize="sm">
-  <Avatar size="xs" name={post.userDisplayText} src={(post as any).authorAvatarURL || post.communityImageURL} />
+  <Avatar size="xs" name={post.anonymous ? 'anonymous' : post.userDisplayText} src={post.anonymous ? undefined : (post as any).authorAvatarURL || post.communityImageURL} />
         <Text>Posted by</Text>
-        <Text fontWeight="semibold">{post.userDisplayText}</Text>
+  <Text fontWeight="semibold">{post.anonymous ? 'anonymous' : post.userDisplayText}</Text>
   <Text>{createdAtLabel}</Text>
-        
+        {post.anonymous && (
+          <Badge colorScheme="purple" variant="subtle">anonymous</Badge>
+        )}
         {typeof post.status === 'number' && post.status === 0 && (
           <Badge colorScheme="yellow" variant="subtle">Pending approval</Badge>
         )}
@@ -294,7 +296,6 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
         {post.imageURL && (
           <Badge colorScheme="black" variant="subtle">SPOILER</Badge>
         )}
-        
       </HStack>
 
       {/* Title */}

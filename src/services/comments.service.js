@@ -29,10 +29,17 @@ export const replyToComment = async ({ content, postId, parentId }) => {
 	return response.data;
 };
 
+export const deleteComment = async (commentId) => {
+	if (!commentId) throw new Error('commentId is required');
+	const response = await request.delete(`comment/delete/${commentId}`);
+	return response.data;
+};
+
 export default {
 	getCommentsByPost,
 	getCommentsByPostId,
 	createComment,
 	likeComment,
 	replyToComment,
+	deleteComment,
 };

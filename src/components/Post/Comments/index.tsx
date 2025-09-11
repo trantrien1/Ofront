@@ -8,7 +8,7 @@ import { useSetRecoilState, useRecoilValue } from "recoil";
 import { authModalState } from "../../../atoms/authModalAtom";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
 import dynamic from "next/dynamic";
-import { normalizeTimestamp, formatTimeAgo } from "../../../helpers/timestampHelpers";
+
 // Disable SSR for this component to prevent hydration issues
 const Comments = dynamic(() => Promise.resolve(CommentsComponent), {
   ssr: false,
@@ -247,22 +247,50 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     setDeleteLoading(comment.id as string);
     try {
       if (!comment.id) throw "Comment has no ID";
-      // frontend-only: just remove from state
 
-      setPostState((prev) => ({
-        ...prev,
-        selectedPost: {
-          ...prev.selectedPost,
-          numberOfComments: prev.selectedPost?.numberOfComments! - 1,
-        } as Post,
-        postUpdateRequired: true,
-      }));
+      const removeRecursive = (nodes: Comment[], targetId: string): [Comment[], number] => {
+        let removedCount = 0;
+        const filtered = nodes.filter(n => {
+          if (n.id === targetId) {
+            removedCount += 1 + (n.replies ? countAll(n.replies) : 0);
+            return false;
+          }
+          return true;
+        }).map(n => {
+          if (n.replies && n.replies.length) {
+            const [newReplies, childRemoved] = removeRecursive(n.replies, targetId);
+            if (childRemoved) {
+              removedCount += childRemoved;
+              return { ...n, replies: newReplies, replyCount: Math.max(0, (n.replyCount||0) - childRemoved) };
+            }
+          }
+          return n;
+        });
+        return [filtered, removedCount];
+      };
+      const countAll = (nodes: Comment[]): number => nodes.reduce((sum,c)=> sum + 1 + (c.replies?countAll(c.replies):0),0);
 
-      setComments((prev) => prev.filter((item) => item.id !== comment.id));
-      // return true;
+      // Call backend delete
+      try {
+        const { CommentsService } = await import("../../../services/index");
+        await CommentsService.deleteComment(comment.id);
+      } catch (e) {
+        console.warn('Delete comment backend failed or not available', e);
+      }
+
+      setComments(prev => {
+        const [updated, removed] = removeRecursive(prev, comment.id!);
+        if (removed) {
+          setPostState(p => ({
+            ...p,
+            selectedPost: p.selectedPost ? { ...p.selectedPost, numberOfComments: Math.max(0, p.selectedPost.numberOfComments - removed) } as Post : p.selectedPost,
+            postUpdateRequired: true,
+          }));
+        }
+        return updated;
+      });
     } catch (error: any) {
-  console.error("Error deleting comment", error?.message || error);
-      // return false;
+      console.error("Error deleting comment", error?.message || error);
     }
     setDeleteLoading("");
   };

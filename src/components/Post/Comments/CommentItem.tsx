@@ -8,21 +8,20 @@ import {
   Text,
   Button,
   useColorModeValue,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverArrow,
-  PopoverBody,
+  Tooltip,
   HStack,
 } from "@chakra-ui/react";
 type Timestamp = any;
-import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
+import { FaCheckCircle, FaCircle } from "react-icons/fa";
+import { keyframes } from '@emotion/react';
+import { REACTIONS } from '../../../constants/reactions';
 import { Image } from "@chakra-ui/react";
 import { normalizeTimestamp, useRelativeTime } from "../../../helpers/timestampHelpers";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import ReplyInput from "./ReplyInput";
 import CommentsService from "../../../services/comments.service";
+import request from "../../../services/request"; // use shared axios instance for auth headers
 
 // Disable SSR for this component to prevent hydration issues
 const DynamicCommentItem = dynamic(() => Promise.resolve(CommentItemComponent), {
@@ -92,6 +91,26 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     return undefined;
   });
   const inflightRef = useRef<string | null>(null);
+
+  // Reaction hover state (mimic PostItem)
+  const [showReactions, setShowReactions] = useState(false);
+  const hoverTimer = useRef<any>(null);
+  const hideTimer = useRef<any>(null);
+  const clearTimers = () => { if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; } if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } };
+  const handleMainEnter = () => { clearTimers(); hoverTimer.current = setTimeout(() => setShowReactions(true), 300); };
+  const handleMainLeave = () => { clearTimers(); hideTimer.current = setTimeout(() => setShowReactions(false), 150); };
+  const handleBarEnter = () => { clearTimers(); setShowReactions(true); };
+  const handleBarLeave = () => { clearTimers(); hideTimer.current = setTimeout(() => setShowReactions(false), 150); };
+
+  const chipBg = useColorModeValue("gray.100", "whiteAlpha.100");
+  const chipHoverBg = useColorModeValue("gray.200", "whiteAlpha.200");
+  const borderCol = useColorModeValue("gray.200", "whiteAlpha.300");
+  const iconMuted = useColorModeValue("gray.600", "gray.300");
+
+  const slideIn = keyframes`
+    from { transform: translateX(-10px); opacity: 0.9; }
+    to { transform: translateX(0); opacity: 1; }
+  `;
 
   // Theming colors
   const highlightBg = useColorModeValue("gray.100", "whiteAlpha.100");
@@ -170,24 +189,42 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     inflightRef.current = comment.id;
     try {
       console.debug('[CommentItem] update-level start', { commentId: comment.id, level });
-      await fetch('/api/update-level', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ commentId: comment.id, level })
-      });
+  // Use axios request instance so Authorization + cookie headers are attached
+  // IMPORTANT: don't force Number() on comment.id; if it's not purely digits, Number() => NaN -> JSON null -> proxy rejects
+  await request.put('update-level', { commentId: comment.id, level: Number(level) });
       console.debug('[CommentItem] update-level done');
-    } catch (e) {
-      // rollback
+    } catch (e: any) {
+      let fallbackTried = false;
+      const status = e?.response?.status;
+      if (status === 400 || status === 404) {
+        // Fallback to legacy /like endpoint (service supports create/toggle) similar to post path
+        try {
+          fallbackTried = true;
+          console.warn('[CommentItem] update-level failed, trying /like fallback', { commentId: comment.id, level, status });
+          await request.put('like', { commentId: comment.id, level: Number(level) });
+          console.debug('[CommentItem] /like fallback success');
+          inflightRef.current = null;
+          setUpdating(false);
+          return; // keep optimistic likeLevel
+        } catch (e2: any) {
+          try { console.warn('[CommentItem] /like fallback also failed', { status: e2?.response?.status, data: e2?.response?.data }); } catch {}
+        }
+      }
+      // rollback if both failed or non-retryable error
       setLikeLevel(prev);
-      console.warn('[CommentItem] update-level failed', e);
+      try {
+        const data = e?.response?.data;
+        console.warn('[CommentItem] update-level failed', { err: e?.message, status, data, fallbackTried });
+      } catch {}
     }
     inflightRef.current = null;
     setUpdating(false);
   };
 
-  const isPositive = likeLevel === 3 || likeLevel === 4;
-  const isNegative = likeLevel === 1 || likeLevel === 2;
+  const currentReaction = likeLevel ? REACTIONS.find(r => r.lv === likeLevel) : undefined;
+  const mainIcon = currentReaction ? currentReaction.icon : REACTIONS[0].icon;
+  const mainColor = currentReaction ? currentReaction.color : iconMuted;
+  const mainLabel = currentReaction ? currentReaction.label : 'Đánh giá';
 
   return (
     <Box>
@@ -220,47 +257,88 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             {isLoading && <Spinner size="sm" />}
           </Stack>
           <Text fontSize="10pt">{comment.text}</Text>
-          <Stack direction="row" align="center" fontWeight={600} color={actionsColor}>
-            <Popover placement="top" trigger="click">
-              <PopoverTrigger>
-                <Button
-                  size="xs"
-                  variant={likeLevel ? 'solid' : 'outline'}
-                  fontSize="9pt"
-                  isLoading={updating}
-                  colorScheme={isPositive ? 'green' : isNegative ? 'red' : undefined}
-                >
-                  {isPositive ? 'Hài lòng' : isNegative ? 'Không hài lòng' : 'Phản hồi'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent w="auto" bg={useColorModeValue('white', 'gray.700')} _focus={{ outline: 'none' }}>
-                <PopoverArrow />
-                <PopoverBody p={2}>
-                  <HStack spacing={2}>
-                    <Button
-                      size="xs"
-                      leftIcon={<Icon as={FaThumbsUp} />}
-                      bg={isPositive ? likePosBg : undefined}
-                      color={isPositive ? 'white' : 'green.500'}
-                      _hover={{ bg: isPositive ? likePosBgHover : 'green.50' }}
-                      onClick={() => !updating && setLevel(3)}
-                    >
-                      Hài lòng
-                    </Button>
-                    <Button
-                      size="xs"
-                      leftIcon={<Icon as={FaThumbsDown} />}
-                      bg={isNegative ? likeNegBg : undefined}
-                      color={isNegative ? 'white' : 'red.500'}
-                      _hover={{ bg: isNegative ? likeNegBgHover : 'red.50' }}
-                      onClick={() => !updating && setLevel(1)}
-                    >
-                      Không hài lòng
-                    </Button>
-                  </HStack>
-                </PopoverBody>
-              </PopoverContent>
-            </Popover>
+          <Stack direction="row" align="center" fontWeight={600} color={actionsColor} position="relative">
+            {/* Reaction chip */}
+            <HStack
+              spacing={1.5}
+              px={2.5}
+              py={1}
+              rounded="full"
+              border="1px solid"
+              borderColor={currentReaction ? mainColor : borderCol}
+              bg={chipBg}
+              cursor="pointer"
+              onMouseEnter={handleMainEnter}
+              onMouseLeave={handleMainLeave}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (likeLevel === REACTIONS[0].lv) {
+                  setLevel(REACTIONS[0].lv); // triggers toggle off logic inside setLevel
+                } else {
+                  setLevel(REACTIONS[0].lv);
+                }
+              }}
+              transition="all .15s ease"
+              _hover={{ bg: chipHoverBg, transform: 'scale(1.03)' }}
+            >
+              <Icon as={mainIcon as any} color={currentReaction ? mainColor : iconMuted} boxSize={3.5} />
+              <Text fontSize="9pt" fontWeight="medium">{mainLabel}</Text>
+            </HStack>
+
+            {/* Hover reaction bar */}
+            {showReactions && (
+              <HStack
+                spacing={2}
+                position="absolute"
+                top="-54px"
+                left={0}
+                bg={useColorModeValue('white','gray.800')}
+                border="1px solid"
+                borderColor={borderCol}
+                boxShadow="lg"
+                rounded="full"
+                px={3}
+                py={2}
+                onMouseEnter={handleBarEnter}
+                onMouseLeave={handleBarLeave}
+                zIndex={10}
+                animation={`${slideIn} 140ms ease-out`}
+              >
+                {REACTIONS.map(r => {
+                  const active = likeLevel === r.lv;
+                  return (
+                    <Tooltip key={r.lv} label={r.label} hasArrow>
+                      <Box
+                        as="button"
+                        onClick={(e: any) => {
+                          e.stopPropagation();
+                          if (likeLevel === r.lv) {
+                            // Toggle off via setting same level then inside setLevel it unsets
+                            setLevel(r.lv);
+                          } else {
+                            setLevel(r.lv);
+                          }
+                          setShowReactions(false);
+                        }}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        w="34px"
+                        h="34px"
+                        rounded="full"
+                        bg={active ? chipHoverBg : chipBg}
+                        border="1px solid"
+                        borderColor={active ? r.color : borderCol}
+                        transition="transform 120ms ease, background 120ms ease"
+                        _hover={{ transform: 'scale(1.15)' }}
+                      >
+                        <Icon as={r.icon as any} color={active ? r.color : iconMuted} boxSize={4} />
+                      </Box>
+                    </Tooltip>
+                  );
+                })}
+              </HStack>
+            )}
             <Text fontSize="9pt" _hover={{ color: hoverLinkColor }} onClick={() => setShowReplyInput(!showReplyInput)}>
               Trả lời
             </Text>

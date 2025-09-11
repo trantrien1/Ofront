@@ -131,8 +131,8 @@ const LandingPage: React.FC = () => {
                     display="inline-block"
                     fontWeight="extrabold"
                     fontSize={{ base: "2.4rem", md: "3.2rem" }}
-                    className={!reducedMotion ? "outline-text" : undefined}
-                    style={reducedMotion ? { color: '#4ade80' } : undefined}
+                    className={!reducedMotion ? "mindai-loop" : undefined}
+                    style={reducedMotion ? { color: '#ff8c00' } : undefined}
                   >
                     MindAI
                   </Text>
@@ -144,10 +144,10 @@ const LandingPage: React.FC = () => {
                     fontWeight="extrabold"
                     letterSpacing="-0.5px"
                     fontSize={{ base: "1.15rem", md: "1.32rem" }}
+                    className={!reducedMotion ? 'typing-slogan' : undefined}
                     style={{
-                      display: "inline-block",
-                      marginTop: "0.35em",
-                      animation: reducedMotion ? undefined : "slideUpText 1.2s cubic-bezier(.4,0,.2,1)"
+                      display: 'inline-block',
+                      marginTop: '0.35em'
                     }}
                   >
                     Đồng hành cùng bạn, chăm sóc tinh thần, nuôi dưỡng tương lai
@@ -181,26 +181,41 @@ const LandingPage: React.FC = () => {
                   @media (prefers-reduced-motion: reduce) {
                     .neon-text { animation: none; text-shadow: none; }
                   }
-                  /* Outline fill effect */
-                  .outline-text {
-                    position: relative;
+                  /* Looping orange gradient effect for MindAI */
+                  .mindai-loop {
+                    background: linear-gradient(90deg, #ff9800, #ff4d00, #ff9800);
+                    background-size: 200% 100%;
+                    -webkit-background-clip: text;
                     color: transparent;
-                    -webkit-text-stroke: 2px #4ade80;
+                    animation: orangeFlow 5s linear infinite;
+                    text-shadow: 0 0 6px rgba(255,140,0,0.35), 0 0 14px rgba(255,77,0,0.25);
                   }
-                  .outline-text::after {
-                    content: attr(data-text);
-                    position: absolute;
-                    inset: 0;
-                    width: 0;
-                    color: #4ade80;
-                    overflow: hidden;
-                    white-space: nowrap;
-                    animation: fillText 3s ease forwards .25s;
+                  @keyframes orangeFlow {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
                   }
-                  @keyframes fillText { from { width:0; } to { width:100%; } }
                   @media (prefers-reduced-motion: reduce) {
-                    .outline-text { -webkit-text-stroke: 0; color:#4ade80; }
-                    .outline-text::after { animation:none; width:100%; position:static; }
+                    .mindai-loop { animation: none; text-shadow: none; }
+                  }
+                  /* Typing effect (loop) for slogan */
+                  .typing-slogan {
+                    position: relative;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    /* caret removed */
+                    animation: typingCycle 6s steps(60, end) 0s infinite;
+                  }
+                  @keyframes typingCycle {
+                    0% { width: 0; }
+                    40% { width: 100%; }
+                    55% { width: 100%; } /* hold full */
+                    85% { width: 0; }
+                    100% { width: 0; } /* hold empty */
+                  }
+                  /* caret blink removed */
+                  @media (prefers-reduced-motion: reduce) {
+                    .typing-slogan { animation: none; border-right: none; white-space: normal; }
                   }
                 `}</style>
               </MotionBox>
@@ -216,16 +231,16 @@ const LandingPage: React.FC = () => {
                   lineHeight={1.4}
                   pl={4}
                 >
-                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'orange.400', rounded:'full' }}>
+                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'red.400', rounded:'full' }}>
                     Thiết kế dành riêng cho sinh viên Việt Nam
                   </Text>
                   <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'red.400', rounded:'full' }}>
                     Tích hợp rèn luyện kỹ năng • trợ lý cảm xúc thông minh • cộng đồng an toàn
                   </Text>
-                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'purple.400', rounded:'full' }}>
+                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'red.400', rounded:'full' }}>
                     Nhận diện & can thiệp sớm lo âu, căng thẳng, bế tắc tâm lý
                   </Text>
-                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'pink.400', rounded:'full' }}>
+                  <Text as="li" position="relative" _before={{ content:'""', position:'absolute', left:'-1.1em', top:'0.55em', w:'6px', h:'6px', bg:'red.400', rounded:'full' }}>
                     Khai phóng thế mạnh cá nhân & nâng cao chất lượng học tập, cuộc sống
                   </Text>
                 </Stack>
@@ -255,12 +270,12 @@ const LandingPage: React.FC = () => {
                     <Button
                       as={ChakraLink}
                       size="lg"
-                      variant="outline"
-                      fontWeight="bold"
-                      borderWidth="2px"
-                      borderColor="orange.400"
-                      color="orange.500"
-                      _hover={{ bg: "orange.50", transform: "translateY(-2px)" }}
+                      px={7}
+                      fontWeight="extrabold"
+                      color="white"
+                      bgGradient="linear(to-r, orange.500, red.500)"
+                      _hover={{ bgGradient: 'linear(to-r, orange.400, red.500)', transform: 'translateY(-3px)', shadow: 'lg' }}
+                      _active={{ transform: 'translateY(-1px)' }}
                       transition="all .25s ease"
                     >
                       Làm DASS‑21
@@ -303,17 +318,13 @@ const LandingPage: React.FC = () => {
               overflow="hidden"
               shadow="xl"
               initial={{ opacity: 0, x: 40, scale: 0.98 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
+              animate={{ opacity: 1, x: 0, scale: 1.3 }}
               transition={{ duration: 0.55, ease: "easeOut" }}
               whileHover={!reducedMotion ? { y: -4 } : undefined}
               style={{ willChange: 'transform' }}
             >
               <Image alt="App preview" src="/images/A2.png" />
-              <HStack p={4} spacing={3} borderTop="1px solid" borderColor={border}>
-                <Badge colorScheme="blue" variant="subtle">Ami AI</Badge>
-                <Badge colorScheme="purple" variant="subtle">DASS‑21</Badge>
-                <Badge colorScheme="green" variant="subtle">Riêng tư</Badge>
-              </HStack>
+            
             </MotionBox>
           </SimpleGrid>
 
@@ -368,10 +379,27 @@ const LandingPage: React.FC = () => {
           <Stack align="center" mt={10} spacing={4}>
             <HStack spacing={4} flexWrap="wrap" justify="center">
               <Link href="/anime" passHref>
-                <Button as={ChakraLink} colorScheme="blue" rightIcon={<FiArrowRight />}>Trò chuyện với Ami</Button>
+                <Button
+                  as={ChakraLink}
+                  rightIcon={<FiArrowRight />}
+                  fontWeight="bold"
+                  color="white"
+                  bgGradient="linear(to-r, orange.500, red.500)"
+                  _hover={{ bgGradient: "linear(to-r, orange.400, red.500)", transform: 'translateY(-2px)', shadow: 'md' }}
+                  _active={{ transform: 'translateY(0)' }}
+                  transition="all .25s ease"
+                >Trò chuyện với Ami</Button>
               </Link>
               <Link href="/quiz" passHref>
-                <Button as={ChakraLink} variant="outline" borderColor={border}>Làm DASS‑21</Button>
+                <Button
+                  as={ChakraLink}
+                  fontWeight="bold"
+                  color="white"
+                  bgGradient="linear(to-r, orange.500, red.500)"
+                  _hover={{ bgGradient: 'linear(to-r, orange.400, red.500)', transform: 'translateY(-2px)', shadow: 'md' }}
+                  _active={{ transform: 'translateY(0)' }}
+                  transition="all .25s ease"
+                >Làm DASS‑21</Button>
               </Link>
               <Link href="/courses/videos" passHref>
                 <Button as={ChakraLink} variant="ghost">Xem video trị liệu</Button>
@@ -423,7 +451,17 @@ const LandingPage: React.FC = () => {
           <Stack align="center" mt={10}>
             <MotionBox whileHover={!reducedMotion ? { y: -2 } : undefined} transition={{ duration: .18 }} style={{ willChange: 'transform' }}>
               <Link href="/anime" passHref>
-                <Button as={ChakraLink} colorScheme="blue" size="md" rightIcon={<FiArrowRight />}>
+                <Button
+                  as={ChakraLink}
+                  size="md"
+                  rightIcon={<FiArrowRight />}
+                  fontWeight="bold"
+                  color="white"
+                  bgGradient="linear(to-r, orange.500, red.500)"
+                  _hover={{ bgGradient: 'linear(to-r, orange.400, red.500)', transform: 'translateY(-3px)', shadow: 'lg' }}
+                  _active={{ transform: 'translateY(-1px)' }}
+                  transition="all .25s ease"
+                >
                   Bắt đầu với Ami
                 </Button>
               </Link>
@@ -524,14 +562,33 @@ const LandingPage: React.FC = () => {
             <HStack spacing={4}>
               <MotionBox whileHover={!reducedMotion ? { scale: 1.02 } : undefined} whileTap={!reducedMotion ? { scale: 0.98 } : undefined} style={{ willChange: 'transform' }}>
                 <Link href="/anime" passHref>
-                  <Button as={ChakraLink} colorScheme="blue" size="lg" rightIcon={<FiArrowRight />}>
+                  <Button
+                    as={ChakraLink}
+                    size="lg"
+                    rightIcon={<FiArrowRight />}
+                    fontWeight="bold"
+                    color="white"
+                    bgGradient="linear(to-r, orange.500, red.500)"
+                    _hover={{ bgGradient: 'linear(to-r, orange.400, red.500)', transform: 'translateY(-3px)', shadow: 'lg' }}
+                    _active={{ transform: 'translateY(-1px)' }}
+                    transition="all .25s ease"
+                  >
                     Trò chuyện với Ami
                   </Button>
                 </Link>
               </MotionBox>
               <MotionBox whileHover={!reducedMotion ? { y: -2 } : undefined} style={{ willChange: 'transform' }}>
                 <Link href="/quiz" passHref>
-                  <Button as={ChakraLink} variant="outline" size="lg" borderColor={border}>
+                  <Button
+                    as={ChakraLink}
+                    size="lg"
+                    fontWeight="bold"
+                    color="white"
+                    bgGradient="linear(to-r, orange.500, red.500)"
+                    _hover={{ bgGradient: 'linear(to-r, orange.400, red.500)', transform: 'translateY(-3px)', shadow: 'lg' }}
+                    _active={{ transform: 'translateY(-1px)' }}
+                    transition="all .25s ease"
+                  >
                     Làm DASS‑21
                   </Button>
                 </Link>

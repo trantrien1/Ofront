@@ -35,8 +35,9 @@ import { keyframes } from "@emotion/react";
 import { NextRouter } from "next/router";
 import { AiOutlineDelete } from "react-icons/ai";
 import { BsChat, BsDot, BsGlobe } from "react-icons/bs";
-import { FaReddit, FaThumbsUp, FaShare, FaHeart, FaAngry, FaSurprise, FaSadTear, FaLaugh, FaGrinHearts } from "react-icons/fa";
-import { BsEmojiFrown, BsEmojiSunglasses, BsEmojiSmile, BsEmojiNeutral } from "react-icons/bs";
+import { FaReddit, FaThumbsUp, FaShare } from "react-icons/fa";
+import { BsEmojiFrown, BsEmojiSunglasses, BsEmojiSmile, BsEmojiNeutral } from "react-icons/bs"; // (legacy icons maybe still used elsewhere in file)
+import { REACTIONS } from '../../../constants/reactions';
 import {
   IoArrowRedoOutline,
   IoBookmarkOutline,
@@ -203,14 +204,8 @@ const PostItemComponent: React.FC<PostItemContentProps> = ({
   const handleBarEnter = () => { clearTimers(); setShowReactions(true); };
   const handleBarLeave = () => { clearTimers(); hideTimer.current = setTimeout(() => setShowReactions(false), 150); };
 
-  // 6 reactions mapped to 5 backend levels (Haha & Wow -> 4)
-  const reactions = [
-    { lv: 1, label: 'Đồng ý', icon: FaThumbsUp, color: 'blue.500' },
-    { lv: 2, label: 'Đồng ý hoàn toàn', icon: FaHeart, color: 'red.500' },
-    { lv: 3, label: 'Đồng ý bình thường', icon: FaGrinHearts, color: 'pink.400' },
-    { lv: 4, label: 'Không đồng ý', icon: FaSadTear, color: 'yellow.500' },
-    { lv: 5, label: 'Hoàn toàn không đồng ý', icon: FaAngry, color: 'orange.500' },
-  ] as const;
+  // Unified reaction definitions
+  const reactions = REACTIONS;
 
   const slideIn = keyframes`
     from { transform: translateX(-10px); opacity: 0.9; }

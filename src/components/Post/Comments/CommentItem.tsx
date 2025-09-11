@@ -123,6 +123,8 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   const likeNegBgHover = useColorModeValue("red.600", "red.500");
   const hoverLinkColor = useColorModeValue("blue.600", "blue.300");
   const likeCountColor = useColorModeValue("gray.500", "gray.400");
+  // Used for reaction bar background (must not call hook conditionally)
+  const reactionBarBg = useColorModeValue('white','gray.800');
   console.log("đây là giờ comment", comment.createdAt);
   // Precompute relative time label to avoid calling hook inside conditional directly in JSX
   const commentTimeLabel = useRelativeTime(comment.createdAt ? normalizeTimestamp(comment.createdAt) : undefined);
@@ -286,13 +288,13 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             </HStack>
 
             {/* Hover reaction bar */}
-            {showReactions && (
+      {showReactions && (
               <HStack
                 spacing={2}
                 position="absolute"
                 top="-54px"
                 left={0}
-                bg={useColorModeValue('white','gray.800')}
+        bg={reactionBarBg}
                 border="1px solid"
                 borderColor={borderCol}
                 boxShadow="lg"

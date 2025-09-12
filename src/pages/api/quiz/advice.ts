@@ -18,8 +18,9 @@ async function callGemini(prompt: string) {
         },
       ],
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 512,
+        temperature: 0.6,
+        maxOutputTokens: 1500,
+        stopSequences: ["\n---END---\n"],
       },
     }),
   });
@@ -60,27 +61,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       lines.push("Chỉ đưa ra lời khuyên nhẹ nhàng/khái quát khi dữ liệu chưa đầy đủ; tránh kết luận nặng nề.");
     }
     lines.push(`Tổng số câu hỏi hiển thị: ${totalQuestions ?? '?'}; số câu đã trả lời: ${answeredCount ?? 0}.`);
-    lines.push('Dưới đây là câu hỏi và lựa chọn của người dùng. Hãy phân tích nhanh điểm mạnh/yếu và đưa ra 3-6 lời khuyên cụ thể, ngắn gọn, có thể hành động ngay.');
-    lines.push(`Định dạng:
-    - Mở đầu 1-2 câu đồng cảm, xác nhận cảm xúc của người dùng.
-    - Danh sách 3-6 gợi ý cụ thể, dễ thực hiện ngay để giảm stress (ví dụ: thở sâu, vận động nhẹ, chia nhỏ công việc, tìm người trò chuyện).
-    - (Tuỳ chọn) nguồn lực/kênh hỗ trợ uy tín (sách, website sức khỏe tinh thần, hotline hỗ trợ).`);
+  lines.push('Dưới đây là câu hỏi và lựa chọn của người dùng. Hãy phân tích nhanh điểm mạnh/yếu và đưa ra 3-6 lời khuyên cụ thể, ngắn gọn, có thể hành động ngay.');
+  lines.push(`Định dạng và yêu cầu (bắt buộc):\n- Mở đầu 1-2 câu đồng cảm, xác nhận cảm xúc của người dùng.\n- Danh sách 3-6 gợi ý cụ thể, dễ thực hiện ngay để giảm stress.\n- (Tùy chọn) nguồn lực/kênh hỗ trợ uy tín.\nHãy trả về một chuỗi văn bản hoàn chỉnh; không cắt ngang câu. Nếu cần báo kết thúc, kết thúc bằng dòng chính xác: "---END---".`);
     lines.push('---');
     items.forEach((it: any, i: number) => {
-      const q = String(it?.question || `Câu hỏi #${i + 1}`);
-      const ansTxt = String(it?.answerText ?? '').trim();
+      const qText = String(it?.questionText || it?.question || `Câu hỏi #${i + 1}`);
+      const selectedLabel = String(it?.selectedLabel ?? it?.answerText ?? '').trim();
       const score = typeof it?.score === 'number' ? it.score : '';
-      lines.push(`Q${i + 1}: ${q}`);
-      if (ansTxt) {
-        lines.push(`→ Trả lời: ${ansTxt} (điểm: ${score})`);
+      lines.push(`Q${i + 1}: ${qText}`);
+      if (selectedLabel) {
+        lines.push(`→ Trả lời được chọn (label): ${selectedLabel} (giá trị: ${String(it?.selectedValue ?? '')}, điểm: ${score})`);
+        if (Array.isArray(it?.options) && it.options.length) {
+          const opts = it.options.map((o: any) => String(o?.content ?? o?.label ?? o)).join(' | ');
+          lines.push(`   Lựa chọn khả dĩ: ${opts}`);
+        }
       } else {
         lines.push(`→ Chưa trả lời`);
       }
     });
     lines.push("Khi dữ liệu ít hoặc toàn điểm thấp (0), tránh gợi ý mức khẩn cấp quá cao. Hãy cân nhắc tính phù hợp.");
-    const prompt = lines.join('\n');
+  let prompt = lines.join('\n');
+  // append explicit end marker used in stopSequences so model knows to finish
+  prompt += '\n---END---\n';
 
-    const advice = await callGemini(prompt);
+  const advice = await callGemini(prompt);
     return res.status(200).json({ advice });
   } catch (e: any) {
     return res.status(500).json({ error: e?.message || 'Failed to generate advice' });

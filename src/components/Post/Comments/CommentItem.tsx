@@ -63,7 +63,7 @@ export type Comment = {
 type CommentItemProps = {
   comment: Comment;
   onDeleteComment: (comment: Comment) => void;
-  onReply: (parentComment: Comment, replyText: string) => void;
+  onReply: (parentComment: Comment, replyText: string, anonymous?: boolean) => void;
   isLoading: boolean;
   userId?: string;
   user?: any;
@@ -163,10 +163,10 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     return () => clearTimeout(timeoutId);
   }, [comment.id, router.asPath, router.isReady]);
 
-  const handleReply = async (replyText: string) => {
+  const handleReply = async (replyText: string, anonymous?: boolean) => {
     setReplyLoading(true);
     try {
-      await onReply(comment, replyText);
+      await onReply(comment, replyText, anonymous);
       setReplyText("");
       setShowReplyInput(false);
     } catch (error: any) {

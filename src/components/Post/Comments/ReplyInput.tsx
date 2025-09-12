@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Flex, Textarea, Button, Text, Avatar, Box } from "@chakra-ui/react";
+import { Flex, Textarea, Button, Text, Avatar, Box, Switch, Tooltip } from "@chakra-ui/react";
 type User = { uid: string; email?: string; photoURL?: string };
 
 type ReplyInputProps = {
@@ -67,14 +67,15 @@ const ReplyInput: React.FC<ReplyInputProps> = ({
               borderRadius="0px 0px 4px 4px"
               gap={2}
             >
-              <Button
-                size="sm"
-                variant={anonymous ? 'solid':'outline'}
-                colorScheme="purple"
-                onClick={()=> setAnonymous(a=>!a)}
-              >
-                {anonymous ? 'anonymous: Bật':'anonymous'}
-              </Button>
+              <Flex align="center" gap={3} mr="auto">
+                <Tooltip label="Khi bật, tên của bạn sẽ không hiển thị cùng phản hồi." placement="top" hasArrow>
+                  <Text fontSize="sm" cursor="help">
+                    {anonymous ? '👻 Đăng ẩn danh' : '👤 Đăng công khai'}
+                  </Text>
+                </Tooltip>
+                <Text fontSize="xs" mt={0} color="gray.500" display={{ base: 'none', md: 'block' }}>Bật để ẩn tên khi trả lời.</Text>
+              </Flex>
+              <Switch isChecked={anonymous} onChange={(e) => setAnonymous((e.target as HTMLInputElement).checked)} colorScheme="green" size="md" aria-label={anonymous ? 'Ẩn danh: Bật' : 'Ẩn danh: Tắt'} />
               <Button
                 size="sm"
                 variant="ghost"

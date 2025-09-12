@@ -1,5 +1,5 @@
 import React from "react";
-import { Flex, Textarea, Button, Text, useColorModeValue } from "@chakra-ui/react";
+import { Flex, Textarea, Button, Text, useColorModeValue, Switch, Tooltip } from "@chakra-ui/react";
 type User = { uid: string; email?: string; photoURL?: string; displayName?: string };
 // ...
 
@@ -68,27 +68,21 @@ const CommentInput: React.FC<CommentInputProps> = ({
             p="6px 8px"
             borderRadius="0px 0px 4px 4px"
           >
-            <Button
-              mr="auto"
-              height="26px"
-              variant={anonymous ? 'solid':'outline'}
-              colorScheme="purple"
-              onClick={() => setAnonymous(a=>!a)}
-              size="sm"
-            >
-              {anonymous ? 'anonymous: Bật' : 'anonymous: Tắt'}
-            </Button>
+            <Flex align="center" gap={3} mr="auto">
+              <Tooltip label="Khi bật, tên của bạn sẽ không hiển thị cùng bình luận." placement="top" hasArrow>
+                <Text fontSize="sm" cursor="help">
+                  {anonymous ? '👻 Đăng ẩn danh' : '👤 Đăng công khai'}
+                </Text>
+              </Tooltip>
+              <Text fontSize="xs" mt={0} color="gray.500" display={{ base: 'none', md: 'block' }}>Bật để ẩn tên khi bình luận.</Text>
+            </Flex>
+            <Switch isChecked={anonymous} onChange={(e) => setAnonymous((e.target as HTMLInputElement).checked)} colorScheme="green" size="md" aria-label={anonymous ? 'Ẩn danh: Bật' : 'Ẩn danh: Tắt'} />
             <Button
               height="26px"
               disabled={!comment.length}
               isLoading={loading}
               colorScheme="blue"
               onClick={() => {
-                console.log("=== COMMENT BUTTON CLICKED ===");
-                console.log("Comment text:", comment);
-                console.log("onCreateComment function:", typeof onCreateComment);
-                console.log("User in CommentInput:", user);
-                console.log("==================================");
                 onCreateComment(comment, anonymous);
               }}
             >

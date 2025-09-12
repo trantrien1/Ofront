@@ -27,27 +27,110 @@ const typingDots = emotionKeyframes`
   40% { transform: scale(1.2); opacity: 1; }
 `;
 
+// Simple fade-in-up animation for new messages
+const fadeInUp = emotionKeyframes`
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+// Bobbing avatar animation
+const bob = emotionKeyframes`
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+`;
+
+// Blinking caret for typing effect
+const blink = emotionKeyframes`
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+`;
+
+// Pulse for send button
+const pulse = emotionKeyframes`
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 1; }
+`;
+
+// Typing text animation component (simulates a user/bot typing label)
+const TypingText: React.FC<{ label?: string; speed?: number }> = ({ label = 'Đang gõ...', speed = 90 }) => {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % (label.length + 1)), speed);
+    return () => clearInterval(t);
+  }, [label, speed]);
+  return (
+    <Text fontSize="sm" display="inline-flex" alignItems="center">
+      {label.slice(0, idx)}
+      <Box as="span" ml={1} sx={{ display: 'inline-block', width: '6px', height: '14px', background: 'transparent' }}>
+        <Box as="span" sx={{ display: 'inline-block', marginLeft: '2px', width: '6px', height: '14px', background: 'currentColor', animation: `${blink} 1s step-end infinite` }} />
+      </Box>
+    </Text>
+  );
+};
+
 export const useChatDrawer = () => {
   return useDisclosure();
 };
 
-const MessageBubble: React.FC<{ m: Message }> = ({ m }) => {
+const MessageBubble: React.FC<{ m: Message; index?: number }> = ({ m, index }) => {
   const isSelf = m.from === "user";
-  const bg = m.from === "bot" ? "gray.100" : isSelf ? "blue.500" : "green.500";
+  // Colors: bot = light gray/blue, user = brand blue, peer = green
+  const bg = m.from === "bot" ? "blue.50" : isSelf ? "blue.600" : "green.500";
   const color = m.from === "bot" ? "gray.800" : "white";
+
+  // Avatar for bot/peer on left
+  const avatar = (
+    <Box w="36px" h="36px" mr={3} flexShrink={0} display="flex" alignItems="center" justifyContent="center" borderRadius="full" bg={m.from === 'bot' ? 'blue.100' : 'green.400'} sx={{ animation: `${bob} 2200ms ease-in-out infinite` }}>
+      {m.from === 'bot' ? <BsRobot /> : <BsPeople />}
+    </Box>
+  );
+
   return (
-    <Flex w="100%" justify={isSelf ? "flex-end" : "flex-start"}>
-      <Box maxW="75%" bg={bg} color={color} px={3} py={2} borderRadius="md">
-        {m.thinking ? (
-          <HStack spacing={2} minH="22px">
-            <Box as="span" w="10px" h="10px" borderRadius="full" bg={m.from === "bot" ? "purple.500" : "whiteAlpha.800"} animation={`${typingDots} 1s infinite ease-in-out`} />
-            <Box as="span" w="10px" h="10px" borderRadius="full" bg={m.from === "bot" ? "purple.500" : "whiteAlpha.800"} animation={`${typingDots} 1s infinite ease-in-out`} style={{ animationDelay: "0.15s" }} />
-            <Box as="span" w="10px" h="10px" borderRadius="full" bg={m.from === "bot" ? "purple.500" : "whiteAlpha.800"} animation={`${typingDots} 1s infinite ease-in-out`} style={{ animationDelay: "0.3s" }} />
-          </HStack>
-        ) : (
-          <Text fontSize="sm">{m.text}</Text>
-        )}
+    <Flex
+      w="100%"
+      justify={isSelf ? "flex-end" : "flex-start"}
+      animation={`${fadeInUp} 220ms ease`}
+      style={{ animationDelay: `${(index || 0) * 60}ms` }}
+    >
+      {!isSelf && avatar}
+      <Box position="relative" maxW="78%">
+        {/* bubble */}
+        <Box
+          bg={bg}
+          color={color}
+          px={4}
+          py={2}
+          borderRadius="16px"
+          boxShadow={m.from === 'bot' ? 'sm' : 'none'}
+        >
+          {m.thinking ? (
+            <HStack spacing={2} minH="22px">
+              <TypingText label={m.from === 'bot' ? 'Đang trả lời...' : 'Đang trả lời...'} speed={80} />
+            </HStack>
+          ) : (
+            <Text fontSize="sm">{m.text}</Text>
+          )}
+        </Box>
+
+        {/* small rotated square tail to match bubble color */}
+        <Box
+          width="10px"
+          height="10px"
+          position="absolute"
+          top="12px"
+          left={!isSelf ? '-5px' : 'auto'}
+          right={isSelf ? '-5px' : 'auto'}
+          transform="rotate(45deg)"
+          bg={bg}
+          borderRadius="2px"
+        />
+
       </Box>
+      {isSelf && (
+        <Box w="12px" />
+      )}
     </Flex>
   );
 };
@@ -68,7 +151,7 @@ const ChatInput: React.FC<{ onSend: (t: string) => void; placeholder?: string }>
   return (
     <HStack>
       <Input
-        placeholder={placeholder || "Type a message"}
+        placeholder={placeholder || "Nhập câu hỏi của bạn..."}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
@@ -324,7 +407,7 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ isOpen, onClose, userId }) => {
                 <>
                   <ChatPanel messages={botMessages} />
                   <Divider />
-                  <ChatInput onSend={sendToBot} placeholder="Hỏi chatbot..." />
+                  <ChatInput onSend={sendToBot} placeholder="Nhập câu hỏi của bạn..." />
                 </>
               ) : selectedConvoId ? (
                 <>

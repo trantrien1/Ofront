@@ -28,6 +28,10 @@ export function clearClientAuthStorage() {
 
 export async function performLogout(opts: PerformLogoutOptions = {}) {
   const { redirect, targetPath = "/", extra } = opts;
+  // Try to notify backend to clear HttpOnly cookie (best-effort)
+  try {
+    await fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  } catch {}
 
   // Destroy auth cookies on all possible paths
   const cookieNames = ["token", "role", "authToken", "accessToken", "userRole", "username"]; // cover possible variants

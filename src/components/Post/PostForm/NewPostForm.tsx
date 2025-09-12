@@ -13,6 +13,8 @@ import {
 	HStack,
 	Radio,
 	Text,
+	Switch,
+	Tooltip,
 } from "@chakra-ui/react";
 type User = { uid: string; email?: string };
 import { useRouter } from "next/router";
@@ -296,23 +298,28 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 						<Text fontSize="sm" fontWeight={600} mb={2}>Audience</Text>
 						<RadioGroup value={visibility} onChange={(val) => setVisibility(val as any)}>
 							<HStack spacing={6}>
-								<Radio value="public">Public</Radio>
 								<Radio value="community">Community</Radio>
 							</HStack>
 						</RadioGroup>
 					</Box>
 					{visibility === "community" && (
 						<Box>
-							<Text fontSize="sm" fontWeight={600} mb={2}>Select community</Text>
-		      <Input value={targetCommunityId} onChange={(e) => setTargetCommunityId(e.target.value)} placeholder="Community ID" />
+							
 						</Box>
 					)}
 					<Box>
-						<Text fontSize="sm" fontWeight={600} mb={2}>Chế độ ẩn danh</Text>
-						<Button size="sm" variant={anonymous ? 'solid' : 'outline'} colorScheme="purple" onClick={() => setAnonymous(a => !a)}>
-							{anonymous ? 'Ẩn danh: Bật' : 'Ẩn danh: Tắt'}
-						</Button>
-						<Text fontSize="xs" mt={1} color="gray.500">Nếu bật, tên của bạn sẽ hiển thị là "Ẩn danh".</Text>
+							<Text fontSize="sm" fontWeight={600} mb={2}>Chế độ ẩn danh</Text>
+							<Flex align="center" justify="space-between">
+								<Flex align="center" gap={3}>
+									<Tooltip label="Khi bật, tên của bạn sẽ không hiển thị cùng bài đăng." placement="top" hasArrow>
+										<Text fontSize="sm" cursor="help">
+											{anonymous ? '👻 Đăng ẩn danh' : '👤 Đăng công khai'}
+										</Text>
+									</Tooltip>
+									<Text fontSize="xs" mt={0} color="gray.500" display={{ base: 'none', md: 'block' }}>Nếu bật, tên của bạn sẽ hiển thị là &quot;Ẩn danh&quot;.</Text>
+								</Flex>
+								<Switch isChecked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} colorScheme="green" size="md" aria-label={anonymous ? 'Ẩn danh: Bật' : 'Ẩn danh: Tắt'} />
+							</Flex>
 					</Box>
 				</Stack>
 			</Box>
@@ -346,6 +353,24 @@ const NewPostForm: React.FC<NewPostFormProps> = ({
 						loading={loading}
 						textInputs={textInputs}
 					/>
+				)}
+				{selectedTab === "Link" && (
+					<Box width="100%" textAlign="center" py={12}>
+						<Text fontSize="lg" mb={2}>🛠️ Tính năng sẽ được cập nhật sau</Text>
+						<Text fontSize="sm" color="gray.500">Chức năng đăng Link sẽ có trong bản cập nhật tiếp theo.</Text>
+					</Box>
+				)}
+				{selectedTab === "Poll" && (
+					<Box width="100%" textAlign="center" py={12}>
+						<Text fontSize="lg" mb={2}>🛠️ Tính năng sẽ được cập nhật sau</Text>
+						<Text fontSize="sm" color="gray.500">Tạo Poll (bình chọn) sẽ được bổ sung sớm.</Text>
+					</Box>
+				)}
+				{selectedTab === "Talk" && (
+					<Box width="100%" textAlign="center" py={12}>
+						<Text fontSize="lg" mb={2}>🛠️ Tính năng sẽ được cập nhật sau</Text>
+						<Text fontSize="sm" color="gray.500">Tính năng Talk / audio sẽ có trong các bản phát hành sau.</Text>
+					</Box>
 				)}
 			</Flex>
 		</Flex>

@@ -19,6 +19,8 @@ import {
   Flex,
   Icon,
   Image,
+  Switch,
+  Tooltip,
   useColorModeValue,
   Spinner,
 } from "@chakra-ui/react";
@@ -276,17 +278,25 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
               </Text>
             </FormControl>
 
-            <FormControl display="flex" alignItems="center">
-              <Button
-                as="div"
-                variant={anonymous ? 'solid' : 'outline'}
-                colorScheme="purple"
-                size="sm"
-                onClick={() => setAnonymous(a => !a)}
-              >
-                {anonymous ? 'anonymous: Bật' : 'anonymous: Tắt'}
-              </Button>
-              <Text ml={3} fontSize="sm" color={hintColor}>Bật để không hiển thị tên của bạn.</Text>
+            <FormControl display="flex" alignItems="center" justifyContent="space-between">
+              <Flex align="center" gap={3}>
+                <Tooltip label="Khi bật, tên của bạn sẽ không hiển thị cùng bài đăng." placement="top" hasArrow>
+                  <Text fontSize="sm" cursor="help">
+                    {anonymous ? '👻 Đăng ẩn danh' : '👤 Đăng công khai'}
+                  </Text>
+                </Tooltip>
+                <Text fontSize="sm" color={hintColor} display={{ base: 'none', md: 'block' }}>
+                  Bật để không hiển thị tên của bạn.
+                </Text>
+              </Flex>
+
+              <Switch
+                isChecked={anonymous}
+                onChange={(e) => setAnonymous(e.target.checked)}
+                colorScheme="green"
+                size="md"
+                aria-label={anonymous ? 'Ẩn danh: Bật' : 'Ẩn danh: Tắt'}
+              />
             </FormControl>
 
             <FormControl>

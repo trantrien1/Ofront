@@ -5,6 +5,9 @@ import {
   Heading, HStack, Icon, IconButton, Progress, Radio, RadioGroup, SimpleGrid,
   Skeleton, Spacer, Stack, Text, Tooltip, useBoolean, useColorModeValue,
   useDisclosure, useToast, Spinner, Alert, AlertIcon, Kbd, useBreakpointValue,
+  UnorderedList, ListItem,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton,
+  CircularProgress, VStack, Stat, StatLabel, StatNumber, StatHelpText,
 } from "@chakra-ui/react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -199,6 +202,7 @@ export default function QuizPage() {
   const [qIndex, setQIndex] = useState<number>(0); // navigator focus
   const confirmSubmit = useDisclosure();
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const resultModal = useDisclosure();
 
   const cardBg = useColorModeValue("white", "gray.800");
   const borderCol = useColorModeValue("gray.200", "gray.700");
@@ -340,9 +344,11 @@ export default function QuizPage() {
   }, [toast]);
 
   const handleSubmit = useCallback(async () => {
-    setSubmitted(true);
-    setAdvice("");
-    setAdviceLoading.on();
+  setSubmitted(true);
+  setAdvice("");
+  setAdviceLoading.on();
+  // Open result modal early so user sees loading state while advice is generated
+  try { resultModal.onOpen(); } catch {}
     try {
       const itemsBase = filteredQuestions;
       const answeredCountLocal = itemsBase.filter((q) => answers[q.id as any] !== undefined).length;
@@ -368,7 +374,16 @@ export default function QuizPage() {
         const val = answers[q.id as any];
         const score = scoreAnswer(q, val);
         const answerText = val !== undefined ? pickAnswerLabel(q, val) : "";
-        return { order: idx + 1, id: q.id, question: q.content || q.text || String(q.id), answer: val ?? "", answerText, score };
+        const options = Array.isArray(q.answers) ? q.answers.map((o) => ({ id: o.id ?? o.content, content: o.content })) : [];
+        return {
+          order: idx + 1,
+          id: q.id,
+          questionText: q.content || q.text || String(q.id),
+          selectedValue: val ?? "",
+          selectedLabel: answerText,
+          options,
+          score,
+        };
       });
 
       const res = await fetch('/api/quiz/advice', {
@@ -377,15 +392,19 @@ export default function QuizPage() {
         body: JSON.stringify({
           audience,
           items,
+          rawAnswers: answers,
           dass,
           partialDass,
           totalQuestions: filteredQuestions.length,
           answeredCount: answeredCountLocal,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Gemini error');
-      setAdvice(String(data?.advice || '').trim());
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || 'Gemini error');
+  const adviceText = String(data?.advice || '').trim();
+  setAdvice(adviceText);
+  // Open result modal (shows summary + advice)
+  try { resultModal.onOpen(); } catch {}
     } catch (e: any) {
       setAdvice("");
       toast({ status: "error", title: "Không tạo được lời khuyên", description: e?.message || "Failed" });
@@ -698,24 +717,77 @@ export default function QuizPage() {
                     </Box>
                   )}
 
-                  {submitted && (
-                    <Box mt={5} fontSize="sm">
-                      <Heading size="sm" mb={2}>Lời khuyên</Heading>
-                      {adviceLoading ? (
-                        <HStack color={muted} spacing={2}><Spinner size="sm"/><Text>Đang tạo lời khuyên…</Text></HStack>
-                      ) : advice ? (
-                        <Box whiteSpace="pre-wrap" color={adviceColor}>{advice}</Box>
-                      ) : (
-                        <Text color={muted}>Chưa có lời khuyên.</Text>
-                      )}
-                    </Box>
-                  )}
+                  {/* Advice is shown in the result modal after submission; removed inline duplicate. */}
                 </Box>
               </Box>
             </Flex>
           )}
 
           {/* Confirm submit modal */}
+          {/* Result modal shown after submission (Assessment - Reassure - Actions) */}
+          <Modal isOpen={resultModal.isOpen} onClose={resultModal.onClose} isCentered>
+            <ModalOverlay bg="blackAlpha.600" />
+            <ModalContent sx={{ maxW: ['92vw', '880px', '920px'], width: ['92vw', '880px', '920px'], borderRadius: 'xl' }}>
+              <ModalHeader fontSize="xl" lineHeight="1.1">Kết quả & Lời khuyên</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody>
+                <Box position="relative">
+                  {adviceLoading && (
+                    <Flex position="absolute" inset={0} align="center" justify="center" bg="whiteAlpha.600" zIndex={20} borderRadius="md">
+                      <HStack><Spinner size="lg"/><Text>Đang tạo lời khuyên…</Text></HStack>
+                    </Flex>
+                  )}
+                  <VStack spacing={4} align="stretch" textAlign="center">
+                  <Box>
+                    <CircularProgress
+                      value={dass ? Math.round(((dass.depression.score + dass.anxiety.score + dass.stress.score) / 3) / 42 * 100) : (partialDass ? Math.round((partialDass.totalAnswered / 21) * 100) : 0)}
+                      size="140px"
+                      thickness="10px"
+                      color="gray.400"
+                    >
+                      <Box textAlign="center">
+                        <Text fontWeight="700" fontSize="lg">{dass ? `${percent(((dass.depression.score + dass.anxiety.score + dass.stress.score) / 3) / 42)}%` : `${partialDass ? percent((partialDass.totalAnswered / 21)) + '%' : 'N/A'}`}</Text>
+                        <Text fontSize="xs" color={muted}>Mức tổng quan</Text>
+                      </Box>
+                    </CircularProgress>
+                  </Box>
+
+                  <Box>
+                    <Text fontSize="md" fontWeight={600} mb={2}>
+                      {dass ? `Kết quả: Trầm cảm ${dass.depression.level} · Lo âu ${dass.anxiety.level} · Căng thẳng ${dass.stress.level}` : (partialDass ? `Bạn đã trả lời ${partialDass.totalAnswered} câu — kết quả tạm tính.` : 'Chưa đủ dữ liệu để phân tích.')}
+                    </Text>
+                    <HStack justify="center" spacing={4} mb={2}>
+                      <HStack spacing={2}><Box w={3} h={3} borderRadius="full" bg={levelColor(dass ? dass.depression.level : 'gray')} /> <Text fontSize="sm">Trầm cảm: {dass ? dass.depression.level : '-'}</Text></HStack>
+                      <HStack spacing={2}><Box w={3} h={3} borderRadius="full" bg={levelColor(dass ? dass.anxiety.level : 'gray')} /> <Text fontSize="sm">Lo âu: {dass ? dass.anxiety.level : '-'}</Text></HStack>
+                      <HStack spacing={2}><Box w={3} h={3} borderRadius="full" bg={levelColor(dass ? dass.stress.level : 'gray')} /> <Text fontSize="sm">Căng thẳng: {dass ? dass.stress.level : '-'}</Text></HStack>
+                    </HStack>
+                    <Text fontSize="sm" color={adviceColor} mb={2}>
+                      Đây chỉ là kết quả tham khảo. Nếu bạn thấy lo lắng, thử hít thở sâu và nghỉ ngắn; nếu kéo dài, hãy tìm hỗ trợ chuyên môn.
+                    </Text>
+                  </Box>
+
+                  <Box textAlign="left">
+                    <Text fontWeight={700} mb={2}>Gợi ý hành động</Text>
+                    {adviceLoading ? (
+                      <HStack color={muted} spacing={2}><Spinner size="sm"/> <Text>Đang tạo lời khuyên…</Text></HStack>
+                    ) : advice ? (
+                      <Box whiteSpace="pre-wrap" color={adviceColor}>{advice}</Box>
+                    ) : (
+                      <UnorderedList pl={5} spacing={2} fontSize="sm">
+                        <ListItem>Hít thở 4-4-4 trong 2 phút để làm dịu cơ thể.</ListItem>
+                        <ListItem>Ghi 1 việc nhỏ hôm nay để cảm thấy có thể kiểm soát.</ListItem>
+                        <ListItem>Nếu cảm xúc nặng hoặc kéo dài, liên hệ chuyên gia hoặc người thân đáng tin cậy.</ListItem>
+                      </UnorderedList>
+                    )}
+                  </Box>
+                </VStack>
+                </Box>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="outline" onClick={resultModal.onClose}>Đóng</Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
           <AlertDialog
             isOpen={confirmSubmit.isOpen}
             leastDestructiveRef={cancelRef}

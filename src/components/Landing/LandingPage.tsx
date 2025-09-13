@@ -42,8 +42,8 @@ const LandingPage: React.FC = () => {
   const primary = useColorModeValue("black", "white");
   const accent = useColorModeValue("blue.700", "blue.400");
   const accentSoft = useColorModeValue("blue.100", "whiteAlpha.100");
-  // Thêm màu gradient đỏ-cam cho MindAi
-  const mindAiGradient = "linear(to-r, red.500, orange.500, orange.700)";
+  // Thêm màu gradient đỏ-cam cho VeitMindAI
+  const veitMindAiGradient = "linear(to-r, red.500, orange.500, orange.700)";
   // Gradient đậm hơn cho dòng phụ đề (tăng tương phản)
   const subtitleGradient = "linear(to-r, orange.500, red.500)";
   // Màu cho nút nổi bật
@@ -127,14 +127,14 @@ const LandingPage: React.FC = () => {
                 >
                   <Text
                     as="span"
-                    data-text="MindAI"
+                    data-text="VietMindAI"
                     display="inline-block"
                     fontWeight="extrabold"
                     fontSize={{ base: "2.4rem", md: "3.2rem" }}
-                    className={!reducedMotion ? "mindai-loop" : undefined}
+                    className={!reducedMotion ? "vietmindai-loop" : undefined}
                     style={reducedMotion ? { color: '#ff8c00' } : undefined}
                   >
-                    MindAI
+                    VietMindAI
                   </Text>
                   <br />
                   <Text
@@ -181,8 +181,8 @@ const LandingPage: React.FC = () => {
                   @media (prefers-reduced-motion: reduce) {
                     .neon-text { animation: none; text-shadow: none; }
                   }
-                  /* Looping orange gradient effect for MindAI */
-                  .mindai-loop {
+                  /* Looping orange gradient effect for VeitMindAI */
+                  .vietmindai-loop {
                     background: linear-gradient(90deg, #ff9800, #ff4d00, #ff9800);
                     background-size: 200% 100%;
                     -webkit-background-clip: text;
@@ -196,7 +196,7 @@ const LandingPage: React.FC = () => {
                     100% { background-position: 0% 50%; }
                   }
                   @media (prefers-reduced-motion: reduce) {
-                    .mindai-loop { animation: none; text-shadow: none; }
+                    .vietmindai-loop { animation: none; text-shadow: none; }
                   }
                   /* Typing effect (loop) for slogan */
                   .typing-slogan {

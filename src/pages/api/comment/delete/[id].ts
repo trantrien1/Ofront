@@ -36,14 +36,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (upstreamSession) cookieParts.push(`JSESSIONID=${upstreamSession}`);
     if (cookieParts.length) headers.Cookie = cookieParts.join('; ');
 
-    console.log("Deleting upstream comment:", upstreamUrl);
-    console.log("Resolved token source:", token ? `${tokenSource} len=${token.length}` : 'none');
-    console.log("Proxy headers to upstream:", headers);
 
     const r = await fetch(upstreamUrl, { method: 'DELETE', headers });
     const text = await r.text();
     const snippet = text.slice(0,500).replace(/\n/g,' ');
-    console.log(`/api/comment/delete proxy: upstream status=${r.status}; body_snippet=${snippet}`);
+  
 
     const ct = r.headers.get('content-type') || '';
     if (ct.includes('application/json')) {

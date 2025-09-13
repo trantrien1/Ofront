@@ -30,11 +30,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Debug: incoming auth hints (do NOT log actual token)
   try {
-    console.log('[api/admin/pending-posts] incoming', {
-      role,
-      hasAuthHeader: Boolean(incomingAuth),
-      hasTokenCookie: Boolean(req.cookies?.token),
-    });
   } catch {}
 
     // If we know the user is not admin from cookies, fail fast with a clear message
@@ -119,14 +114,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try { parsed = text && /\{\s*\"|\[/.test(text) ? JSON.parse(text) : undefined; } catch {}
       // Debug: log each attempt (mask secrets)
       try {
-  console.log('[api/admin/pending-posts] attempt', {
-          idx: attemptIdx,
-          hasAuth: Boolean((headers as any).Authorization),
-          hasCookie: Boolean((headers as any).Cookie),
-          status: r.status,
-          ct,
-          bodyPreview: String(text || '').slice(0, 300),
-        });
       } catch {}
       if (r.ok) return res.status(200).json(parsed ?? (text ? { upstreamText: text } : []));
       lastStatus = r.status; lastCT = ct; lastText = text; lastParsed = parsed;

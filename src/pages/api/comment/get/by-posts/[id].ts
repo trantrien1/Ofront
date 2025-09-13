@@ -7,9 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log("=== GET COMMENTS FOR POST ===");
-    console.log("/api/comment/get/by-posts/[id] proxy: incoming headers:", req.headers);
-    console.log("/api/comment/get/by-posts/[id] proxy: incoming query:", req.query);
+
 
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: "post id required" });
@@ -96,9 +94,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       delete headers["Cookie"];
     }
 
-    console.log("Calling upstream:", upstreamUrl);
-    console.log("Resolved token source:", token ? `${tokenSource} len=${token.length}` : "none");
-    console.log("Proxy headers to upstream:", headers);
 
   let r = await fetch(upstreamUrl, { method: "GET", headers });
     let text = await r.text();
@@ -110,7 +105,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const retryHeaders = { ...headers } as Record<string, string>;
         delete retryHeaders["Cookie"];
         retried = "auth_only";
-        console.log("Retrying upstream with auth_only headers");
         const r2 = await fetch(upstreamUrl, { method: "GET", headers: retryHeaders });
         const t2 = await r2.text();
         r = r2; text = t2;
@@ -118,7 +112,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const retryHeaders = { ...headers } as Record<string, string>;
         delete retryHeaders["Cookie"];
         retried = "no_cookies";
-        console.log("Retrying upstream without cookies");
         const r2 = await fetch(upstreamUrl, { method: "GET", headers: retryHeaders });
         const t2 = await r2.text();
         r = r2; text = t2;
@@ -126,14 +119,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const retryHeaders = { ...headers } as Record<string, string>;
         delete retryHeaders["Authorization"];
         retried = "no_auth";
-        console.log("Retrying upstream without Authorization header (public)");
         const r2 = await fetch(upstreamUrl, { method: "GET", headers: retryHeaders });
         const t2 = await r2.text();
         r = r2; text = t2;
       } else {
         // Final explicit public retry with x-public header
         const publicHeaders: Record<string, string> = { Accept: "application/json", "x-public": "1" };
-        console.log("Retrying upstream with explicit x-public header");
         const r2 = await fetch(upstreamUrl, { method: "GET", headers: publicHeaders });
         const t2 = await r2.text();
         r = r2; text = t2; retried = "explicit_public";
@@ -141,8 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const snippet = typeof text === "string" ? text.slice(0, 2000) : String(text);
-    console.log(`/api/comment/get/by-posts proxy: upstream status=${r.status}; retried=${retried}; body_snippet=${snippet.replace(/\n/g, " ")}`);
-    console.log("=============================");
+ 
 
     if (process.env.NODE_ENV !== "production") {
       res.setHeader("x-proxy-had-token", token ? "1" : "0");

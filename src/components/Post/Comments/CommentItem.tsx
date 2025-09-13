@@ -86,6 +86,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
+  /* Reaction state and handlers hidden for now - preserved for future use
   const [likeLevel, setLikeLevel] = useState<number | undefined>(() => {
     const lvl = (comment as any).likeLevel;
     if (typeof lvl === 'number') return lvl;
@@ -104,16 +105,19 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
   const handleMainLeave = () => { clearTimers(); hideTimer.current = setTimeout(() => setShowReactions(false), 150); };
   const handleBarEnter = () => { clearTimers(); setShowReactions(true); };
   const handleBarLeave = () => { clearTimers(); hideTimer.current = setTimeout(() => setShowReactions(false), 150); };
+  */
 
   const chipBg = useColorModeValue("gray.100", "whiteAlpha.100");
   const chipHoverBg = useColorModeValue("gray.200", "whiteAlpha.200");
   const borderCol = useColorModeValue("gray.200", "whiteAlpha.300");
   const iconMuted = useColorModeValue("gray.600", "gray.300");
 
+  /*
   const slideIn = keyframes`
     from { transform: translateX(-10px); opacity: 0.9; }
     to { transform: translateX(0); opacity: 1; }
   `;
+  */
 
   // Theming colors
   const highlightBg = useColorModeValue("gray.100", "whiteAlpha.100");
@@ -180,6 +184,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     setReplyText("");
   };
 
+  /* Reaction updater hidden for now - preserved for future use
   const setLevel = async (level: number) => {
     if (!comment.id) return;
     if (updating) return;
@@ -225,11 +230,14 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
     inflightRef.current = null;
     setUpdating(false);
   };
+  */
 
+  /*
   const currentReaction = likeLevel ? REACTIONS.find(r => r.lv === likeLevel) : undefined;
   const mainIcon = currentReaction ? currentReaction.icon : REACTIONS[0].icon;
   const mainColor = currentReaction ? currentReaction.color : iconMuted;
   const mainLabel = currentReaction ? currentReaction.label : 'Đánh giá';
+  */
 
   return (
     <Box>
@@ -262,8 +270,9 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
             {isLoading && <Spinner size="sm" />}
           </Stack>
           <Text fontSize="10pt">{comment.text}</Text>
+          {/* Reaction UI is currently hidden. Uncomment below to re-enable ratings. */}
           <Stack direction="row" align="center" fontWeight={600} color={actionsColor} position="relative">
-            {/* Reaction chip */}
+            {/*
             <HStack
               spacing={1.5}
               px={2.5}
@@ -290,14 +299,13 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
               <Text fontSize="9pt" fontWeight="medium">{mainLabel}</Text>
             </HStack>
 
-            {/* Hover reaction bar */}
-      {showReactions && (
+            {showReactions && (
               <HStack
                 spacing={2}
                 position="absolute"
                 top="-54px"
                 left={0}
-        bg={reactionBarBg}
+                bg={reactionBarBg}
                 border="1px solid"
                 borderColor={borderCol}
                 boxShadow="lg"
@@ -344,6 +352,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
                 })}
               </HStack>
             )}
+            */}
             <Text fontSize="9pt" _hover={{ color: hoverLinkColor }} onClick={() => setShowReplyInput(!showReplyInput)}>
               Trả lời
             </Text>
@@ -373,7 +382,7 @@ const CommentItemComponent: React.FC<CommentItemProps> = ({
               return (
                 <>
                   <Text fontSize="9pt" _hover={{ color: hoverLinkColor }}>
-                    Edit
+                    Edit  
                   </Text>
                   <Text
                     fontSize="9pt"

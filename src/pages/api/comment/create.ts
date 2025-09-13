@@ -7,9 +7,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log("=== CREATE COMMENT REQUEST ===");
-    console.debug("/api/comment/create proxy: incoming headers:", req.headers);
-    console.debug("/api/comment/create proxy: incoming body:", req.body);
 
     // Build payload: include content, postId, and optional parentId for replies
     const incoming = req.body || {};
@@ -98,9 +95,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       delete headers["Cookie"];
     }
 
-    console.log(`Calling upstream: ${upstream}`);
-    console.log("Proxy headers to upstream:", headers);
-    console.log("Payload:", payload);
 
     let r = await fetch(upstream, {
       method: "POST",
@@ -116,7 +110,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const h1 = { ...headers } as Record<string, string>;
       delete h1["Cookie"];
       retried = "auth_only_json";
-      console.log("Retrying upstream with auth_only_json");
       let r2 = await fetch(upstream, { method: "POST", headers: h1, body: JSON.stringify(payload) });
       let t2 = await r2.text();
       r = r2; text = t2;
@@ -130,15 +123,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const h2 = { ...headers, "Content-Type": "application/x-www-form-urlencoded" } as Record<string, string>;
         delete h2["Cookie"];
         retried = "auth_only_form";
-        console.log("Retrying upstream with auth_only_form");
         r2 = await fetch(upstream, { method: "POST", headers: h2, body: form.toString() });
         t2 = await r2.text();
         r = r2; text = t2;
       }
     }
 
-    console.debug(`/api/comment/create proxy: upstream status=${r.status}; retried=${retried}; body_snippet=${text.slice(0, 2000).replace(/\n/g, " ")}`);
-    console.log("==============================");
 
     if (process.env.NODE_ENV !== "production") {
       res.setHeader("x-proxy-had-token", token ? "1" : "0");

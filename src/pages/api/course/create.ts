@@ -15,8 +15,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const bodyObj = typeof req.body === "string" ? safeParseJSON(req.body) || {} : (req.body || {});
     // Log the payload received from client
     try {
-      console.log("[api/course/create] incoming body:", JSON.stringify(bodyObj));
-      console.log("[api/course/create] admin role:", admin.role || "unknown");
     } catch {}
     if (!bodyObj || !bodyObj.title) {
       // Be lenient: title or name

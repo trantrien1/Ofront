@@ -33,7 +33,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const body = ct.includes("application/json") ? await r.json() : await r.text();
     return res.status(r.status).json(body);
   } catch (err: any) {
-    console.error("/api/notifications proxy error:", err?.message || err);
     return res.status(500).json({ error: "proxy_error", message: err?.message || String(err) });
   }
 }
